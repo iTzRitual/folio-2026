@@ -1,9 +1,15 @@
-import Scene from "@/components/Scene";
+"use client";
+
+import dynamic from "next/dynamic";
+
+const DynamicScene = dynamic(() => import("@/components/Scene"), {
+  ssr: false,
+});
 
 export default function Home() {
   return (
     <main className="relative h-screen">
-      <Scene></Scene>
+      <DynamicScene />
     </main>
   );
 }
