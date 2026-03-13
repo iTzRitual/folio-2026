@@ -8,12 +8,12 @@ import { Environment } from "@react-three/drei";
 export default function Scene() {
   return (
     <>
-      <Canvas className="bg-[#292929]" key="main-canvas">
+      <Canvas className="bg-[#1D1D1D]" key="main-canvas">
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
         <Model />
       </Canvas>
-      <GridOverlay />
+      {/* <GridOverlay /> */}
     </>
   );
 }

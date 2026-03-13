@@ -75,7 +75,7 @@ export function ProfessionLabel({
         anchorY={anchorY}
         fontSize={fontSize}
         lineHeight={1}
-        font="fonts/Aeonik-Thin.otf"
+        font="fonts/Aeonik-Light.otf"
       >
         {children}
         <meshBasicMaterial color="white" opacity={0.7} transparent />

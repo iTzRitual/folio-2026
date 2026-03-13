@@ -48,7 +48,7 @@ export default function Model() {
     transmission: { value: 1, min: 0, max: 1, step: 0.1 },
     ior: { value: 0.8, min: 0, max: 3, step: 0.1 },
     chromaticAberration: { value: 0.45, min: 0, max: 1, step: 0.01 },
-    backside: { value: false },
+    backside: { value: true },
     scale: { value: 0.9, min: 0, max: 3, step: 0.1 },
   });
 
