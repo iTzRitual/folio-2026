@@ -3,6 +3,7 @@ import {
   useGLTF,
   Text,
   MeshTransmissionMaterial,
+  Center,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
@@ -14,7 +15,7 @@ import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
 
 export default function Model() {
   const mesh = useRef<THREE.Group>(null);
-  const { nodes } = useGLTF("/glbs/torrus.glb");
+  const { nodes } = useGLTF("/glbs/czaszka2.glb");
   const width = useThree((state) => state.viewport.width);
   const { size, viewport } = useThree();
 
@@ -38,18 +39,41 @@ export default function Model() {
 
   useFrame((state, delta) => {
     if (mesh.current) {
-      mesh.current.rotation.y += delta;
+      const t = state.clock.getElapsedTime();
+
+      // Zmieniamy Y na Z (częsty przypadek przy eksporcie z Blendera)
+      mesh.current.rotation.z += delta * 1.2;
+
+      // Wychylenia na pozostałych osiach
+      mesh.current.rotation.x = Math.sin(t * 2) * 0.2;
+      mesh.current.rotation.y = Math.cos(t * 2) * 0.1;
     }
   });
 
+  // const materialProps = useControls({
+  //   thickness: { value: 0.1, min: 0, max: 3, step: 0.05 },
+  //   roughness: { value: 0.6, min: 0, max: 1, step: 0.1 },
+  //   transmission: { value: 1, min: 0, max: 1, step: 0.1 },
+  //   ior: { value: 1.1, min: 0, max: 3, step: 0.1 },
+  //   chromaticAberration: { value: 0.08, min: 0, max: 1, step: 0.01 },
+  //   backside: { value: true },
+  //   scale: { value: 1.3, min: 0, max: 3, step: 0.05 },
+  // });
+
   const materialProps = useControls({
-    thickness: { value: 3, min: 0, max: 3, step: 0.05 },
-    roughness: { value: 0.2, min: 0, max: 1, step: 0.1 },
-    transmission: { value: 1, min: 0, max: 1, step: 0.1 },
-    ior: { value: 0.8, min: 0, max: 3, step: 0.1 },
-    chromaticAberration: { value: 0.45, min: 0, max: 1, step: 0.01 },
-    backside: { value: true },
-    scale: { value: 0.9, min: 0, max: 3, step: 0.1 },
+    thickness: { value: 3, min: 0, max: 5, step: 0.05 },
+    roughness: { value: 0, min: 0, max: 1, step: 0.1 },
+    transmission: { value: 0.9, min: 0, max: 1, step: 0.1 },
+    ior: { value: 0.9, min: 0, max: 3, step: 0.1 },
+    chromaticAberration: { value: 0.0, min: 0, max: 1, step: 0.01 },
+    backside: { value: false },
+    scale: { value: 1.1, min: 0, max: 3, step: 0.05 },
+  });
+
+  const skullRotation = useControls("Skull Rotation", {
+    x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
+    y: { value: -3.13, min: -Math.PI, max: Math.PI, step: 0.05 },
+    z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
 
   const viewportMinDimension = Math.min(viewport.width, viewport.height);
@@ -57,15 +81,15 @@ export default function Model() {
 
   return (
     <group>
-      <Clone
-        ref={mesh}
-        object={nodes.Torus002}
-        rotation={[Math.PI / 4, 0, Math.PI / 4]}
-        position={[0, 0, 2]}
-        scale={responsiveScale}
-      >
-        <MeshTransmissionMaterial {...materialProps} />
-      </Clone>
+      <group position={[0, 0.1, 2]}>
+        <group rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}>
+          <Center>
+            <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
+              <MeshTransmissionMaterial {...materialProps} />
+            </Clone>
+          </Center>
+        </group>
+      </group>
       <Title>Natan Mokrzycki</Title>
       <Subtitle>
         Bridging the gap between technical performance and high-end visual
