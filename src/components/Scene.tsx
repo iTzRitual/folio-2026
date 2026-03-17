@@ -26,7 +26,7 @@ export default function Scene() {
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
-        <Background />
+        {/* <Background /> */}
         <Model />
       </Canvas>
       {/* <GridOverlay /> */}

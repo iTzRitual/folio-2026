@@ -52,7 +52,7 @@ export function Title({ children }: { children: React.ReactNode }) {
             if (materialRef.current) materialRef.current.opacity = 1;
           }}
         >
-          <h1 className="selection:bg-white selection:text-[#1D1D1D]">
+          <h1 className="selection:bg-[#E2E2E2] selection:text-[#1D1D1D]">
             {children}
           </h1>
         </Copy>
