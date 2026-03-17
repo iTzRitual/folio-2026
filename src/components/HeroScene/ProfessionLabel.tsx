@@ -1,4 +1,4 @@
-import { Text } from "@react-three/drei";
+import { Text, Html } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import { useMemo } from "react";
 import * as THREE from "three";
@@ -19,15 +19,18 @@ export function ProfessionLabel({
   const { size, viewport } = useThree();
 
   const pxTo3DWidth = viewport.width / size.width;
+  const pxTo3DHeight = viewport.height / size.height;
+
   const marginX = 60 * pxTo3DWidth;
   const availableWidth = viewport.width - 2 * marginX;
   const fontSize = availableWidth * 0.02;
+
+  const pixelFontSize = fontSize / pxTo3DWidth;
 
   const isLeft = align === "left";
   const anchorX = isLeft ? "left" : "right";
   const anchorY = verticalPos === "above" ? "bottom" : "top";
 
-  const pxTo3DHeight = viewport.height / size.height;
   const paddingY = 8 * pxTo3DHeight;
   const finalY =
     verticalPos === "above" ? position[1] + paddingY : position[1] - paddingY;
@@ -69,17 +72,32 @@ export function ProfessionLabel({
 
   return (
     <group>
-      <Text
-        position={[position[0], finalY, position[2]]}
-        anchorX={anchorX}
-        anchorY={anchorY}
-        fontSize={fontSize}
-        lineHeight={1}
-        font="fonts/Aeonik-Light.otf"
-      >
-        {children}
-        <meshBasicMaterial color="white" opacity={0.7} transparent />
-      </Text>
+      <group position={[position[0], finalY, position[2]]}>
+        <Text
+          anchorX={anchorX}
+          anchorY={anchorY}
+          fontSize={fontSize}
+          lineHeight={1}
+          font="fonts/Aeonik-Light.otf"
+        >
+          {children}
+          <meshBasicMaterial color="white" opacity={0.7} transparent />
+        </Text>
+
+        <Html
+          as="div"
+          className={`
+            pointer-events-auto whitespace-nowrap m-0 p-0 text-red-500/50 font-aeonik font-light leading-none
+            ${isLeft ? "left-0" : "-translate-x-full"} 
+            ${verticalPos === "above" ? "-translate-y-full" : "top-0"}
+          `}
+          style={{
+            fontSize: `${pixelFontSize}px`,
+          }}
+        >
+          {children}
+        </Html>
+      </group>
 
       <mesh position={[lineX, position[1], position[2]]}>
         <planeGeometry args={[lineWidth, lineThickness]} />

@@ -41,10 +41,7 @@ export default function Model() {
     if (mesh.current) {
       const t = state.clock.getElapsedTime();
 
-      // Zmieniamy Y na Z (częsty przypadek przy eksporcie z Blendera)
       mesh.current.rotation.z += delta * 1.2;
-
-      // Wychylenia na pozostałych osiach
       mesh.current.rotation.x = Math.sin(t * 2) * 0.2;
       mesh.current.rotation.y = Math.cos(t * 2) * 0.1;
     }
