@@ -3,3 +3,30 @@
 @theme {
   --font-aeonik: var(--font-aeonik);
 }
+h1 .block-line-wrapper,
+p .block-line-wrapper {
+  margin: 0 auto;
+}
+
+.block-line-wrapper {
+  position: relative;
+  width: max-content;
+  display: block;
+}
+
+.block-line {
+  position: relative;
+  display: block;
+}
+
+.block-revealer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 101%;
+  height: 110%;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 1;
+  border-radius: 0.5rem;
+}

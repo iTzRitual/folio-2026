@@ -23,7 +23,6 @@ function Background() {
 export default function Scene() {
   return (
     <>
-      <h1 className="sr-only">Natan Mokrzycki - Portfolio</h1>
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />

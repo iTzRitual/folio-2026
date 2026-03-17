@@ -1,6 +1,8 @@
 import { Text, Html } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import { useMemo } from "react";
+import { Copy } from "../Copy";
+import { useRef } from "react";
 import * as THREE from "three";
 
 interface ProfessionLabelProps {
@@ -8,6 +10,7 @@ interface ProfessionLabelProps {
   position: [number, number, number];
   align: "left" | "right";
   verticalPos: "above" | "below";
+  direction?: "leftToRight" | "rightToLeft";
 }
 
 export function ProfessionLabel({
@@ -15,7 +18,9 @@ export function ProfessionLabel({
   position,
   align,
   verticalPos,
+  direction,
 }: ProfessionLabelProps) {
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const { size, viewport } = useThree();
 
   const pxTo3DWidth = viewport.width / size.width;
@@ -81,13 +86,18 @@ export function ProfessionLabel({
           font="fonts/Aeonik-Light.otf"
         >
           {children}
-          <meshBasicMaterial color="white" opacity={0.7} transparent />
+          <meshBasicMaterial
+            ref={materialRef}
+            transparent
+            opacity={0}
+            color="#BEBEBE"
+          />
         </Text>
 
         <Html
           as="div"
           className={`
-            pointer-events-auto whitespace-nowrap m-0 p-0 text-red-500/50 font-aeonik font-light leading-none
+            pointer-events-auto whitespace-nowrap m-0 p-0 text-red-500/0 font-aeonik font-light leading-none
             ${isLeft ? "left-0" : "-translate-x-full"} 
             ${verticalPos === "above" ? "-translate-y-full" : "top-0"}
           `}
@@ -95,7 +105,16 @@ export function ProfessionLabel({
             fontSize: `${pixelFontSize}px`,
           }}
         >
-          {children}
+          <Copy
+            delay={0.4}
+            direction={direction}
+            blockColor="#BEBEBE"
+            onReveal={() => {
+              if (materialRef.current) materialRef.current.opacity = 1;
+            }}
+          >
+            <p>{children}</p>
+          </Copy>
         </Html>
       </group>
 

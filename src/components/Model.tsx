@@ -1,7 +1,6 @@
 import {
   Clone,
   useGLTF,
-  Text,
   MeshTransmissionMaterial,
   Center,
 } from "@react-three/drei";
@@ -13,7 +12,11 @@ import { Title } from "./HeroScene/Title";
 import { Subtitle } from "./HeroScene/Subtitle";
 import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
 
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+
 export default function Model() {
+  const animGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const { nodes } = useGLTF("/glbs/czaszka2.glb");
   const width = useThree((state) => state.viewport.width);
@@ -36,6 +39,21 @@ export default function Model() {
   const leftX = -viewport.width / 2 + marginX;
   const rightX = viewport.width / 2 - marginX;
   const lineY = -viewport.height / 2 + marginY;
+
+  useGSAP(() => {
+    if (animGroupRef.current) {
+      animGroupRef.current.scale.set(0, 0, 0);
+
+      gsap.to(animGroupRef.current.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 1.5,
+        ease: "elastic.out(1, 0.5)",
+        delay: 1.4,
+      });
+    }
+  }, []);
 
   useFrame((state, delta) => {
     if (mesh.current) {
@@ -64,7 +82,7 @@ export default function Model() {
     ior: { value: 0.9, min: 0, max: 3, step: 0.1 },
     chromaticAberration: { value: 0.0, min: 0, max: 1, step: 0.01 },
     backside: { value: false },
-    scale: { value: 1.1, min: 0, max: 3, step: 0.05 },
+    scale: { value: 0.8, min: 0, max: 3, step: 0.05 },
   });
 
   const skullRotation = useControls("Skull Rotation", {
@@ -78,7 +96,7 @@ export default function Model() {
 
   return (
     <group>
-      <group position={[0, 0.1, 2]}>
+      <group position={[0, 0.1, 2]} ref={animGroupRef}>
         <group rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}>
           <Center>
             <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
@@ -96,6 +114,7 @@ export default function Model() {
         position={[leftX, row3TopY, 0]}
         align="left"
         verticalPos="below"
+        direction="leftToRight"
       >
         Software Engineer
       </ProfessionLabel>
@@ -104,6 +123,7 @@ export default function Model() {
         position={[rightX, row3BottomY, 0]}
         align="right"
         verticalPos="above"
+        direction="rightToLeft"
       >
         Creative Technologist
       </ProfessionLabel>

@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ReactLenis } from "lenis/react";
+import { Leva } from "leva";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
@@ -8,8 +10,12 @@ const DynamicScene = dynamic(() => import("@/components/Scene"), {
 
 export default function Home() {
   return (
-    <main className="relative h-screen">
-      <DynamicScene />
-    </main>
+    <>
+      <Leva collapsed />
+      <ReactLenis root />
+      <main className="relative h-screen">
+        <DynamicScene />
+      </main>
+    </>
   );
 }
