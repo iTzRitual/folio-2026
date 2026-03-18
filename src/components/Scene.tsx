@@ -20,14 +20,14 @@ function Background() {
   );
 }
 
-export default function Scene() {
+export default function Scene({ startAnimation }: { startAnimation: boolean }) {
   return (
     <>
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
         {/* <Background /> */}
-        <Model />
+        <Model startAnimation={startAnimation} />
       </Canvas>
       {/* <GridOverlay /> */}
     </>

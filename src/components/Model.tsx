@@ -15,7 +15,11 @@ import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 
-export default function Model() {
+interface ModelProps {
+  startAnimation: boolean;
+}
+
+export default function Model({ startAnimation }: ModelProps) {
   const animGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const { nodes } = useGLTF("/glbs/czaszka2.glb");
@@ -41,19 +45,22 @@ export default function Model() {
   const lineY = -viewport.height / 2 + marginY;
 
   useGSAP(() => {
-    if (animGroupRef.current) {
-      animGroupRef.current.scale.set(0, 0, 0);
+    if (!animGroupRef.current) return;
 
-      gsap.to(animGroupRef.current.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 1.5,
-        ease: "elastic.out(1, 0.5)",
-        delay: 1.4,
-      });
+    if (!startAnimation) {
+      animGroupRef.current.scale.set(0, 0, 0);
+      return;
     }
-  }, []);
+
+    gsap.to(animGroupRef.current.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 1.5,
+      ease: "elastic.out(1, 0.5)",
+      delay: 0,
+    });
+  }, [startAnimation]);
 
   useFrame((state, delta) => {
     if (mesh.current) {
