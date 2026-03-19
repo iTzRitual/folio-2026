@@ -1,8 +1,10 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
+import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
 import { GridOverlay } from "./HeroScene/GridOverlay";
+import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment, useTexture } from "@react-three/drei";
 
 function Background() {
@@ -24,10 +26,14 @@ export default function Scene({ startAnimation }: { startAnimation: boolean }) {
   return (
     <>
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
+        <color attach="background" args={["#1D1D1D"]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
         {/* <Background /> */}
         <Model startAnimation={startAnimation} />
+        <EffectComposer>
+          <CustomAberration />
+        </EffectComposer>
       </Canvas>
       {/* <GridOverlay /> */}
     </>
