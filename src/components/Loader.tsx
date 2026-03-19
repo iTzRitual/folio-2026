@@ -1,31 +1,103 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useProgress } from "@react-three/drei";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
 interface LoaderProps {
+  onExitStart: () => void;
   onComplete: () => void;
 }
 
-export function Loader({ onComplete }: LoaderProps) {
+export function Loader({ onExitStart, onComplete }: LoaderProps) {
   const { progress } = useProgress();
 
   const containerRef = useRef<HTMLDivElement>(null);
-
   const unitsRef = useRef<HTMLDivElement>(null);
   const tensRef = useRef<HTMLDivElement>(null);
   const hundredsRef = useRef<HTMLDivElement>(null);
 
+  const odometerWrapperRef = useRef<HTMLDivElement>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
+
   const progressProxy = useRef({ value: 0 });
+
+  const isRevealed = useRef(false);
+  const isExiting = useRef(false);
+
+  const odometerTween = useRef<gsap.core.Tween | null>(null);
+
+  const triggerExit = () => {
+    if (isExiting.current) return;
+    isExiting.current = true;
+
+    const tl = gsap.timeline({
+      delay: 0,
+      onComplete: onComplete,
+    });
+
+    tl.set(blockRef.current, { transformOrigin: "left center" });
+
+    tl.to(blockRef.current, {
+      scaleX: 1,
+      duration: 0.5,
+      ease: "power4.inOut",
+    });
+
+    tl.set(odometerWrapperRef.current, { opacity: 0 });
+
+    tl.call(() => onExitStart());
+
+    tl.set(blockRef.current, { transformOrigin: "right center" });
+    tl.to(blockRef.current, {
+      scaleX: 0,
+      duration: 0.5,
+      ease: "power4.inOut",
+    });
+  };
 
   useGSAP(
     () => {
-      gsap.to(progressProxy.current, {
-        value: progress,
-        duration: 1.5,
+      const tl = gsap.timeline({
+        onComplete: () => {
+          isRevealed.current = true;
+
+          if (odometerTween.current) {
+            odometerTween.current.play();
+          }
+
+          if (progress === 100 && progressProxy.current.value >= 99.9) {
+            triggerExit();
+          }
+        },
+      });
+
+      tl.set(blockRef.current, { transformOrigin: "right center", scaleX: 0 });
+      tl.to(blockRef.current, {
+        scaleX: 1,
+        duration: 0.5,
+        ease: "power4.inOut",
+      });
+      tl.set(odometerWrapperRef.current, { opacity: 1 });
+      tl.set(blockRef.current, { transformOrigin: "left center" });
+      tl.to(blockRef.current, {
+        scaleX: 0,
+        duration: 0.5,
+        ease: "power4.inOut",
+      });
+    },
+    { scope: containerRef },
+  );
+
+  useGSAP(
+    () => {
+      const targetProgress = Math.max(progress, 31);
+      odometerTween.current = gsap.to(progressProxy.current, {
+        value: targetProgress,
+        duration: 2,
         ease: "power2.out",
+        paused: !isRevealed.current,
         onUpdate: () => {
           const val = Math.floor(progressProxy.current.value);
 
@@ -42,15 +114,14 @@ export function Loader({ onComplete }: LoaderProps) {
         },
         onComplete: () => {
           if (progress === 100 && progressProxy.current.value >= 99.9) {
-            setTimeout(onComplete, 500);
+            if (isRevealed.current) {
+              triggerExit();
+            }
           }
         },
       });
     },
-    {
-      dependencies: [progress, onComplete],
-      scope: containerRef,
-    },
+    { dependencies: [progress], scope: containerRef },
   );
 
   const renderDigits = (isHundreds = false) => {
@@ -65,24 +136,35 @@ export function Loader({ onComplete }: LoaderProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-white font-aeonik font-black text-6xl"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-white font-aeonik font-black text-6xl pointer-events-none"
     >
-      <div className="flex space-x-1 overflow-hidden h-[1em] leading-none">
-        <div className="relative">
-          <div ref={hundredsRef} className="flex flex-col">
-            {renderDigits(true)}
-          </div>
-        </div>
+      <div className="block-line-wrapper">
+        <div
+          ref={blockRef}
+          className="block-revealer bg-white"
+          style={{ transform: "scaleX(0)", height: "100%" }}
+        />
 
-        <div className="relative">
-          <div ref={tensRef} className="flex flex-col">
-            {renderDigits()}
+        <div
+          ref={odometerWrapperRef}
+          className="flex space-x-1 overflow-hidden h-[1em] leading-none opacity-0 px-4"
+        >
+          <div className="relative">
+            <div ref={hundredsRef} className="flex flex-col">
+              {renderDigits(true)}
+            </div>
           </div>
-        </div>
 
-        <div className="relative">
-          <div ref={unitsRef} className="flex flex-col">
-            {renderDigits()}
+          <div className="relative">
+            <div ref={tensRef} className="flex flex-col">
+              {renderDigits()}
+            </div>
+          </div>
+
+          <div className="relative">
+            <div ref={unitsRef} className="flex flex-col">
+              {renderDigits()}
+            </div>
           </div>
         </div>
       </div>

@@ -58,7 +58,7 @@ export default function Model({ startAnimation }: ModelProps) {
       z: 1,
       duration: 1.5,
       ease: "elastic.out(1, 0.5)",
-      delay: 0,
+      delay: 1,
     });
   }, [startAnimation]);
 
@@ -112,8 +112,9 @@ export default function Model({ startAnimation }: ModelProps) {
           </Center>
         </group>
       </group>
-      <Title>Natan Mokrzycki</Title>
-      <Subtitle>
+
+      <Title startTrigger={startAnimation}>Natan Mokrzycki</Title>
+      <Subtitle startTrigger={startAnimation}>
         Bridging the gap between technical performance and high-end visual
         aesthetics.
       </Subtitle>
@@ -122,6 +123,7 @@ export default function Model({ startAnimation }: ModelProps) {
         align="left"
         verticalPos="below"
         direction="leftToRight"
+        startTrigger={startAnimation}
       >
         Software Engineer
       </ProfessionLabel>
@@ -131,6 +133,7 @@ export default function Model({ startAnimation }: ModelProps) {
         align="right"
         verticalPos="above"
         direction="rightToLeft"
+        startTrigger={startAnimation}
       >
         Creative Technologist
       </ProfessionLabel>

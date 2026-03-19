@@ -4,7 +4,13 @@ import { Copy } from "../Copy";
 import { useRef } from "react";
 import * as THREE from "three";
 
-export function Subtitle({ children }: { children: React.ReactNode }) {
+export function Subtitle({
+  children,
+  startTrigger,
+}: {
+  children: React.ReactNode;
+  startTrigger: boolean;
+}) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const { size, viewport } = useThree();
 
@@ -47,9 +53,10 @@ export function Subtitle({ children }: { children: React.ReactNode }) {
         }}
       >
         <Copy
-          delay={0.3}
+          delay={0.1}
           blockColor="#BCBCBC"
           direction="rightToLeft"
+          startTrigger={startTrigger}
           onReveal={() => {
             if (materialRef.current) materialRef.current.opacity = 1;
           }}

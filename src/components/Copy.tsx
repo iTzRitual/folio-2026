@@ -17,17 +17,19 @@ interface CopyProps {
   duration?: number;
   onReveal?: (index: number) => void;
   direction?: "leftToRight" | "rightToLeft";
+  startTrigger?: boolean;
 }
 
 export function Copy({
   children,
   animateOnScroll = false,
-  delay = 1,
+  delay = 0,
   blockColor = "#ffffff",
   stagger = 0.15,
   duration = 0.75,
   onReveal,
   direction = "leftToRight",
+  startTrigger = true,
 }: CopyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onRevealRef = useRef(onReveal);
@@ -124,7 +126,15 @@ export function Copy({
         });
       } else {
         blocks.current.forEach((block, index) => {
-          createBlockRevealAnimation(block, lines.current[index], index);
+          const tl = createBlockRevealAnimation(
+            block,
+            lines.current[index],
+            index,
+          );
+
+          if (!startTrigger) {
+            tl.pause();
+          }
         });
       }
 
@@ -151,6 +161,7 @@ export function Copy({
         stagger,
         duration,
         direction,
+        startTrigger,
       ],
     },
   );

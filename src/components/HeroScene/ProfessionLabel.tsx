@@ -11,6 +11,7 @@ interface ProfessionLabelProps {
   verticalPos: "above" | "below";
   direction?: "leftToRight" | "rightToLeft";
   lineDelay?: number;
+  startTrigger: boolean;
 }
 
 export function ProfessionLabel({
@@ -20,6 +21,7 @@ export function ProfessionLabel({
   verticalPos,
   direction,
   lineDelay = 1.5,
+  startTrigger,
 }: ProfessionLabelProps) {
   const textMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const lineMaterialRef = useRef<THREE.ShaderMaterial>(null);
@@ -134,9 +136,10 @@ export function ProfessionLabel({
           }}
         >
           <Copy
-            delay={0.4}
+            delay={0.2}
             direction={direction}
             blockColor="#BEBEBE"
+            startTrigger={startTrigger}
             onReveal={() => {
               if (textMaterialRef.current) textMaterialRef.current.opacity = 1;
             }}

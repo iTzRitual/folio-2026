@@ -11,17 +11,22 @@ const DynamicScene = dynamic(() => import("@/components/Scene"), {
 });
 
 export default function Home() {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [startScene, setStartScene] = useState(false);
+  const [removeLoader, setRemoveLoader] = useState(false);
 
   return (
     <>
       <Leva collapsed />
       <ReactLenis root />
 
-      {!isLoaded && <Loader onComplete={() => setIsLoaded(true)} />}
-
       <main className="relative h-screen bg-[#1D1D1D]">
-        <DynamicScene startAnimation={isLoaded} />
+        {!removeLoader && (
+          <Loader
+            onExitStart={() => setStartScene(true)}
+            onComplete={() => setRemoveLoader(true)}
+          />
+        )}
+        <DynamicScene startAnimation={startScene} />
       </main>
     </>
   );
