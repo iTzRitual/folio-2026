@@ -23,7 +23,7 @@ export default function Model({ startAnimation }: ModelProps) {
   const animGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
-  const { nodes } = useGLTF("/glbs/czaszka2.glb");
+  const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
   const { size, viewport } = useThree();
 
   const pxTo3DWidth = viewport.width / size.width;
