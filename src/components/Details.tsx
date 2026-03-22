@@ -101,15 +101,20 @@ export function Details() {
     sections.heroHoldEnd,
     sections.detailsEnterEnd,
   );
+  const handoffProgress = getSegmentProgress(
+    sections.heroHoldEnd,
+    sections.heroExitEnd,
+  );
 
   const headingSize = (viewport.width - marginX * 2) * 0.03;
   const bodySize = headingSize * 0.5;
 
   const sectionTravel = viewport.height * 1.16;
-  const baseY = -sectionTravel + sectionTravel * detailsProgress;
+  const handoffLift = viewport.height * 0.16 * handoffProgress;
+  const baseY = -sectionTravel + sectionTravel * detailsProgress + handoffLift;
 
-  const sectionTop = viewport.height / 2 - marginY * 0.5;
-  const sectionSpacing = viewport.height * 0.31;
+  const sectionTop = viewport.height / 2 - marginY * 0.35;
+  const sectionSpacing = viewport.height * 0.25;
 
   const leftTitleX = leftX;
   const rightTitleX = rightX - viewport.width * 0.2;
