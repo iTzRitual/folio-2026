@@ -12,6 +12,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
+import { useScrollTimeline } from "@/context/ScrollTimelineContext";
 
 export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
@@ -25,6 +26,7 @@ export default function Model() {
     responsiveScale: baseResponsiveScale,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
+  const { isDetailsActive, getSegmentProgress, sections } = useScrollTimeline();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
@@ -73,7 +75,17 @@ export default function Model() {
     z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
 
+  const heroExit = getSegmentProgress(
+    sections.heroHoldEnd,
+    sections.detailsEnterEnd,
+  );
+
   useFrame((state, delta) => {
+    if (isDetailsActive && isDragging.current) {
+      isDragging.current = false;
+      document.body.style.cursor = "auto";
+    }
+
     const dt = Math.min(delta, 0.1);
 
     const currentViewport = state.viewport.getCurrentViewport(
@@ -149,6 +161,10 @@ export default function Model() {
       interactiveGroupRef.current.position.copy(pos.current);
     }
 
+    if (animGroupRef.current) {
+      animGroupRef.current.position.y = 0.1 + heroExit * currentViewport.height;
+    }
+
     if (mesh.current) {
       const t = state.clock.getElapsedTime();
       mesh.current.rotation.z += dt * 1.2;
@@ -163,9 +179,11 @@ export default function Model() {
         <mesh
           position={[0, 0, 0]}
           onPointerEnter={() => {
+            if (isDetailsActive) return;
             isHoveringCenter.current = true;
           }}
           onPointerLeave={() => {
+            if (isDetailsActive) return;
             isHoveringCenter.current = false;
           }}
         >
@@ -177,20 +195,24 @@ export default function Model() {
           <mesh
             position={[0, 0, 0.01]}
             onPointerEnter={() => {
+              if (isDetailsActive) return;
               isHoveringModel.current = true;
               document.body.style.cursor = "grab";
             }}
             onPointerLeave={() => {
+              if (isDetailsActive) return;
               isHoveringModel.current = false;
               if (!isDragging.current) document.body.style.cursor = "auto";
             }}
             onPointerDown={(e) => {
+              if (isDetailsActive) return;
               isDragging.current = true;
               document.body.style.cursor = "grabbing";
               (e.target as Element).setPointerCapture(e.pointerId);
               e.stopPropagation();
             }}
             onPointerUp={(e) => {
+              if (isDetailsActive) return;
               isDragging.current = false;
               document.body.style.cursor = isHoveringModel.current
                 ? "grab"

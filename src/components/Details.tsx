@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { calculateHeroSafeZone } from "@/lib/heroSafeZone";
+import { Text } from "@react-three/drei";
+import { useMemo, useRef, useState } from "react";
+import { useHeroLayout } from "@/context/HeroLayoutContext";
+import { useScrollTimeline } from "@/context/ScrollTimelineContext";
+import { Mesh } from "three";
 
 const experience = [
   {
@@ -68,71 +71,202 @@ const skills = [
 ];
 
 export function Details() {
-  const [marginX, setMarginX] = useState(60);
+  const { viewport, marginX, marginY, leftX, rightX } = useHeroLayout();
+  const { getSegmentProgress, sections } = useScrollTimeline();
 
-  useEffect(() => {
-    const handleResize = () => {
-      const safeZone = calculateHeroSafeZone({
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      });
+  const experienceTitleRef = useRef(null);
+  const projectsTitleRef = useRef(null);
+  const educationTitleRef = useRef(null);
 
-      setMarginX(safeZone.marginX);
+  const [titleWidths, setTitleWidths] = useState({
+    experience: 0,
+    projects: 0,
+    education: 0,
+  });
+
+  const handleTitleSync = (titleKey: string) => (mesh: Mesh) => {
+    if (mesh?.geometry) {
+      mesh.geometry.computeBoundingBox();
+
+      if (mesh.geometry.boundingBox) {
+        const { max, min } = mesh.geometry.boundingBox;
+        const width = max.x - min.x;
+
+        setTitleWidths((prev) => ({ ...prev, [titleKey]: width }));
+      }
+    }
+  };
+
+  const detailsProgress = getSegmentProgress(
+    sections.heroHoldEnd,
+    sections.detailsEnterEnd,
+  );
+
+  const headingSize = (viewport.width - marginX * 2) * 0.03;
+  const bodySize = headingSize * 0.5;
+
+  const sectionTravel = viewport.height * 1.16;
+  const baseY = -sectionTravel + sectionTravel * detailsProgress;
+
+  const sectionTop = viewport.height / 2 - marginY * 0.5;
+  const sectionSpacing = viewport.height * 0.31;
+
+  const leftTitleX = leftX;
+  const rightTitleX = rightX - viewport.width * 0.2;
+  const rightBodyX = rightX;
+
+  const textWidthLeft = viewport.width * 0.37;
+  const textWidthRight = viewport.width * 0.18;
+
+  const gap = viewport.width * 0.08;
+
+  const bodyPositions = useMemo(() => {
+    return {
+      experience: leftTitleX + titleWidths.experience + gap,
+      projects: leftTitleX + titleWidths.projects + gap,
+      education: leftTitleX + titleWidths.education + gap,
     };
+  }, [leftTitleX, titleWidths, gap]);
 
-    handleResize();
+  const experienceText = useMemo(
+    () =>
+      experience
+        .map((exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`)
+        .join("\n"),
+    [],
+  );
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const projectsText = useMemo(
+    () => projects.map((project) => `${project.name}`).join("\n"),
+    [],
+  );
+
+  const educationText = useMemo(
+    () =>
+      education
+        .map((edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`)
+        .join("\n"),
+    [],
+  );
+
+  const skillsText = useMemo(() => skills.join("\n"), []);
 
   return (
-    <section
-      className="font-aeonik bg-[#1D1D1D] text-white pb-40 flex justify-between text-large"
-      style={{ paddingLeft: marginX, paddingRight: marginX }}
-    >
-      <div className="flex flex-col gap-20">
-        <div className="flex gap-20 ">
-          <h3 className="text-5xl">Experience</h3>
-          <ul className="mt-6">
-            {experience.map((exp, index) => (
-              <li key={index}>
-                <span className="font-bold">{exp.duration}</span> /{" "}
-                {exp.position} @ <span className="italic">{exp.company}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="flex gap-20 ">
-          <h3 className="text-5xl">Featured Projects</h3>
-          <ul className="mt-6">
-            {projects.map((project, index) => (
-              <li key={index}>
-                <span className="font-bold">{project.name}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="flex gap-20 ">
-          <h3 className="text-5xl">Education</h3>
-          <ul className="mt-6">
-            {education.map((edu, index) => (
-              <li key={index}>
-                {edu.field} ({edu.degree}) @{" "}
-                <span className="italic">{edu.institution}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="flex gap-20">
-        <h3 className="text-5xl">Skills</h3>
-        <ul className="mt-6">
-          {skills.map((skill, index) => (
-            <li key={index}>{skill}</li>
-          ))}
-        </ul>
-      </div>
-    </section>
+    <group position={[0, baseY, -0.05]}>
+      <Text
+        ref={experienceTitleRef}
+        position={[leftTitleX, sectionTop, 0]}
+        anchorX="left"
+        anchorY="top"
+        fontSize={headingSize}
+        lineHeight={1}
+        font="fonts/Aeonik-Light.otf"
+        color="#FFFFFF"
+        onSync={handleTitleSync("experience")}
+      >
+        Experience
+      </Text>
+      <Text
+        position={[
+          bodyPositions.experience,
+          sectionTop - headingSize * 0.38,
+          0,
+        ]}
+        anchorX="left"
+        anchorY="top"
+        maxWidth={textWidthLeft}
+        fontSize={bodySize}
+        lineHeight={1.5}
+        font="fonts/Aeonik-Light.otf"
+        color="#D6D6D6"
+      >
+        {experienceText}
+      </Text>
+
+      <Text
+        ref={projectsTitleRef}
+        position={[leftTitleX, sectionTop - sectionSpacing, 0]}
+        anchorX="left"
+        anchorY="top"
+        fontSize={headingSize}
+        lineHeight={1}
+        font="fonts/Aeonik-Light.otf"
+        color="#FFFFFF"
+        onSync={handleTitleSync("projects")}
+      >
+        Featured Projects
+      </Text>
+      <Text
+        position={[
+          bodyPositions.projects,
+          sectionTop - sectionSpacing - headingSize * 0.38,
+          0,
+        ]}
+        anchorX="left"
+        anchorY="top"
+        maxWidth={textWidthLeft}
+        fontSize={bodySize}
+        lineHeight={1.5}
+        font="fonts/Aeonik-Light.otf"
+        color="#D6D6D6"
+      >
+        {projectsText}
+      </Text>
+
+      <Text
+        ref={educationTitleRef}
+        position={[leftTitleX, sectionTop - sectionSpacing * 2, 0]}
+        anchorX="left"
+        anchorY="top"
+        fontSize={headingSize}
+        lineHeight={1}
+        font="fonts/Aeonik-Light.otf"
+        color="#FFFFFF"
+        onSync={handleTitleSync("education")}
+      >
+        Education
+      </Text>
+      <Text
+        position={[
+          bodyPositions.education,
+          sectionTop - sectionSpacing * 2 - headingSize * 0.38,
+          0,
+        ]}
+        anchorX="left"
+        anchorY="top"
+        maxWidth={viewport.width * 0.75}
+        fontSize={bodySize}
+        lineHeight={1.5}
+        font="fonts/Aeonik-Light.otf"
+        color="#D6D6D6"
+      >
+        {educationText}
+      </Text>
+
+      <Text
+        position={[rightTitleX, sectionTop, 0]}
+        anchorX="left"
+        anchorY="top"
+        fontSize={headingSize}
+        lineHeight={1}
+        font="fonts/Aeonik-Light.otf"
+        color="#FFFFFF"
+      >
+        Skills
+      </Text>
+      <Text
+        position={[rightBodyX, sectionTop - headingSize * 0.38, 0]}
+        anchorX="right"
+        anchorY="top"
+        maxWidth={textWidthRight}
+        textAlign="left"
+        fontSize={bodySize}
+        lineHeight={1.5}
+        font="fonts/Aeonik-Light.otf"
+        color="#D6D6D6"
+      >
+        {skillsText}
+      </Text>
+    </group>
   );
 }

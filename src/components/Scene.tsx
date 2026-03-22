@@ -7,7 +7,7 @@ import { HeroText } from "./HeroText";
 import { HeroLayoutProvider } from "./HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment } from "@react-three/drei";
-import { GridOverlay } from "./HeroScene/GridOverlay";
+import { Details } from "./Details";
 
 function SceneContent({ startAnimation }: { startAnimation: boolean }) {
   return (
@@ -18,6 +18,7 @@ function SceneContent({ startAnimation }: { startAnimation: boolean }) {
       {/* <Background /> */}
       <Model />
       <HeroText />
+      <Details />
       <EffectComposer>
         <CustomAberration />
       </EffectComposer>

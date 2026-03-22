@@ -3,6 +3,7 @@ import { Subtitle } from "./HeroScene/Subtitle";
 import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
+import { useScrollTimeline } from "@/context/ScrollTimelineContext";
 
 export function HeroText() {
   const {
@@ -17,6 +18,15 @@ export function HeroText() {
     row3BottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
+  const { getSegmentProgress, sections } = useScrollTimeline();
+
+  const heroExit = getSegmentProgress(
+    sections.heroHoldEnd,
+    sections.detailsEnterEnd,
+  );
+
+  const heroYOffset = heroExit * viewport.height * 1.05;
+  const heroOpacity = 1 - heroExit;
 
   const titleAvailableWidth = viewport.width - 2 * marginX;
   const titleFontSize = titleAvailableWidth * 0.125;
@@ -38,7 +48,7 @@ export function HeroText() {
   const professionLineWidth = viewport.width * 0.9;
 
   return (
-    <>
+    <group position={[0, heroYOffset, 0]} visible={heroOpacity > 0.02}>
       <Title
         startTrigger={startTrigger}
         viewportWidth={viewport.width}
@@ -89,6 +99,6 @@ export function HeroText() {
       >
         Creative Technologist
       </ProfessionLabel>
-    </>
+    </group>
   );
 }
