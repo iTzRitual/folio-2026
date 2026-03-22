@@ -14,12 +14,12 @@ const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
 });
 
-const TIMELINE_VIEWPORTS = 2;
+const TIMELINE_VIEWPORTS = 1.5;
 
 const SCROLL_SECTIONS = {
-  heroHoldEnd: 0.16,
+  heroHoldEnd: 0,
   heroExitEnd: 0.42,
-  detailsEnterEnd: 0.76,
+  detailsEnterEnd: 1,
 };
 
 function clamp01(value: number): number {

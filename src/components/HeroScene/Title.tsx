@@ -1,6 +1,6 @@
 import { Text, Html } from "@react-three/drei";
 import { Copy } from "../Copy";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -13,6 +13,7 @@ interface TitleProps {
   y: number;
   calculatedFontSize: number;
   pixelFontSize: number;
+  scrollHintOpacity: number;
 }
 
 export function Title({
@@ -23,6 +24,7 @@ export function Title({
   y,
   calculatedFontSize,
   pixelFontSize,
+  scrollHintOpacity,
 }: TitleProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textGroupRef = useRef<THREE.Group>(null);
@@ -34,6 +36,7 @@ export function Title({
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const [textWidth3D, setTextWidth3D] = useState(0);
+  const [isScrollHintReady, setIsScrollHintReady] = useState(false);
 
   const targetScale = 0.75;
 
@@ -101,10 +104,24 @@ export function Title({
         opacity: 1,
         duration: fadeDuration,
         ease: "power2.out",
+        onComplete: () => {
+          setIsScrollHintReady(true);
+        },
       },
       fadePosition,
     );
   }, [startTrigger, textWidth3D, viewportWidth, marginX]);
+
+  useEffect(() => {
+    if (!scrollTextRef.current || !isScrollHintReady) return;
+
+    gsap.to(scrollTextRef.current, {
+      opacity: scrollHintOpacity,
+      duration: 0.2,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, [scrollHintOpacity, isScrollHintReady]);
 
   return (
     <group position={[0, y, 0]} ref={groupRef}>
