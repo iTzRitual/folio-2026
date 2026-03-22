@@ -1,24 +1,27 @@
 "use client";
 
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
-import { GridOverlay } from "./HeroScene/GridOverlay";
+import { HeroText } from "./HeroText";
+import { HeroLayoutProvider } from "./HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
-import { Environment, useTexture } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
+import { GridOverlay } from "./HeroScene/GridOverlay";
 
-function Background() {
-  const { viewport } = useThree();
-  const texture = useTexture("/gemini_bg.png");
-
+function SceneContent({ startAnimation }: { startAnimation: boolean }) {
   return (
-    <mesh
-      scale={[viewport.width * 3, viewport.height * 3, 1]}
-      position={[0, 0, -3]}
-    >
-      <planeGeometry />
-      <meshBasicMaterial map={texture} depthTest={false} />
-    </mesh>
+    <HeroLayoutProvider startAnimation={startAnimation}>
+      <color attach="background" args={["#1D1D1D"]} />
+      <directionalLight intensity={3} position={[0, 3, 2]} />
+      <Environment preset="city" />
+      {/* <Background /> */}
+      <Model />
+      <HeroText />
+      <EffectComposer>
+        <CustomAberration />
+      </EffectComposer>
+    </HeroLayoutProvider>
   );
 }
 
@@ -26,14 +29,7 @@ export default function Scene({ startAnimation }: { startAnimation: boolean }) {
   return (
     <>
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
-        <color attach="background" args={["#1D1D1D"]} />
-        <directionalLight intensity={3} position={[0, 3, 2]} />
-        <Environment preset="city" />
-        {/* <Background /> */}
-        <Model startAnimation={startAnimation} />
-        <EffectComposer>
-          <CustomAberration />
-        </EffectComposer>
+        <SceneContent startAnimation={startAnimation} />
       </Canvas>
       {/* <GridOverlay /> */}
     </>

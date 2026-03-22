@@ -1,18 +1,29 @@
 import { Text, Html } from "@react-three/drei";
-import { useThree } from "@react-three/fiber";
 import { Copy } from "../Copy";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
+interface TitleProps {
+  children: React.ReactNode;
+  startTrigger: boolean;
+  viewportWidth: number;
+  marginX: number;
+  y: number;
+  calculatedFontSize: number;
+  pixelFontSize: number;
+}
+
 export function Title({
   children,
   startTrigger,
-}: {
-  children: React.ReactNode;
-  startTrigger: boolean;
-}) {
+  viewportWidth,
+  marginX,
+  y,
+  calculatedFontSize,
+  pixelFontSize,
+}: TitleProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textGroupRef = useRef<THREE.Group>(null);
   const htmlDivRef = useRef<HTMLDivElement>(null);
@@ -21,21 +32,8 @@ export function Title({
   const isFirstRun = useRef(true);
 
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const { size, viewport } = useThree();
 
   const [textWidth3D, setTextWidth3D] = useState(0);
-
-  const pxTo3DWidth = viewport.width / size.width;
-  const pxTo3DHeight = viewport.height / size.height;
-
-  const marginX = 60 * pxTo3DWidth;
-  const marginY = 240 * pxTo3DHeight;
-
-  const y = -viewport.height / 2 + marginY;
-
-  const availableWidth = viewport.width - 2 * marginX;
-  const calculatedFontSize = availableWidth * 0.125;
-  const pixelFontSize = calculatedFontSize / pxTo3DWidth;
 
   const targetScale = 0.75;
 
@@ -63,7 +61,7 @@ export function Title({
     });
 
     const targetX =
-      -viewport.width / 2 + marginX + (textWidth3D * targetScale) / 2;
+      -viewportWidth / 2 + marginX + (textWidth3D * targetScale) / 2;
 
     tl.to(
       textGroupRef.current.position,
@@ -106,7 +104,7 @@ export function Title({
       },
       fadePosition,
     );
-  }, [startTrigger, textWidth3D, viewport.width, marginX]);
+  }, [startTrigger, textWidth3D, viewportWidth, marginX]);
 
   return (
     <group position={[0, y, 0]} ref={groupRef}>
@@ -160,7 +158,7 @@ export function Title({
 
       <group
         position={[
-          viewport.width / 2 - marginX,
+          viewportWidth / 2 - marginX,
           -(calculatedFontSize * targetScale) / 2,
           0,
         ]}

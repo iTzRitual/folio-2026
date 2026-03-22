@@ -4,41 +4,27 @@ import {
   MeshTransmissionMaterial,
   Center,
 } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
-import { Title } from "./HeroScene/Title";
-import { Subtitle } from "./HeroScene/Subtitle";
-import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
-
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
+import { useHeroLayout } from "@/context/HeroLayoutContext";
+import { useAnimationContext } from "@/context/AnimationContext";
 
-interface ModelProps {
-  startAnimation: boolean;
-}
-
-export default function Model({ startAnimation }: ModelProps) {
+export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
-  const { size, viewport } = useThree();
 
-  const pxTo3DWidth = viewport.width / size.width;
-  const pxTo3DHeight = viewport.height / size.height;
-  const marginX = 60 * pxTo3DWidth;
-  const marginY = 210 * pxTo3DHeight;
-
-  const leftX = -viewport.width / 2 + marginX;
-  const rightX = viewport.width / 2 - marginX;
-
-  const middleSpaceHeight = viewport.height - 2 * marginY;
-  const frHeight = middleSpaceHeight / 3;
-
-  const row3TopY = viewport.height / 2 - marginY - frHeight;
-  const row3BottomY = -viewport.height / 2 + marginY + frHeight;
+  const {
+    grabAreaRadius: baseGrabAreaRadius,
+    stickyAreaRadius: baseStickyAreaRadius,
+    responsiveScale: baseResponsiveScale,
+  } = useHeroLayout();
+  const { startTrigger } = useAnimationContext();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
@@ -52,7 +38,7 @@ export default function Model({ startAnimation }: ModelProps) {
   useGSAP(() => {
     if (!animGroupRef.current) return;
 
-    if (!startAnimation) {
+    if (!startTrigger) {
       animGroupRef.current.scale.set(0, 0, 0);
       return;
     }
@@ -65,7 +51,7 @@ export default function Model({ startAnimation }: ModelProps) {
       ease: "elastic.out(1, 0.5)",
       delay: 1,
     });
-  }, [startAnimation]);
+  }, [startTrigger]);
 
   const materialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
@@ -77,17 +63,15 @@ export default function Model({ startAnimation }: ModelProps) {
     scale: { value: 0.8, min: 0, max: 3, step: 0.05 },
   });
 
+  const responsiveScale = baseResponsiveScale * materialProps.scale;
+  const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
+  const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
+
   const skullRotation = useControls("Skull Rotation", {
     x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
     y: { value: -3.13, min: -Math.PI, max: Math.PI, step: 0.05 },
     z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
-
-  const viewportMinDimension = Math.min(viewport.width, viewport.height);
-  const responsiveScale = (viewportMinDimension / 8) * materialProps.scale;
-
-  const grabAreaRadius = responsiveScale * 1.3;
-  const stickyAreaRadius = responsiveScale * 1.75;
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
@@ -227,31 +211,6 @@ export default function Model({ startAnimation }: ModelProps) {
           </group>
         </group>
       </group>
-
-      <Title startTrigger={startAnimation}>Natan Mokrzycki</Title>
-      <Subtitle startTrigger={startAnimation}>
-        Bridging the gap between technical performance and high-end visual
-        aesthetics.
-      </Subtitle>
-      <ProfessionLabel
-        position={[leftX, row3TopY, 0]}
-        align="left"
-        verticalPos="below"
-        direction="leftToRight"
-        startTrigger={startAnimation}
-      >
-        Software Engineer
-      </ProfessionLabel>
-
-      <ProfessionLabel
-        position={[rightX, row3BottomY, 0]}
-        align="right"
-        verticalPos="above"
-        direction="rightToLeft"
-        startTrigger={startAnimation}
-      >
-        Creative Technologist
-      </ProfessionLabel>
     </group>
   );
 }
