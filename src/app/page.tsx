@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { ReactLenis } from "lenis/react";
 import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
+import { Details } from "@/components/Details";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
@@ -28,6 +29,7 @@ export default function Home() {
         )}
         <DynamicScene startAnimation={startScene} />
       </main>
+      <Details />
     </>
   );
 }

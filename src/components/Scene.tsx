@@ -31,7 +31,7 @@ export default function Scene({ startAnimation }: { startAnimation: boolean }) {
       <Canvas className="bg-[#1D1D1D]" key="main-canvas">
         <SceneContent startAnimation={startAnimation} />
       </Canvas>
-      <GridOverlay />
+      {/* <GridOverlay /> */}
     </>
   );
 }
