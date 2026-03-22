@@ -18,10 +18,12 @@ export function HeroText() {
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
 
-  const titleY = -viewport.height / 2 + 240 * pxTo3DHeight;
   const titleAvailableWidth = viewport.width - 2 * marginX;
   const titleFontSize = titleAvailableWidth * 0.125;
   const titlePixelFontSize = titleFontSize / pxTo3DWidth;
+  const fontVisualOffset = titleFontSize * 0.1;
+
+  const titleY = -viewport.height / 2 + marginY + fontVisualOffset;
 
   const subtitleY = viewport.height / 2 - marginY;
   const subtitleAvailableWidth = viewport.width - 2 * marginX;

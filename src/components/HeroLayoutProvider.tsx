@@ -23,7 +23,19 @@ export function HeroLayoutProvider({
   const layoutValue: HeroLayoutContextType = useMemo(() => {
     const pxTo3DWidth = viewport.width / size.width;
     const pxTo3DHeight = viewport.height / size.height;
-    const marginX = 60 * pxTo3DWidth;
+
+    const TARGET_ASPECT_RATIO = 16 / 9;
+    const currentAspectRatio = viewport.width / viewport.height;
+
+    let extraMarginX = 0;
+
+    if (currentAspectRatio > TARGET_ASPECT_RATIO) {
+      const safeWidth = viewport.height * TARGET_ASPECT_RATIO;
+      extraMarginX = (viewport.width - safeWidth) / 2;
+    }
+
+    const marginX = 60 * pxTo3DWidth + extraMarginX;
+
     const marginY = 210 * pxTo3DHeight;
 
     const leftX = -viewport.width / 2 + marginX;
@@ -35,8 +47,10 @@ export function HeroLayoutProvider({
     const row3TopY = viewport.height / 2 - marginY - frHeight;
     const row3BottomY = -viewport.height / 2 + marginY + frHeight;
 
-    const viewportMinDimension = Math.min(viewport.width, viewport.height);
-
+    const viewportMinDimension = Math.min(
+      viewport.width - extraMarginX * 2,
+      viewport.height,
+    );
     const responsiveScale = viewportMinDimension / 8;
 
     const grabAreaRadius = responsiveScale * 1.3;
