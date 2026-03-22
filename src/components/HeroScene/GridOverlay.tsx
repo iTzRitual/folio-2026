@@ -1,25 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { calculateHeroSafeZone } from "@/lib/heroSafeZone";
 
 export function GridOverlay() {
-  const [margins, setMargins] = useState({ x: 60, y: 210 });
+  const [margins, setMargins] = useState<{ x: number; y: number }>({
+    x: 60,
+    y: 230,
+  });
 
   useEffect(() => {
     const handleResize = () => {
-      const TARGET_ASPECT_RATIO = 16 / 9;
-      const currentAspectRatio = window.innerWidth / window.innerHeight;
-
-      let extraMarginX = 0;
-
-      if (currentAspectRatio > TARGET_ASPECT_RATIO) {
-        const safeWidth = window.innerHeight * TARGET_ASPECT_RATIO;
-        extraMarginX = (window.innerWidth - safeWidth) / 2;
-      }
+      const safeZone = calculateHeroSafeZone({
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
 
       setMargins({
-        x: 60 + extraMarginX,
-        y: 210,
+        x: safeZone.marginX,
+        y: safeZone.marginY,
       });
     };
 

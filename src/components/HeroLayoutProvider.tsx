@@ -8,6 +8,7 @@ import {
   AnimationContextProvider,
   AnimationContextType,
 } from "@/context/AnimationContext";
+import { calculateHeroSafeZone } from "@/lib/heroSafeZone";
 
 interface HeroLayoutProviderProps {
   children: ReactNode;
@@ -24,19 +25,18 @@ export function HeroLayoutProvider({
     const pxTo3DWidth = viewport.width / size.width;
     const pxTo3DHeight = viewport.height / size.height;
 
-    const TARGET_ASPECT_RATIO = 16 / 9;
-    const currentAspectRatio = viewport.width / viewport.height;
+    const {
+      marginX: marginXPx,
+      marginY: marginYPx,
+      extraMarginX: extraMarginXPx,
+    } = calculateHeroSafeZone({
+      viewportWidth: size.width,
+      viewportHeight: size.height,
+    });
 
-    let extraMarginX = 0;
-
-    if (currentAspectRatio > TARGET_ASPECT_RATIO) {
-      const safeWidth = viewport.height * TARGET_ASPECT_RATIO;
-      extraMarginX = (viewport.width - safeWidth) / 2;
-    }
-
-    const marginX = 60 * pxTo3DWidth + extraMarginX;
-
-    const marginY = 210 * pxTo3DHeight;
+    const marginX = marginXPx * pxTo3DWidth;
+    const marginY = marginYPx * pxTo3DHeight;
+    const extraMarginX = extraMarginXPx * pxTo3DWidth;
 
     const leftX = -viewport.width / 2 + marginX;
     const rightX = viewport.width / 2 - marginX;
