@@ -1,9 +1,16 @@
 import { Title } from "./HeroScene/Title";
 import { Subtitle } from "./HeroScene/Subtitle";
 import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Group } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
-import { useScrollTimeline } from "@/context/ScrollTimelineContext";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function HeroText() {
   const {
@@ -18,18 +25,52 @@ export function HeroText() {
     row3BottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progress, getSegmentProgress, sections } = useScrollTimeline();
+  const progressRef = useRef(0);
+  const titleGroupRef = useRef<Group>(null);
+  const subtitleGroupRef = useRef<Group>(null);
+  const heroGroupRef = useRef<Group>(null);
 
-  const heroExit = getSegmentProgress(
-    sections.heroHoldEnd,
-    sections.detailsEnterEnd,
-  );
+  useGSAP(() => {
+    const scrollState = { progress: 0 };
 
-  const heroYOffset = heroExit * viewport.height * 1.05;
-  const titleYOffset = heroExit * viewport.height * 0.7;
-  const subtitleProgress = 1 - Math.pow(1 - heroExit, 1.05);
-  const subtitleYOffset = subtitleProgress * viewport.height * 0.22;
-  const heroOpacity = 1 - heroExit;
+    const tween = gsap.to(scrollState, {
+      progress: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: document.body,
+        start: "top top",
+        end: "+=50%",
+        scrub: true,
+      },
+      onUpdate: () => {
+        progressRef.current = Math.min(Math.max(scrollState.progress, 0), 1);
+      },
+    });
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    };
+  }, []);
+
+  useFrame(() => {
+    const heroExit = progressRef.current;
+    const titleYOffset = heroExit * viewport.height * 0.7;
+    const subtitleProgress = 1 - Math.pow(1 - heroExit, 1.05);
+    const subtitleYOffset = subtitleProgress * viewport.height * 0.22;
+    const heroYOffset = heroExit * viewport.height * 1.05;
+
+    if (titleGroupRef.current) {
+      titleGroupRef.current.position.y = titleYOffset;
+    }
+    if (subtitleGroupRef.current) {
+      subtitleGroupRef.current.position.y = subtitleYOffset;
+    }
+    if (heroGroupRef.current) {
+      heroGroupRef.current.position.y = heroYOffset;
+      heroGroupRef.current.visible = heroExit < 0.98;
+    }
+  });
 
   const titleAvailableWidth = viewport.width - 2 * marginX;
   const titleFontSize = titleAvailableWidth * 0.125;
@@ -49,11 +90,11 @@ export function HeroText() {
   const professionPaddingY = 8 * pxTo3DHeight;
   const professionLineThickness = 1 * pxTo3DHeight;
   const professionLineWidth = viewport.width * 0.9;
-  const scrollHintOpacity = Math.max(0, 1 - progress / 0.08);
+  const scrollHintOpacity = 1;
 
   return (
     <>
-      <group position={[0, titleYOffset, 0]}>
+      <group position={[0, 0, 0]} ref={titleGroupRef}>
         <Title
           startTrigger={startTrigger}
           viewportWidth={viewport.width}
@@ -66,7 +107,7 @@ export function HeroText() {
           Natan Mokrzycki
         </Title>
       </group>
-      <group position={[0, subtitleYOffset, 0]}>
+      <group position={[0, 0, 0]} ref={subtitleGroupRef}>
         <Subtitle
           startTrigger={startTrigger}
           y={subtitleY}
@@ -77,7 +118,7 @@ export function HeroText() {
           aesthetics.
         </Subtitle>
       </group>
-      <group position={[0, heroYOffset, 0]} visible={heroOpacity > 0.02}>
+      <group position={[0, 0, 0]} ref={heroGroupRef}>
         <ProfessionLabel
           position={[leftX, row3TopY, 0]}
           align="left"

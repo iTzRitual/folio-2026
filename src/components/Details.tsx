@@ -1,10 +1,15 @@
 "use client";
 
 import { Text } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
-import { useScrollTimeline } from "@/context/ScrollTimelineContext";
-import { Mesh } from "three";
+import { Group, Mesh } from "three";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const experience = [
   {
@@ -72,7 +77,31 @@ const skills = [
 
 export function Details() {
   const { viewport, marginX, marginY, leftX, rightX } = useHeroLayout();
-  const { getSegmentProgress, sections } = useScrollTimeline();
+  const progressRef = useRef(0);
+  const rootGroupRef = useRef<Group>(null);
+
+  useGSAP(() => {
+    const scrollState = { progress: 0 };
+
+    const tween = gsap.to(scrollState, {
+      progress: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: document.body,
+        start: "top top",
+        end: "+=50%",
+        scrub: true,
+      },
+      onUpdate: () => {
+        progressRef.current = Math.min(Math.max(scrollState.progress, 0), 1);
+      },
+    });
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    };
+  }, []);
 
   const experienceTitleRef = useRef(null);
   const projectsTitleRef = useRef(null);
@@ -97,18 +126,21 @@ export function Details() {
     }
   };
 
-  const detailsProgress = getSegmentProgress(
-    sections.heroHoldEnd,
-    sections.detailsEnterEnd,
-  );
-
   const headingSize = (viewport.width - marginX * 2) * 0.03;
   const bodySize = headingSize * 0.5;
 
   const sectionTravel = viewport.height * 1.16;
   const targetBaseY = -viewport.height * 0.25;
-  const baseY =
-    -sectionTravel + (sectionTravel + targetBaseY) * detailsProgress;
+
+  useFrame(() => {
+    const detailsProgress = progressRef.current;
+    const baseY =
+      -sectionTravel + (sectionTravel + targetBaseY) * detailsProgress;
+
+    if (rootGroupRef.current) {
+      rootGroupRef.current.position.y = baseY;
+    }
+  });
 
   const sectionTop = viewport.height / 2 - marginY * 0.35;
   const sectionSpacing = viewport.height * 0.25;
@@ -154,7 +186,7 @@ export function Details() {
   const skillsText = useMemo(() => skills.join("\n"), []);
 
   return (
-    <group position={[0, baseY, -0.05]}>
+    <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
       <Text
         ref={experienceTitleRef}
         position={[leftTitleX, sectionTop, 0]}

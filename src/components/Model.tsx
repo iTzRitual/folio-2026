@@ -3,16 +3,19 @@ import {
   useGLTF,
   MeshTransmissionMaterial,
   Center,
+  useCursor,
 } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { useRef, useState } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
-import { useScrollTimeline } from "@/context/ScrollTimelineContext";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
@@ -26,16 +29,22 @@ export default function Model() {
     responsiveScale: baseResponsiveScale,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { isDetailsActive, getSegmentProgress, sections } = useScrollTimeline();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
   const isDragging = useRef(false);
+  const isDetailsActiveRef = useRef(false);
 
   const isHoveringCenter = useRef(false);
   const isHoveringModel = useRef(false);
 
+  const [isHovered, setIsHovered] = useState(false);
+  const [isDragged, setIsDragged] = useState(false);
+
   const lastInteractionTime = useRef(0);
+  const { viewport } = useThree();
+
+  useCursor(isHovered, isDragged ? "grabbing" : "grab", "auto");
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -54,6 +63,29 @@ export default function Model() {
       delay: 1,
     });
   }, [startTrigger]);
+
+  useGSAP(() => {
+    if (!animGroupRef.current) return;
+
+    const tween = gsap.to(animGroupRef.current.position, {
+      y: 0.1 + viewport.height,
+      ease: "none",
+      scrollTrigger: {
+        trigger: document.body,
+        start: "top top",
+        end: "+=50%",
+        scrub: true,
+        onUpdate: (self) => {
+          isDetailsActiveRef.current = self.progress >= 0.42;
+        },
+      },
+    });
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    };
+  }, [viewport.height]);
 
   const materialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
@@ -75,18 +107,14 @@ export default function Model() {
     z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
 
-  const heroExit = getSegmentProgress(
-    sections.heroHoldEnd,
-    sections.detailsEnterEnd,
-  );
-
   useFrame((state, delta) => {
-    if (isDetailsActive && isDragging.current) {
+    if (isDetailsActiveRef.current && isDragging.current) {
       isDragging.current = false;
-      document.body.style.cursor = "auto";
+      setIsDragged(false);
     }
 
-    const dt = Math.min(delta, 0.1);
+    const dt = Math.min(delta, 1 / 30);
+    const outerGroupY = animGroupRef.current?.position.y ?? 0.1;
 
     const currentViewport = state.viewport.getCurrentViewport(
       state.camera,
@@ -94,7 +122,8 @@ export default function Model() {
     );
 
     const cursorX = (state.pointer.x * currentViewport.width) / 2;
-    const cursorY = (state.pointer.y * currentViewport.height) / 2 - 0.1;
+    const cursorY =
+      (state.pointer.y * currentViewport.height) / 2 - outerGroupY;
 
     if (isDragging.current) {
       lastInteractionTime.current = state.clock.getElapsedTime();
@@ -111,8 +140,10 @@ export default function Model() {
 
       const collisionRadius = responsiveScale * 1.2;
       const limitX = currentViewport.width / 2 - collisionRadius;
-      const limitTop = currentViewport.height / 2 - 0.1 - collisionRadius;
-      const limitBottom = -currentViewport.height / 2 - 0.1 + collisionRadius;
+      const limitTop =
+        currentViewport.height / 2 - outerGroupY - collisionRadius;
+      const limitBottom =
+        -currentViewport.height / 2 - outerGroupY + collisionRadius;
       const bounceForce = -0.85;
 
       if (pos.current.x > limitX) {
@@ -161,10 +192,6 @@ export default function Model() {
       interactiveGroupRef.current.position.copy(pos.current);
     }
 
-    if (animGroupRef.current) {
-      animGroupRef.current.position.y = 0.1 + heroExit * currentViewport.height;
-    }
-
     if (mesh.current) {
       const t = state.clock.getElapsedTime();
       mesh.current.rotation.z += dt * 1.2;
@@ -179,11 +206,11 @@ export default function Model() {
         <mesh
           position={[0, 0, 0]}
           onPointerEnter={() => {
-            if (isDetailsActive) return;
+            if (isDetailsActiveRef.current) return;
             isHoveringCenter.current = true;
           }}
           onPointerLeave={() => {
-            if (isDetailsActive) return;
+            if (isDetailsActiveRef.current) return;
             isHoveringCenter.current = false;
           }}
         >
@@ -195,28 +222,26 @@ export default function Model() {
           <mesh
             position={[0, 0, 0.01]}
             onPointerEnter={() => {
-              if (isDetailsActive) return;
+              if (isDetailsActiveRef.current) return;
               isHoveringModel.current = true;
-              document.body.style.cursor = "grab";
+              setIsHovered(true);
             }}
             onPointerLeave={() => {
-              if (isDetailsActive) return;
+              if (isDetailsActiveRef.current) return;
               isHoveringModel.current = false;
-              if (!isDragging.current) document.body.style.cursor = "auto";
+              setIsHovered(false);
             }}
             onPointerDown={(e) => {
-              if (isDetailsActive) return;
+              if (isDetailsActiveRef.current) return;
               isDragging.current = true;
-              document.body.style.cursor = "grabbing";
+              setIsDragged(true);
               (e.target as Element).setPointerCapture(e.pointerId);
               e.stopPropagation();
             }}
             onPointerUp={(e) => {
-              if (isDetailsActive) return;
+              if (isDetailsActiveRef.current) return;
               isDragging.current = false;
-              document.body.style.cursor = isHoveringModel.current
-                ? "grab"
-                : "auto";
+              setIsDragged(false);
               (e.target as Element).releasePointerCapture(e.pointerId);
             }}
           >
