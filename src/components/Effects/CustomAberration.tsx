@@ -22,7 +22,6 @@ export const CustomAberration = forwardRef((props, ref) => {
       const y = 1.0 - e.clientY / window.innerHeight;
 
       targetMouse.current.set(x, y);
-
       intensity.current = 1.0;
     };
 
@@ -33,15 +32,18 @@ export const CustomAberration = forwardRef((props, ref) => {
     };
   }, []);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     prevMouse.current.copy(currentMouse.current);
-    currentMouse.current.lerp(targetMouse.current, 0.15);
 
-    intensity.current = Math.max(0.0, intensity.current - 0.05);
+    const lerpFactor = 1 - Math.exp(-9.75 * delta);
+    currentMouse.current.lerp(targetMouse.current, lerpFactor);
+
+    intensity.current = Math.max(0.0, intensity.current - 3.0 * delta);
 
     effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
     effect.uniforms.get("u_prevMouse")!.value.copy(prevMouse.current);
     effect.uniforms.get("u_aberrationIntensity")!.value = intensity.current;
+    effect.uniforms.get("u_deltaTime")!.value = Math.max(delta, 0.0001);
   });
 
   return <primitive ref={ref} object={effect} dispose={null} />;

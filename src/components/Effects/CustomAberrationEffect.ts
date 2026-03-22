@@ -1,11 +1,12 @@
-import { Effect } from 'postprocessing';
-import { Uniform, Vector2 } from 'three';
+import { Effect } from "postprocessing";
+import { Uniform, Vector2 } from "three";
 
 const fragmentShader = `
 uniform vec2 u_mouse;
 uniform vec2 u_prevMouse;
 uniform float u_aberrationIntensity;
 uniform vec2 u_resolution;
+uniform float u_deltaTime; 
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
@@ -17,7 +18,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     
     vec2 centerOfPixel = gridUV + vec2(1.0/gridSize.x, 1.0/gridSize.y) * 0.5;
     
-    vec2 mouseDirection = u_mouse - u_prevMouse;
+    vec2 rawMouseDirection = u_mouse - u_prevMouse;
+    vec2 mouseDirection = rawMouseDirection * (0.016666 / u_deltaTime);
     
     vec2 pixelToMouseDirection = (centerOfPixel - u_mouse) * aspect;
     float pixelDistanceToMouse = length(pixelToMouseDirection);
@@ -38,14 +40,15 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class CustomAberrationEffect extends Effect {
-    constructor() {
-        super('CustomAberrationEffect', fragmentShader, {
-            uniforms: new Map<string, Uniform<Vector2 | number>>([
-                ['u_mouse', new Uniform(new Vector2(0.5, 0.5))],
-                ['u_prevMouse', new Uniform(new Vector2(0.5, 0.5))],
-                ['u_aberrationIntensity', new Uniform(0.0)],
-                ['u_resolution', new Uniform(new Vector2(1, 1))],
-            ]),
-        });
-    }
+  constructor() {
+    super("CustomAberrationEffect", fragmentShader, {
+      uniforms: new Map<string, Uniform<Vector2 | number>>([
+        ["u_mouse", new Uniform(new Vector2(0.5, 0.5))],
+        ["u_prevMouse", new Uniform(new Vector2(0.5, 0.5))],
+        ["u_aberrationIntensity", new Uniform(0.0)],
+        ["u_resolution", new Uniform(new Vector2(1, 1))],
+        ["u_deltaTime", new Uniform(0.016666)],
+      ]),
+    });
+  }
 }
