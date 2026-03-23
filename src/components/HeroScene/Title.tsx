@@ -1,6 +1,7 @@
 import { Text, Html } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { Copy } from "../Copy";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -13,7 +14,10 @@ interface TitleProps {
   y: number;
   calculatedFontSize: number;
   pixelFontSize: number;
-  scrollHintOpacity: number;
+  scrollProgressRef: MutableRefObject<number>;
+  transitionStart: number;
+  transitionEnd: number;
+  stackedFontSize: number;
 }
 
 export function Title({
@@ -24,12 +28,22 @@ export function Title({
   y,
   calculatedFontSize,
   pixelFontSize,
-  scrollHintOpacity,
+  scrollProgressRef,
+  transitionStart,
+  transitionEnd,
+  stackedFontSize,
 }: TitleProps) {
   const groupRef = useRef<THREE.Group>(null);
   const textGroupRef = useRef<THREE.Group>(null);
   const htmlDivRef = useRef<HTMLDivElement>(null);
   const scrollTextRef = useRef<THREE.MeshBasicMaterial>(null);
+  const stackedGroupRef = useRef<THREE.Group>(null);
+  const stackedTopRef = useRef<THREE.MeshBasicMaterial>(null);
+  const stackedBottomRef = useRef<THREE.MeshBasicMaterial>(null);
+  const introTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const hasUserScrolledRef = useRef(false);
+  const compactAppliedRef = useRef(false);
+  const hintVisibleRef = useRef(false);
 
   const isFirstRun = useRef(true);
 
@@ -62,6 +76,7 @@ export function Title({
         isFirstRun.current = false;
       },
     });
+    introTimelineRef.current = tl;
 
     const targetX =
       -viewportWidth / 2 + marginX + (textWidth3D * targetScale) / 2;
@@ -106,22 +121,105 @@ export function Title({
         ease: "power2.out",
         onComplete: () => {
           setIsScrollHintReady(true);
+          hintVisibleRef.current = true;
         },
       },
       fadePosition,
     );
+
+    return () => {
+      if (introTimelineRef.current === tl) {
+        introTimelineRef.current = null;
+      }
+      tl.kill();
+    };
   }, [startTrigger, textWidth3D, viewportWidth, marginX]);
 
-  useEffect(() => {
-    if (!scrollTextRef.current || !isScrollHintReady) return;
+  useFrame(() => {
+    if (scrollProgressRef.current > transitionStart) {
+      hasUserScrolledRef.current = true;
+    }
 
-    gsap.to(scrollTextRef.current, {
-      opacity: scrollHintOpacity,
-      duration: 0.2,
-      ease: "power2.out",
-      overwrite: true,
-    });
-  }, [scrollHintOpacity, isScrollHintReady]);
+    const targetX =
+      -viewportWidth / 2 + marginX + (textWidth3D * targetScale) / 2;
+
+    if (
+      hasUserScrolledRef.current &&
+      !compactAppliedRef.current &&
+      textWidth3D > 0 &&
+      textGroupRef.current &&
+      htmlDivRef.current
+    ) {
+      introTimelineRef.current?.kill();
+      introTimelineRef.current = null;
+
+      gsap.to(textGroupRef.current.position, {
+        x: targetX,
+        duration: 0.2,
+        ease: "power2.out",
+        overwrite: true,
+      });
+      gsap.to(textGroupRef.current.scale, {
+        x: targetScale,
+        y: targetScale,
+        z: targetScale,
+        duration: 0.2,
+        ease: "power2.out",
+        overwrite: true,
+      });
+      gsap.to(htmlDivRef.current, {
+        scale: targetScale,
+        duration: 0.2,
+        ease: "power2.out",
+        overwrite: true,
+      });
+
+      isFirstRun.current = false;
+      compactAppliedRef.current = true;
+
+      if (!isScrollHintReady) {
+        setIsScrollHintReady(true);
+      }
+    }
+
+    if (!isScrollHintReady) return;
+
+    const range = transitionEnd - transitionStart;
+    if (range <= 0) return;
+
+    const progress = THREE.MathUtils.clamp(
+      (scrollProgressRef.current - transitionStart) / range,
+      0,
+      1,
+    );
+
+    if (scrollTextRef.current) {
+      const showHint = progress <= 0;
+
+      if (hintVisibleRef.current !== showHint) {
+        hintVisibleRef.current = showHint;
+        gsap.to(scrollTextRef.current, {
+          opacity: showHint ? 1 : 0,
+          duration: showHint ? 1.2 : 0.25,
+          ease: "power2.out",
+          overwrite: true,
+        });
+      }
+    }
+
+    if (stackedGroupRef.current) {
+      stackedGroupRef.current.position.x =
+        viewportWidth * 0.08 * (1 - progress);
+    }
+
+    if (stackedTopRef.current) {
+      stackedTopRef.current.opacity = progress;
+    }
+
+    if (stackedBottomRef.current) {
+      stackedBottomRef.current.opacity = progress;
+    }
+  });
 
   return (
     <group position={[0, y, 0]} ref={groupRef}>
@@ -195,6 +293,44 @@ export function Title({
             color="#A0A0A0"
           />
         </Text>
+
+        <group ref={stackedGroupRef} position={[viewportWidth * 0.08, 0, 0]}>
+          <Text
+            anchorX="right"
+            anchorY="bottom"
+            fontSize={stackedFontSize}
+            font="fonts/Aeonik-Light.otf"
+            lineHeight={1}
+            color="#BEBEBE"
+            position={[0, stackedFontSize * 0.1, 0]}
+          >
+            Software Engineer
+            <meshBasicMaterial
+              ref={stackedTopRef}
+              transparent
+              opacity={0}
+              color="#BEBEBE"
+            />
+          </Text>
+
+          <Text
+            anchorX="right"
+            anchorY="top"
+            fontSize={stackedFontSize}
+            font="fonts/Aeonik-Light.otf"
+            lineHeight={1}
+            color="#BEBEBE"
+            position={[0, -stackedFontSize * 0.1, 0]}
+          >
+            Creative Technologist
+            <meshBasicMaterial
+              ref={stackedBottomRef}
+              transparent
+              opacity={0}
+              color="#BEBEBE"
+            />
+          </Text>
+        </group>
       </group>
     </group>
   );

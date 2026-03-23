@@ -1,6 +1,6 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type MutableRefObject } from "react";
 import { Copy } from "../Copy";
 import * as THREE from "three";
 
@@ -18,6 +18,10 @@ interface ProfessionLabelProps {
   paddingY: number;
   lineThickness: number;
   lineWidth: number;
+  scrollProgressRef: MutableRefObject<number>;
+  exitStart: number;
+  exitEnd: number;
+  exitDistance: number;
 }
 
 export function ProfessionLabel({
@@ -34,25 +38,19 @@ export function ProfessionLabel({
   paddingY,
   lineThickness,
   lineWidth,
+  scrollProgressRef,
+  exitStart,
+  exitEnd,
+  exitDistance,
 }: ProfessionLabelProps) {
   const textMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const lineMaterialRef = useRef<THREE.ShaderMaterial>(null);
+  const labelGroupRef = useRef<THREE.Group>(null);
+  const lineMeshRef = useRef<THREE.Mesh>(null);
+  const htmlOpacityRef = useRef<HTMLDivElement>(null);
+  const textRevealedRef = useRef(false);
 
   const elapsed = useRef(0);
-
-  useFrame((_, delta) => {
-    if (lineMaterialRef.current) {
-      elapsed.current += delta;
-
-      if (elapsed.current >= lineDelay) {
-        lineMaterialRef.current.uniforms.uProgress.value = THREE.MathUtils.lerp(
-          lineMaterialRef.current.uniforms.uProgress.value,
-          1.0,
-          delta * 2.0,
-        );
-      }
-    }
-  });
 
   const isLeft = align === "left";
   const anchorX = isLeft ? "left" : "right";
@@ -65,12 +63,62 @@ export function ProfessionLabel({
     ? -viewportWidth / 2 + lineWidth / 2
     : viewportWidth / 2 - lineWidth / 2;
 
+  useFrame((_, delta) => {
+    const clampedExitProgress = THREE.MathUtils.clamp(
+      (scrollProgressRef.current - exitStart) / (exitEnd - exitStart),
+      0,
+      1,
+    );
+    const fadeOpacity = 1 - clampedExitProgress;
+    const pushOffset = exitDistance * clampedExitProgress * (isLeft ? -1 : 1);
+
+    if (labelGroupRef.current) {
+      labelGroupRef.current.position.set(
+        position[0] + pushOffset,
+        finalY,
+        position[2],
+      );
+    }
+
+    if (lineMeshRef.current) {
+      lineMeshRef.current.position.set(
+        lineX + pushOffset,
+        position[1],
+        position[2],
+      );
+    }
+
+    if (textMaterialRef.current) {
+      textMaterialRef.current.opacity =
+        (textRevealedRef.current ? 1 : 0) * fadeOpacity;
+    }
+
+    if (htmlOpacityRef.current) {
+      htmlOpacityRef.current.style.opacity = String(fadeOpacity);
+    }
+
+    if (lineMaterialRef.current) {
+      elapsed.current += delta;
+
+      lineMaterialRef.current.uniforms.uOpacity.value = fadeOpacity;
+
+      if (elapsed.current >= lineDelay) {
+        lineMaterialRef.current.uniforms.uProgress.value = THREE.MathUtils.lerp(
+          lineMaterialRef.current.uniforms.uProgress.value,
+          1.0,
+          delta * 2.0,
+        );
+      }
+    }
+  });
+
   const shaderMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
         uColor: { value: new THREE.Color("#BEBEBE") },
         uIsLeft: { value: isLeft ? 1.0 : 0.0 },
         uProgress: { value: 0.0 },
+        uOpacity: { value: 1.0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -84,6 +132,7 @@ export function ProfessionLabel({
         uniform vec3 uColor;
         uniform float uIsLeft;
         uniform float uProgress;
+        uniform float uOpacity;
         
         void main() {
           float alpha = uIsLeft > 0.5 ? (1.0 - vUv.x) : vUv.x;
@@ -95,7 +144,7 @@ export function ProfessionLabel({
             revealMask = step(1.0 - uProgress, vUv.x);
           }
 
-          gl_FragColor = vec4(uColor, alpha * 0.4 * revealMask);
+          gl_FragColor = vec4(uColor, alpha * 0.4 * revealMask * uOpacity);
         }
       `,
       transparent: true,
@@ -105,7 +154,7 @@ export function ProfessionLabel({
 
   return (
     <group>
-      <group position={[position[0], finalY, position[2]]}>
+      <group position={[position[0], finalY, position[2]]} ref={labelGroupRef}>
         <Text
           anchorX={anchorX}
           anchorY={anchorY}
@@ -133,23 +182,25 @@ export function ProfessionLabel({
             fontSize: `${pixelFontSize}px`,
           }}
         >
-          <Copy
-            delay={0.2}
-            direction={direction}
-            blockColor="#BEBEBE"
-            startTrigger={startTrigger}
-            onReveal={() => {
-              if (textMaterialRef.current) textMaterialRef.current.opacity = 1;
-            }}
-          >
-            <p className="selection:bg-[#BEBEBE] selection:text-[#1D1D1D]">
-              {children}
-            </p>
-          </Copy>
+          <div ref={htmlOpacityRef} style={{ opacity: 1 }}>
+            <Copy
+              delay={0.2}
+              direction={direction}
+              blockColor="#BEBEBE"
+              startTrigger={startTrigger}
+              onReveal={() => {
+                textRevealedRef.current = true;
+              }}
+            >
+              <p className="selection:bg-[#BEBEBE] selection:text-[#1D1D1D]">
+                {children}
+              </p>
+            </Copy>
+          </div>
         </Html>
       </group>
 
-      <mesh position={[lineX, position[1], position[2]]}>
+      <mesh position={[lineX, position[1], position[2]]} ref={lineMeshRef}>
         <planeGeometry args={[lineWidth, lineThickness]} />
         <primitive
           object={shaderMaterial}

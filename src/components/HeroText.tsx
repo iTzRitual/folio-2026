@@ -12,6 +12,9 @@ import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const LABEL_EXIT_START = 0.001;
+const LABEL_EXIT_END = 0.08;
+
 export function HeroText() {
   const {
     viewport,
@@ -52,7 +55,6 @@ export function HeroText() {
       tween.kill();
     };
   }, []);
-
   useFrame(() => {
     const heroExit = progressRef.current;
     const titleYOffset = heroExit * viewport.height * 0.7;
@@ -68,7 +70,6 @@ export function HeroText() {
     }
     if (heroGroupRef.current) {
       heroGroupRef.current.position.y = heroYOffset;
-      heroGroupRef.current.visible = heroExit < 0.98;
     }
   });
 
@@ -90,7 +91,7 @@ export function HeroText() {
   const professionPaddingY = 8 * pxTo3DHeight;
   const professionLineThickness = 1 * pxTo3DHeight;
   const professionLineWidth = viewport.width * 0.9;
-  const scrollHintOpacity = 1;
+  const professionExitDistance = viewport.width * 0.14;
 
   return (
     <>
@@ -102,7 +103,10 @@ export function HeroText() {
           y={titleY}
           calculatedFontSize={titleFontSize}
           pixelFontSize={titlePixelFontSize}
-          scrollHintOpacity={scrollHintOpacity}
+          scrollProgressRef={progressRef}
+          transitionStart={LABEL_EXIT_START}
+          transitionEnd={LABEL_EXIT_END}
+          stackedFontSize={professionFontSize}
         >
           Natan Mokrzycki
         </Title>
@@ -131,6 +135,10 @@ export function HeroText() {
           paddingY={professionPaddingY}
           lineThickness={professionLineThickness}
           lineWidth={professionLineWidth}
+          scrollProgressRef={progressRef}
+          exitStart={LABEL_EXIT_START}
+          exitEnd={LABEL_EXIT_END}
+          exitDistance={professionExitDistance}
         >
           Software Engineer
         </ProfessionLabel>
@@ -147,6 +155,10 @@ export function HeroText() {
           paddingY={professionPaddingY}
           lineThickness={professionLineThickness}
           lineWidth={professionLineWidth}
+          scrollProgressRef={progressRef}
+          exitStart={LABEL_EXIT_START}
+          exitEnd={LABEL_EXIT_END}
+          exitDistance={professionExitDistance}
         >
           Creative Technologist
         </ProfessionLabel>
