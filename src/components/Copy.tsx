@@ -39,6 +39,8 @@ export function Copy({
   const splitRefs = useRef<SplitText[]>([]);
   const lines = useRef<Element[]>([]);
   const blocks = useRef<HTMLDivElement[]>([]);
+  const scrollTriggersRef = useRef<ScrollTrigger[]>([]);
+  const visibilityRafRef = useRef<number | null>(null);
 
   useGSAP(
     () => {
@@ -47,6 +49,12 @@ export function Copy({
       splitRefs.current = [];
       lines.current = [];
       blocks.current = [];
+      scrollTriggersRef.current.forEach((trigger) => trigger.kill());
+      scrollTriggersRef.current = [];
+      if (visibilityRafRef.current !== null) {
+        cancelAnimationFrame(visibilityRafRef.current);
+        visibilityRafRef.current = null;
+      }
 
       let elements: Element[] = [];
 
@@ -109,6 +117,31 @@ export function Copy({
       };
 
       if (animateOnScroll) {
+        const timelines: gsap.core.Timeline[] = [];
+
+        const playAllReveals = () => {
+          timelines.forEach((timeline) => {
+            if (timeline.progress() === 0) {
+              timeline.play();
+            }
+          });
+
+          scrollTriggersRef.current.forEach((trigger) => trigger.kill(false));
+          scrollTriggersRef.current = [];
+
+          if (visibilityRafRef.current !== null) {
+            cancelAnimationFrame(visibilityRafRef.current);
+            visibilityRafRef.current = null;
+          }
+        };
+
+        const isContainerVisible = () => {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect) return false;
+
+          return rect.top <= window.innerHeight && rect.bottom >= 0;
+        };
+
         blocks.current.forEach((block, index) => {
           const tl = createBlockRevealAnimation(
             block,
@@ -116,14 +149,40 @@ export function Copy({
             index,
           );
           tl.pause();
+          timelines.push(tl);
 
-          ScrollTrigger.create({
+          const trigger = ScrollTrigger.create({
             trigger: containerRef.current,
-            start: "top 90%",
+            start: "top bottom",
+            end: "bottom top",
             once: true,
-            onEnter: () => tl.play(),
+            onEnter: playAllReveals,
+            onEnterBack: playAllReveals,
+            onRefresh: (self) => {
+              if (isContainerVisible()) {
+                playAllReveals();
+                self.kill(false);
+              }
+            },
           });
+
+          scrollTriggersRef.current.push(trigger);
         });
+
+        if (isContainerVisible()) {
+          playAllReveals();
+        } else {
+          const pollUntilVisible = () => {
+            if (isContainerVisible()) {
+              playAllReveals();
+              return;
+            }
+
+            visibilityRafRef.current = requestAnimationFrame(pollUntilVisible);
+          };
+
+          visibilityRafRef.current = requestAnimationFrame(pollUntilVisible);
+        }
       } else {
         blocks.current.forEach((block, index) => {
           const tl = createBlockRevealAnimation(
@@ -139,6 +198,13 @@ export function Copy({
       }
 
       return () => {
+        scrollTriggersRef.current.forEach((trigger) => trigger.kill());
+        scrollTriggersRef.current = [];
+        if (visibilityRafRef.current !== null) {
+          cancelAnimationFrame(visibilityRafRef.current);
+          visibilityRafRef.current = null;
+        }
+
         splitRefs.current.forEach((split) => split?.revert());
 
         const wrappers = containerRef.current?.querySelectorAll(

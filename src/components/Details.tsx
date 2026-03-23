@@ -1,6 +1,5 @@
 "use client";
 
-import { Text } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -8,6 +7,8 @@ import { Group, Mesh } from "three";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { useAnimationContext } from "@/context/AnimationContext";
+import { SelectableRevealText } from "./DetailsScene/SelectableRevealText";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -76,7 +77,9 @@ const skills = [
 ];
 
 export function Details() {
-  const { viewport, marginX, marginY, leftX, rightX } = useHeroLayout();
+  const { viewport, marginX, marginY, leftX, rightX, pxTo3DWidth } =
+    useHeroLayout();
+  const { startTrigger } = useAnimationContext();
   const progressRef = useRef(0);
   const rootGroupRef = useRef<Group>(null);
 
@@ -103,10 +106,6 @@ export function Details() {
     };
   }, []);
 
-  const experienceTitleRef = useRef(null);
-  const projectsTitleRef = useRef(null);
-  const educationTitleRef = useRef(null);
-
   const [titleWidths, setTitleWidths] = useState({
     experience: 0,
     projects: 0,
@@ -131,6 +130,8 @@ export function Details() {
 
   const headingSize = (viewport.width - marginX * 2) * 0.03;
   const bodySize = headingSize * 0.5;
+  const headingPixelSize = headingSize / pxTo3DWidth;
+  const bodyPixelSize = bodySize / pxTo3DWidth;
 
   const sectionTravel = viewport.height * 1.16;
   const targetBaseY = -viewport.height * 0.25;
@@ -152,10 +153,9 @@ export function Details() {
   const rightTitleX = rightX - viewport.width * 0.2;
   const rightBodyX = rightX;
 
-  const textWidthLeft = viewport.width * 0.37;
-  const textWidthRight = viewport.width * 0.18;
-
   const gap = viewport.width * 0.08;
+  const bodyTopOffset = headingSize * 0.38;
+  const bodyLineHeight = bodySize * 1.5;
 
   const bodyPositions = useMemo(() => {
     return {
@@ -169,12 +169,13 @@ export function Details() {
     () =>
       experience
         .map((exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`)
-        .join("\n"),
+        .join("\n")
+        .split("\n"),
     [],
   );
 
   const projectsText = useMemo(
-    () => projects.map((project) => `${project.name}`).join("\n"),
+    () => projects.map((project) => `${project.name}`),
     [],
   );
 
@@ -182,128 +183,195 @@ export function Details() {
     () =>
       education
         .map((edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`)
-        .join("\n"),
+        .join("\n")
+        .split("\n"),
     [],
   );
 
-  const skillsText = useMemo(() => skills.join("\n"), []);
+  const skillsText = useMemo(() => skills.join("\n").split("\n"), []);
 
   return (
     <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
-      <Text
-        ref={experienceTitleRef}
+      <SelectableRevealText
+        text="Experience"
         position={[leftTitleX, sectionTop, 0]}
         anchorX="left"
         anchorY="top"
-        fontSize={headingSize}
-        lineHeight={1}
+        calculatedFontSize={headingSize}
+        pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
+        fontWeightClass="font-light"
         color="#FFFFFF"
+        blockColor="#FFFFFF"
+        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        startTrigger={startTrigger}
+        delay={0.1}
+        direction="leftToRight"
+        lineHeight={1}
         onSync={handleTitleSync("experience")}
-      >
-        Experience
-      </Text>
-      <Text
-        position={[
-          bodyPositions.experience,
-          sectionTop - headingSize * 0.38,
-          0,
-        ]}
-        anchorX="left"
-        anchorY="top"
-        maxWidth={textWidthLeft}
-        fontSize={bodySize}
-        lineHeight={1.5}
-        font="fonts/Aeonik-Light.otf"
-        color="#D6D6D6"
-      >
-        {experienceText}
-      </Text>
+      />
 
-      <Text
-        ref={projectsTitleRef}
+      {experienceText.map((line, index) => (
+        <SelectableRevealText
+          key={`exp-${line}`}
+          text={line}
+          position={[
+            bodyPositions.experience,
+            sectionTop - bodyTopOffset - index * bodyLineHeight,
+            0,
+          ]}
+          anchorX="left"
+          anchorY="top"
+          calculatedFontSize={bodySize}
+          pixelFontSize={bodyPixelSize}
+          font="fonts/Aeonik-Light.otf"
+          fontWeightClass="font-light"
+          color="#D6D6D6"
+          blockColor="#D6D6D6"
+          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          startTrigger={startTrigger}
+          delay={0.18 + index * 0.07}
+          direction="leftToRight"
+          lineHeight={1}
+        />
+      ))}
+
+      <SelectableRevealText
+        text="Featured Projects"
         position={[leftTitleX, sectionTop - sectionSpacing, 0]}
         anchorX="left"
         anchorY="top"
-        fontSize={headingSize}
-        lineHeight={1}
+        calculatedFontSize={headingSize}
+        pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
+        fontWeightClass="font-light"
         color="#FFFFFF"
+        blockColor="#FFFFFF"
+        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        startTrigger={startTrigger}
+        delay={0.3}
+        direction="leftToRight"
+        lineHeight={1}
         onSync={handleTitleSync("projects")}
-      >
-        Featured Projects
-      </Text>
-      <Text
-        position={[
-          bodyPositions.projects,
-          sectionTop - sectionSpacing - headingSize * 0.38,
-          0,
-        ]}
-        anchorX="left"
-        anchorY="top"
-        maxWidth={textWidthLeft}
-        fontSize={bodySize}
-        lineHeight={1.5}
-        font="fonts/Aeonik-Light.otf"
-        color="#D6D6D6"
-      >
-        {projectsText}
-      </Text>
+      />
 
-      <Text
-        ref={educationTitleRef}
+      {projectsText.map((line, index) => (
+        <SelectableRevealText
+          key={`proj-${line}`}
+          text={line}
+          position={[
+            bodyPositions.projects,
+            sectionTop -
+              sectionSpacing -
+              bodyTopOffset -
+              index * bodyLineHeight,
+            0,
+          ]}
+          anchorX="left"
+          anchorY="top"
+          calculatedFontSize={bodySize}
+          pixelFontSize={bodyPixelSize}
+          font="fonts/Aeonik-Light.otf"
+          fontWeightClass="font-light"
+          color="#D6D6D6"
+          blockColor="#D6D6D6"
+          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          startTrigger={startTrigger}
+          delay={0.38 + index * 0.07}
+          direction="leftToRight"
+          lineHeight={1}
+        />
+      ))}
+
+      <SelectableRevealText
+        text="Education"
         position={[leftTitleX, sectionTop - sectionSpacing * 2, 0]}
         anchorX="left"
         anchorY="top"
-        fontSize={headingSize}
-        lineHeight={1}
+        calculatedFontSize={headingSize}
+        pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
+        fontWeightClass="font-light"
         color="#FFFFFF"
+        blockColor="#FFFFFF"
+        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        startTrigger={startTrigger}
+        delay={0.5}
+        direction="leftToRight"
+        lineHeight={1}
         onSync={handleTitleSync("education")}
-      >
-        Education
-      </Text>
-      <Text
-        position={[
-          bodyPositions.education,
-          sectionTop - sectionSpacing * 2 - headingSize * 0.38,
-          0,
-        ]}
-        anchorX="left"
-        anchorY="top"
-        maxWidth={viewport.width * 0.45}
-        fontSize={bodySize}
-        lineHeight={1.5}
-        font="fonts/Aeonik-Light.otf"
-        color="#D6D6D6"
-      >
-        {educationText}
-      </Text>
+      />
 
-      <Text
+      {educationText.map((line, index) => (
+        <SelectableRevealText
+          key={`edu-${line}`}
+          text={line}
+          position={[
+            bodyPositions.education,
+            sectionTop -
+              sectionSpacing * 2 -
+              bodyTopOffset -
+              index * bodyLineHeight,
+            0,
+          ]}
+          anchorX="left"
+          anchorY="top"
+          calculatedFontSize={bodySize}
+          pixelFontSize={bodyPixelSize}
+          font="fonts/Aeonik-Light.otf"
+          fontWeightClass="font-light"
+          color="#D6D6D6"
+          blockColor="#D6D6D6"
+          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          startTrigger={startTrigger}
+          delay={0.58 + index * 0.07}
+          direction="leftToRight"
+          lineHeight={1}
+        />
+      ))}
+
+      <SelectableRevealText
+        text="Skills"
         position={[rightTitleX, sectionTop, 0]}
         anchorX="left"
         anchorY="top"
-        fontSize={headingSize}
-        lineHeight={1}
+        calculatedFontSize={headingSize}
+        pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
+        fontWeightClass="font-light"
         color="#FFFFFF"
-      >
-        Skills
-      </Text>
-      <Text
-        position={[rightBodyX, sectionTop - headingSize * 0.38, 0]}
-        anchorX="right"
-        anchorY="top"
-        maxWidth={textWidthRight}
-        textAlign="left"
-        fontSize={bodySize}
-        lineHeight={1.5}
-        font="fonts/Aeonik-Light.otf"
-        color="#D6D6D6"
-      >
-        {skillsText}
-      </Text>
+        blockColor="#FFFFFF"
+        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        startTrigger={startTrigger}
+        delay={0.12}
+        direction="rightToLeft"
+        lineHeight={1}
+      />
+
+      {skillsText.map((line, index) => (
+        <SelectableRevealText
+          key={`skill-${line}`}
+          text={line}
+          position={[
+            rightBodyX,
+            sectionTop - bodyTopOffset - index * bodyLineHeight,
+            0,
+          ]}
+          anchorX="right"
+          anchorY="top"
+          calculatedFontSize={bodySize}
+          pixelFontSize={bodyPixelSize}
+          font="fonts/Aeonik-Light.otf"
+          fontWeightClass="font-light"
+          color="#D6D6D6"
+          blockColor="#D6D6D6"
+          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          startTrigger={startTrigger}
+          delay={0.2 + index * 0.06}
+          direction="rightToLeft"
+          lineHeight={1}
+        />
+      ))}
     </group>
   );
 }
