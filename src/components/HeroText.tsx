@@ -6,11 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { Group } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-
-gsap.registerPlugin(ScrollTrigger);
+import { useHeroTransition } from "@/context/HeroTransitionContext";
 
 const LABEL_EXIT_START = 0.001;
 const LABEL_EXIT_END = 0.08;
@@ -28,33 +24,11 @@ export function HeroText() {
     row3BottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const progressRef = useRef(0);
+  const { progressRef } = useHeroTransition();
   const titleGroupRef = useRef<Group>(null);
   const subtitleGroupRef = useRef<Group>(null);
   const heroGroupRef = useRef<Group>(null);
 
-  useGSAP(() => {
-    const scrollState = { progress: 0 };
-
-    const tween = gsap.to(scrollState, {
-      progress: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: document.body,
-        start: "top top",
-        end: "+=50%",
-        scrub: true,
-      },
-      onUpdate: () => {
-        progressRef.current = Math.min(Math.max(scrollState.progress, 0), 1);
-      },
-    });
-
-    return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
-    };
-  }, []);
   useFrame(() => {
     const heroExit = progressRef.current;
     const titleYOffset = heroExit * viewport.height * 0.7;

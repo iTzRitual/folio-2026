@@ -53,6 +53,9 @@ export function Title({
   const [isScrollHintReady, setIsScrollHintReady] = useState(false);
 
   const targetScale = 0.75;
+  const HINT_SCROLL_HIDE_EPSILON = 0.0005;
+  const HINT_SCROLL_SHOW_EPSILON = 0.0001;
+  const STACKED_FADE_START = 0.12;
 
   useGSAP(() => {
     if (
@@ -136,8 +139,17 @@ export function Title({
   }, [startTrigger, textWidth3D, viewportWidth, marginX]);
 
   useFrame(() => {
-    if (scrollProgressRef.current > transitionStart) {
+    const hasStartedScroll =
+      scrollProgressRef.current >
+      Math.max(HINT_SCROLL_HIDE_EPSILON, transitionStart * 0.5);
+
+    const hasReturnedToTop =
+      scrollProgressRef.current <= HINT_SCROLL_SHOW_EPSILON;
+
+    if (hasStartedScroll) {
       hasUserScrolledRef.current = true;
+    } else if (hasReturnedToTop) {
+      hasUserScrolledRef.current = false;
     }
 
     const targetX =
@@ -180,6 +192,11 @@ export function Title({
       if (!isScrollHintReady) {
         setIsScrollHintReady(true);
       }
+
+      if (scrollTextRef.current) {
+        hintVisibleRef.current = false;
+        gsap.set(scrollTextRef.current, { opacity: 0, overwrite: true });
+      }
     }
 
     if (!isScrollHintReady) return;
@@ -192,9 +209,14 @@ export function Title({
       0,
       1,
     );
+    const stackedProgress = THREE.MathUtils.clamp(
+      (progress - STACKED_FADE_START) / (1 - STACKED_FADE_START),
+      0,
+      1,
+    );
 
     if (scrollTextRef.current) {
-      const showHint = progress <= 0;
+      const showHint = !hasUserScrolledRef.current && progress <= 0;
 
       if (hintVisibleRef.current !== showHint) {
         hintVisibleRef.current = showHint;
@@ -209,15 +231,15 @@ export function Title({
 
     if (stackedGroupRef.current) {
       stackedGroupRef.current.position.x =
-        viewportWidth * 0.08 * (1 - progress);
+        viewportWidth * 0.08 * (1 - stackedProgress);
     }
 
     if (stackedTopRef.current) {
-      stackedTopRef.current.opacity = progress;
+      stackedTopRef.current.opacity = stackedProgress;
     }
 
     if (stackedBottomRef.current) {
-      stackedBottomRef.current.opacity = progress;
+      stackedBottomRef.current.opacity = stackedProgress;
     }
   });
 

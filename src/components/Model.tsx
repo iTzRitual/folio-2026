@@ -10,30 +10,31 @@ import { useRef, useState } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
-
-gsap.registerPlugin(ScrollTrigger);
+import { useHeroTransition } from "@/context/HeroTransitionContext";
 
 export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
+  const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
 
   const {
+    marginY,
     grabAreaRadius: baseGrabAreaRadius,
     stickyAreaRadius: baseStickyAreaRadius,
     responsiveScale: baseResponsiveScale,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
+  const { progressRef } = useHeroTransition();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
   const isDragging = useRef(false);
-  const isDetailsActiveRef = useRef(false);
+  const isInteractionLockedRef = useRef(false);
 
   const isHoveringCenter = useRef(false);
   const isHoveringModel = useRef(false);
@@ -42,6 +43,19 @@ export default function Model() {
   const [isDragged, setIsDragged] = useState(false);
 
   const lastInteractionTime = useRef(0);
+  const BASE_MODEL_Y = 0.1;
+  const INTERACTION_LOCK_EPSILON = 0.001;
+  const MODEL_UP_TRAVEL_FACTOR = 0.25;
+  const SCALE_OUT_START = 0.2;
+  const SCALE_OUT_END = 0.9;
+  const RETURN_TO_CENTER_SMOOTHNESS = 8;
+  const RETURN_VELOCITY_DAMPING = 10;
+  const RETURN_SNAP_EPSILON = 0.002;
+  const DETAILS_POPUP_START = 0.9;
+  const DETAILS_POPUP_END = 1.0;
+  const DETAILS_POPUP_SCALE = 0.6;
+  const DETAILS_POPUP_X_FACTOR = 0.13;
+  const DETAILS_POPUP_Y_SECTION_OFFSET = 1.1;
   const { viewport } = useThree();
 
   useCursor(isHovered, isDragged ? "grabbing" : "grab", "auto");
@@ -64,29 +78,6 @@ export default function Model() {
     });
   }, [startTrigger]);
 
-  useGSAP(() => {
-    if (!animGroupRef.current) return;
-
-    const tween = gsap.to(animGroupRef.current.position, {
-      y: 0.1 + viewport.height,
-      ease: "none",
-      scrollTrigger: {
-        trigger: document.body,
-        start: "top top",
-        end: "+=50%",
-        scrub: true,
-        onUpdate: (self) => {
-          isDetailsActiveRef.current = self.progress >= 0.42;
-        },
-      },
-    });
-
-    return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
-    };
-  }, [viewport.height]);
-
   const materialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
     roughness: { value: 0.2, min: 0, max: 1, step: 0.1 },
@@ -108,13 +99,102 @@ export default function Model() {
   });
 
   useFrame((state, delta) => {
-    if (isDetailsActiveRef.current && isDragging.current) {
-      isDragging.current = false;
-      setIsDragged(false);
+    const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
+    const shouldLockInteraction = scrollProgress > INTERACTION_LOCK_EPSILON;
+    const dt = Math.min(delta, 1 / 30);
+
+    if (isInteractionLockedRef.current !== shouldLockInteraction) {
+      isInteractionLockedRef.current = shouldLockInteraction;
+
+      if (shouldLockInteraction) {
+        isDragging.current = false;
+        setIsDragged(false);
+        setIsHovered(false);
+        isHoveringCenter.current = false;
+        isHoveringModel.current = false;
+      }
     }
 
-    const dt = Math.min(delta, 1 / 30);
-    const outerGroupY = animGroupRef.current?.position.y ?? 0.1;
+    if (shouldLockInteraction) {
+      const returnAlpha = 1 - Math.exp(-RETURN_TO_CENTER_SMOOTHNESS * dt);
+      const velocityDamping = Math.exp(-RETURN_VELOCITY_DAMPING * dt);
+
+      pos.current.x = THREE.MathUtils.lerp(pos.current.x, 0, returnAlpha);
+      pos.current.y = THREE.MathUtils.lerp(pos.current.y, 0, returnAlpha);
+
+      vel.current.multiplyScalar(velocityDamping);
+
+      if (
+        Math.abs(pos.current.x) < RETURN_SNAP_EPSILON &&
+        Math.abs(pos.current.y) < RETURN_SNAP_EPSILON &&
+        vel.current.lengthSq() < RETURN_SNAP_EPSILON
+      ) {
+        pos.current.set(0, 0, 0);
+        vel.current.set(0, 0, 0);
+      }
+    }
+
+    if (animGroupRef.current) {
+      const popupProgress = THREE.MathUtils.clamp(
+        (scrollProgress - DETAILS_POPUP_START) /
+          (DETAILS_POPUP_END - DETAILS_POPUP_START),
+        0,
+        1,
+      );
+
+      const heroYAtPopupStart =
+        BASE_MODEL_Y +
+        DETAILS_POPUP_START * viewport.height * MODEL_UP_TRAVEL_FACTOR;
+      const heroYCurrent =
+        BASE_MODEL_Y +
+        scrollProgress * viewport.height * MODEL_UP_TRAVEL_FACTOR;
+      const targetBaseY = -viewport.height * 0.25;
+      const sectionTop = viewport.height / 2 - marginY * 0.35;
+      const sectionSpacing = viewport.height * 0.25;
+      const detailsTargetY =
+        targetBaseY +
+        sectionTop -
+        sectionSpacing * DETAILS_POPUP_Y_SECTION_OFFSET;
+      const detailsTargetX = viewport.width * DETAILS_POPUP_X_FACTOR;
+
+      animGroupRef.current.position.x = THREE.MathUtils.lerp(
+        0,
+        detailsTargetX,
+        popupProgress,
+      );
+      animGroupRef.current.position.y =
+        scrollProgress < DETAILS_POPUP_START
+          ? heroYCurrent
+          : THREE.MathUtils.lerp(
+              heroYAtPopupStart,
+              detailsTargetY,
+              popupProgress,
+            );
+    }
+
+    if (transitionScaleGroupRef.current) {
+      const scaleOutProgress = THREE.MathUtils.clamp(
+        (scrollProgress - SCALE_OUT_START) / (SCALE_OUT_END - SCALE_OUT_START),
+        0,
+        1,
+      );
+      const popupProgress = THREE.MathUtils.clamp(
+        (scrollProgress - DETAILS_POPUP_START) /
+          (DETAILS_POPUP_END - DETAILS_POPUP_START),
+        0,
+        1,
+      );
+
+      const scaleOutValue = 1 - scaleOutProgress;
+      const transitionScale = THREE.MathUtils.lerp(
+        scaleOutValue,
+        DETAILS_POPUP_SCALE,
+        popupProgress,
+      );
+      transitionScaleGroupRef.current.scale.setScalar(transitionScale);
+    }
+
+    const outerGroupY = animGroupRef.current?.position.y ?? BASE_MODEL_Y;
 
     const currentViewport = state.viewport.getCurrentViewport(
       state.camera,
@@ -206,11 +286,11 @@ export default function Model() {
         <mesh
           position={[0, 0, 0]}
           onPointerEnter={() => {
-            if (isDetailsActiveRef.current) return;
+            if (isInteractionLockedRef.current) return;
             isHoveringCenter.current = true;
           }}
           onPointerLeave={() => {
-            if (isDetailsActiveRef.current) return;
+            if (isInteractionLockedRef.current) return;
             isHoveringCenter.current = false;
           }}
         >
@@ -218,43 +298,47 @@ export default function Model() {
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
 
-        <group ref={interactiveGroupRef}>
-          <mesh
-            position={[0, 0, 0.01]}
-            onPointerEnter={() => {
-              if (isDetailsActiveRef.current) return;
-              isHoveringModel.current = true;
-              setIsHovered(true);
-            }}
-            onPointerLeave={() => {
-              if (isDetailsActiveRef.current) return;
-              isHoveringModel.current = false;
-              setIsHovered(false);
-            }}
-            onPointerDown={(e) => {
-              if (isDetailsActiveRef.current) return;
-              isDragging.current = true;
-              setIsDragged(true);
-              (e.target as Element).setPointerCapture(e.pointerId);
-              e.stopPropagation();
-            }}
-            onPointerUp={(e) => {
-              if (isDetailsActiveRef.current) return;
-              isDragging.current = false;
-              setIsDragged(false);
-              (e.target as Element).releasePointerCapture(e.pointerId);
-            }}
-          >
-            <circleGeometry args={[grabAreaRadius, 32]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-          </mesh>
+        <group ref={transitionScaleGroupRef}>
+          <group ref={interactiveGroupRef}>
+            <mesh
+              position={[0, 0, 0.01]}
+              onPointerEnter={() => {
+                if (isInteractionLockedRef.current) return;
+                isHoveringModel.current = true;
+                setIsHovered(true);
+              }}
+              onPointerLeave={() => {
+                if (isInteractionLockedRef.current) return;
+                isHoveringModel.current = false;
+                setIsHovered(false);
+              }}
+              onPointerDown={(e) => {
+                if (isInteractionLockedRef.current) return;
+                isDragging.current = true;
+                setIsDragged(true);
+                (e.target as Element).setPointerCapture(e.pointerId);
+                e.stopPropagation();
+              }}
+              onPointerUp={(e) => {
+                if (isInteractionLockedRef.current) return;
+                isDragging.current = false;
+                setIsDragged(false);
+                (e.target as Element).releasePointerCapture(e.pointerId);
+              }}
+            >
+              <circleGeometry args={[grabAreaRadius, 32]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
 
-          <group rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}>
-            <Center>
-              <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                <MeshTransmissionMaterial {...materialProps} />
-              </Clone>
-            </Center>
+            <group
+              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+            >
+              <Center>
+                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
+                  <MeshTransmissionMaterial {...materialProps} />
+                </Clone>
+              </Center>
+            </group>
           </group>
         </group>
       </group>

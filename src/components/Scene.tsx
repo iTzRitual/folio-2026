@@ -8,20 +8,23 @@ import { HeroLayoutProvider } from "./HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment } from "@react-three/drei";
 import { Details } from "./Details";
+import { HeroTransitionProvider } from "./HeroTransitionProvider";
 
 function SceneContent({ startAnimation }: { startAnimation: boolean }) {
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
-      <color attach="background" args={["#1D1D1D"]} />
-      <directionalLight intensity={3} position={[0, 3, 2]} />
-      <Environment preset="city" />
-      {/* <Background /> */}
-      <Model />
-      <HeroText />
-      <Details />
-      <EffectComposer>
-        <CustomAberration />
-      </EffectComposer>
+      <HeroTransitionProvider>
+        <color attach="background" args={["#1D1D1D"]} />
+        <directionalLight intensity={3} position={[0, 3, 2]} />
+        <Environment preset="city" />
+        {/* <Background /> */}
+        <Model />
+        <HeroText />
+        <Details />
+        <EffectComposer>
+          <CustomAberration />
+        </EffectComposer>
+      </HeroTransitionProvider>
     </HeroLayoutProvider>
   );
 }

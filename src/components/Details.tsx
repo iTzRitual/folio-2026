@@ -271,7 +271,7 @@ export function Details() {
         ]}
         anchorX="left"
         anchorY="top"
-        maxWidth={viewport.width * 0.75}
+        maxWidth={viewport.width * 0.45}
         fontSize={bodySize}
         lineHeight={1.5}
         font="fonts/Aeonik-Light.otf"
