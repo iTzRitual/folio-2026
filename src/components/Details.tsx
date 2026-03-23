@@ -121,7 +121,10 @@ export function Details() {
         const { max, min } = mesh.geometry.boundingBox;
         const width = max.x - min.x;
 
-        setTitleWidths((prev) => ({ ...prev, [titleKey]: width }));
+        setTitleWidths((prev) => {
+          if (prev[titleKey as keyof typeof prev] === width) return prev;
+          return { ...prev, [titleKey]: width };
+        });
       }
     }
   };
