@@ -3,10 +3,9 @@ import {
   useGLTF,
   MeshTransmissionMaterial,
   Center,
-  useCursor,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { gsap } from "gsap";
@@ -39,9 +38,6 @@ export default function Model() {
   const isHoveringCenter = useRef(false);
   const isHoveringModel = useRef(false);
 
-  const [isHovered, setIsHovered] = useState(false);
-  const [isDragged, setIsDragged] = useState(false);
-
   const lastInteractionTime = useRef(0);
   const BASE_MODEL_Y = 0.1;
   const INTERACTION_LOCK_EPSILON = 0.001;
@@ -57,8 +53,6 @@ export default function Model() {
   const DETAILS_POPUP_X_FACTOR = 0.13;
   const DETAILS_POPUP_Y_SECTION_OFFSET = 1.1;
   const { viewport } = useThree();
-
-  useCursor(isHovered, isDragged ? "grabbing" : "grab", "auto");
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -108,10 +102,10 @@ export default function Model() {
 
       if (shouldLockInteraction) {
         isDragging.current = false;
-        setIsDragged(false);
-        setIsHovered(false);
         isHoveringCenter.current = false;
         isHoveringModel.current = false;
+
+        document.body.style.cursor = "auto";
       }
     }
 
@@ -305,24 +299,26 @@ export default function Model() {
               onPointerEnter={() => {
                 if (isInteractionLockedRef.current) return;
                 isHoveringModel.current = true;
-                setIsHovered(true);
+                document.body.style.cursor = "grab";
               }}
               onPointerLeave={() => {
                 if (isInteractionLockedRef.current) return;
                 isHoveringModel.current = false;
-                setIsHovered(false);
+                document.body.style.cursor = "auto";
               }}
               onPointerDown={(e) => {
                 if (isInteractionLockedRef.current) return;
                 isDragging.current = true;
-                setIsDragged(true);
+                document.body.style.cursor = "grabbing";
                 (e.target as Element).setPointerCapture(e.pointerId);
                 e.stopPropagation();
               }}
               onPointerUp={(e) => {
                 if (isInteractionLockedRef.current) return;
                 isDragging.current = false;
-                setIsDragged(false);
+                document.body.style.cursor = isHoveringModel.current
+                  ? "grab"
+                  : "auto";
                 (e.target as Element).releasePointerCapture(e.pointerId);
               }}
             >

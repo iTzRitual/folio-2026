@@ -9,6 +9,7 @@ import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment } from "@react-three/drei";
 import { Details } from "./Details";
 import { HeroTransitionProvider } from "./HeroTransitionProvider";
+import { Suspense } from "react";
 
 function SceneContent({ startAnimation }: { startAnimation: boolean }) {
   return (
@@ -18,7 +19,9 @@ function SceneContent({ startAnimation }: { startAnimation: boolean }) {
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
         {/* <Background /> */}
-        <Model />
+        <Suspense fallback={null}>
+          <Model />
+        </Suspense>
         <HeroText />
         <Details />
         <EffectComposer>
