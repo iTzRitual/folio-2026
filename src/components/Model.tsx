@@ -115,20 +115,23 @@ export default function Model() {
     }
 
     if (shouldLockInteraction) {
-      const returnAlpha =
-        1 - Math.exp(-CONFIG.RETURN_TO_CENTER_SMOOTHNESS * dt);
+      pos.current.x = THREE.MathUtils.damp(
+        pos.current.x,
+        0,
+        CONFIG.RETURN_TO_CENTER_SMOOTHNESS,
+        dt,
+      );
+      pos.current.y = THREE.MathUtils.damp(
+        pos.current.y,
+        0,
+        CONFIG.RETURN_TO_CENTER_SMOOTHNESS,
+        dt,
+      );
+
       const velocityDamping = Math.exp(-CONFIG.RETURN_VELOCITY_DAMPING * dt);
-
-      pos.current.x = THREE.MathUtils.lerp(pos.current.x, 0, returnAlpha);
-      pos.current.y = THREE.MathUtils.lerp(pos.current.y, 0, returnAlpha);
-
       vel.current.multiplyScalar(velocityDamping);
 
-      if (
-        Math.abs(pos.current.x) < CONFIG.RETURN_SNAP_EPSILON &&
-        Math.abs(pos.current.y) < CONFIG.RETURN_SNAP_EPSILON &&
-        vel.current.lengthSq() < CONFIG.RETURN_SNAP_EPSILON
-      ) {
+      if (pos.current.lengthSq() < 0.0025) {
         pos.current.set(0, 0, 0);
         vel.current.set(0, 0, 0);
       }
@@ -159,12 +162,8 @@ export default function Model() {
         sectionSpacing * CONFIG.DETAILS_POPUP_Y_SECTION_OFFSET;
       const detailsTargetX = viewport.width * CONFIG.DETAILS_POPUP_X_FACTOR;
 
-      animGroupRef.current.position.x = THREE.MathUtils.lerp(
-        0,
-        detailsTargetX,
-        popupProgress,
-      );
-      animGroupRef.current.position.y =
+      const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
+      const targetY =
         scrollProgress < CONFIG.DETAILS_POPUP_START
           ? heroYCurrent
           : THREE.MathUtils.lerp(
@@ -172,6 +171,19 @@ export default function Model() {
               detailsTargetY,
               popupProgress,
             );
+
+      animGroupRef.current.position.x = THREE.MathUtils.damp(
+        animGroupRef.current.position.x,
+        targetX,
+        10,
+        dt,
+      );
+      animGroupRef.current.position.y = THREE.MathUtils.damp(
+        animGroupRef.current.position.y,
+        targetY,
+        10,
+        dt,
+      );
     }
 
     if (transitionScaleGroupRef.current) {
@@ -189,12 +201,20 @@ export default function Model() {
       );
 
       const scaleOutValue = 1 - scaleOutProgress;
-      const transitionScale = THREE.MathUtils.lerp(
+      const targetScale = THREE.MathUtils.lerp(
         scaleOutValue,
         CONFIG.DETAILS_POPUP_SCALE,
         popupProgress,
       );
-      transitionScaleGroupRef.current.scale.setScalar(transitionScale);
+
+      const currentScale = transitionScaleGroupRef.current.scale.x;
+      const smoothScale = THREE.MathUtils.damp(
+        currentScale,
+        targetScale,
+        10,
+        dt,
+      );
+      transitionScaleGroupRef.current.scale.setScalar(smoothScale);
     }
 
     const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.BASE_MODEL_Y;
@@ -208,82 +228,64 @@ export default function Model() {
     const cursorY =
       (state.pointer.y * currentViewport.height) / 2 - outerGroupY;
 
-    if (isDragging.current) {
-      lastInteractionTime.current = state.clock.getElapsedTime();
+    if (!shouldLockInteraction) {
+      if (isDragging.current) {
+        lastInteractionTime.current = state.clock.getElapsedTime();
 
-      const dragStiffness = 8;
-      vel.current.x = (cursorX - pos.current.x) * dragStiffness;
-      vel.current.y = (cursorY - pos.current.y) * dragStiffness;
+        const dragStiffness = 8;
+        vel.current.x = (cursorX - pos.current.x) * dragStiffness;
+        vel.current.y = (cursorY - pos.current.y) * dragStiffness;
 
-      pos.current.x += vel.current.x * dt;
-      pos.current.y += vel.current.y * dt;
-    } else {
-      pos.current.x += vel.current.x * dt;
-      pos.current.y += vel.current.y * dt;
+        pos.current.x += vel.current.x * dt;
+        pos.current.y += vel.current.y * dt;
+      } else {
+        pos.current.x += vel.current.x * dt;
+        pos.current.y += vel.current.y * dt;
 
-      const collisionRadius = responsiveScale * 1.2;
-      const limitX = currentViewport.width / 2 - collisionRadius;
-      const limitTop =
-        currentViewport.height / 2 - outerGroupY - collisionRadius;
-      const limitBottom =
-        -currentViewport.height / 2 - outerGroupY + collisionRadius;
+        const collisionRadius = responsiveScale * 1.2;
+        const limitX = currentViewport.width / 2 - collisionRadius;
+        const limitTop =
+          currentViewport.height / 2 - outerGroupY - collisionRadius;
+        const limitBottom =
+          -currentViewport.height / 2 - outerGroupY + collisionRadius;
 
-      // previous collision
-      // const bounceForce = -0.85;
+        const edgeSpring = 50.0;
 
-      // if (pos.current.x > limitX) {
-      //   pos.current.x = limitX;
-      //   vel.current.x *= bounceForce;
-      // }
-      // if (pos.current.x < -limitX) {
-      //   pos.current.x = -limitX;
-      //   vel.current.x *= bounceForce;
-      // }
-      // if (pos.current.y > limitTop) {
-      //   pos.current.y = limitTop;
-      //   vel.current.y *= bounceForce;
-      // }
-      // if (pos.current.y < limitBottom) {
-      //   pos.current.y = limitBottom;
-      //   vel.current.y *= bounceForce;
-      // }
-
-      const edgeSpring = 50.0;
-
-      if (pos.current.x > limitX) {
-        vel.current.x -= (pos.current.x - limitX) * edgeSpring * dt;
-      } else if (pos.current.x < -limitX) {
-        vel.current.x -= (pos.current.x + limitX) * edgeSpring * dt;
-      }
-
-      if (pos.current.y > limitTop) {
-        vel.current.y -= (pos.current.y - limitTop) * edgeSpring * dt;
-      } else if (pos.current.y < limitBottom) {
-        vel.current.y -= (pos.current.y - limitBottom) * edgeSpring * dt;
-      }
-
-      const timeSinceRelease =
-        state.clock.getElapsedTime() - lastInteractionTime.current;
-      const inactivityDelay = 2.0;
-
-      if (timeSinceRelease > inactivityDelay) {
-        let targetX = 0;
-        let targetY = 0;
-
-        if (isHoveringCenter.current) {
-          targetX = cursorX;
-          targetY = cursorY;
+        if (pos.current.x > limitX) {
+          vel.current.x -= (pos.current.x - limitX) * edgeSpring * dt;
+        } else if (pos.current.x < -limitX) {
+          vel.current.x -= (pos.current.x + limitX) * edgeSpring * dt;
         }
 
-        vel.current.x += (targetX - pos.current.x) * 4 * dt;
-        vel.current.y += (targetY - pos.current.y) * 4 * dt;
+        if (pos.current.y > limitTop) {
+          vel.current.y -= (pos.current.y - limitTop) * edgeSpring * dt;
+        } else if (pos.current.y < limitBottom) {
+          vel.current.y -= (pos.current.y - limitBottom) * edgeSpring * dt;
+        }
 
-        vel.current.x -= vel.current.x * 3.0 * dt;
-        vel.current.y -= vel.current.y * 3.0 * dt;
-      } else {
-        const friction = 1.0;
-        vel.current.x -= vel.current.x * friction * dt;
-        vel.current.y -= vel.current.y * friction * dt;
+        const timeSinceRelease =
+          state.clock.getElapsedTime() - lastInteractionTime.current;
+        const inactivityDelay = 2.0;
+
+        if (timeSinceRelease > inactivityDelay) {
+          let targetX = 0;
+          let targetY = 0;
+
+          if (isHoveringCenter.current) {
+            targetX = cursorX;
+            targetY = cursorY;
+          }
+
+          vel.current.x += (targetX - pos.current.x) * 4 * dt;
+          vel.current.y += (targetY - pos.current.y) * 4 * dt;
+
+          vel.current.x -= vel.current.x * 3.0 * dt;
+          vel.current.y -= vel.current.y * 3.0 * dt;
+        } else {
+          const friction = 1.0;
+          vel.current.x -= vel.current.x * friction * dt;
+          vel.current.y -= vel.current.y * friction * dt;
+        }
       }
     }
 

@@ -11,6 +11,7 @@ import { Environment } from "@react-three/drei";
 import { Details } from "./Details";
 import { HeroTransitionProvider } from "./HeroTransitionProvider";
 import { Suspense } from "react";
+import { Stats } from "@react-three/drei";
 
 function SceneContent({ startAnimation }: { startAnimation: boolean }) {
   return (
@@ -49,6 +50,7 @@ export default function Scene({ startAnimation }: { startAnimation: boolean }) {
         style={{ touchAction: "auto" }}
       >
         <SceneContent startAnimation={startAnimation} />
+        <Stats />
       </Canvas>
     </div>
   );

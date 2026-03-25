@@ -16,22 +16,12 @@ const experience = [
   {
     company: "Nowa Lukasz Walter",
     position: "Frontend Engineer",
-    duration: "2024 - Present",
+    duration: "2018 - Present",
   },
   {
     company: "Galactic Reborn",
     position: "Co-Founder",
     duration: "2023 - 2024",
-  },
-  {
-    company: "Nowa Lukasz Walter",
-    position: "Frontend Developer",
-    duration: "2020 - 2024",
-  },
-  {
-    company: "Nowa Lukasz Walter",
-    position: "Junior Frontend Developer",
-    duration: "2018 - 2020",
   },
 ];
 
