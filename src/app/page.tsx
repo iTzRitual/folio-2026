@@ -22,7 +22,7 @@ export default function Home() {
       <ReactLenis root />
 
       <div
-        className="relative  bg-[#1D1D1D]"
+        className="relative bg-[#1D1D1D]"
         style={{ height: `${TIMELINE_VIEWPORTS * 100}vh` }}
       >
         <main className="sticky top-0 h-screen bg-[#1D1D1D]">

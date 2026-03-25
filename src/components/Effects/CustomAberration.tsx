@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Vector2 } from "three";
+import { Vector2, MathUtils } from "three";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 
 export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
@@ -35,7 +35,11 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
       const lerpFactor = 1 - Math.exp(-9.75 * delta);
       currentMouse.current.lerp(targetMouse.current, lerpFactor);
 
-      intensity.current = Math.max(0.0, intensity.current - 3.0 * delta);
+      intensity.current = MathUtils.lerp(
+        intensity.current,
+        0,
+        1 - Math.exp(-3.0 * delta),
+      );
 
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
       effect.uniforms.get("u_prevMouse")!.value.copy(prevMouse.current);

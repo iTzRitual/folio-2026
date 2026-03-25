@@ -227,23 +227,39 @@ export default function Model() {
         currentViewport.height / 2 - outerGroupY - collisionRadius;
       const limitBottom =
         -currentViewport.height / 2 - outerGroupY + collisionRadius;
-      const bounceForce = -0.85;
+
+      // previous collision
+      // const bounceForce = -0.85;
+
+      // if (pos.current.x > limitX) {
+      //   pos.current.x = limitX;
+      //   vel.current.x *= bounceForce;
+      // }
+      // if (pos.current.x < -limitX) {
+      //   pos.current.x = -limitX;
+      //   vel.current.x *= bounceForce;
+      // }
+      // if (pos.current.y > limitTop) {
+      //   pos.current.y = limitTop;
+      //   vel.current.y *= bounceForce;
+      // }
+      // if (pos.current.y < limitBottom) {
+      //   pos.current.y = limitBottom;
+      //   vel.current.y *= bounceForce;
+      // }
+
+      const edgeSpring = 50.0;
 
       if (pos.current.x > limitX) {
-        pos.current.x = limitX;
-        vel.current.x *= bounceForce;
+        vel.current.x -= (pos.current.x - limitX) * edgeSpring * dt;
+      } else if (pos.current.x < -limitX) {
+        vel.current.x -= (pos.current.x + limitX) * edgeSpring * dt;
       }
-      if (pos.current.x < -limitX) {
-        pos.current.x = -limitX;
-        vel.current.x *= bounceForce;
-      }
+
       if (pos.current.y > limitTop) {
-        pos.current.y = limitTop;
-        vel.current.y *= bounceForce;
-      }
-      if (pos.current.y < limitBottom) {
-        pos.current.y = limitBottom;
-        vel.current.y *= bounceForce;
+        vel.current.y -= (pos.current.y - limitTop) * edgeSpring * dt;
+      } else if (pos.current.y < limitBottom) {
+        vel.current.y -= (pos.current.y - limitBottom) * edgeSpring * dt;
       }
 
       const timeSinceRelease =
