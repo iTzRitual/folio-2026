@@ -1,6 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
+import { useRef } from "react";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
@@ -33,12 +34,22 @@ function SceneContent({ startAnimation }: { startAnimation: boolean }) {
 }
 
 export default function Scene({ startAnimation }: { startAnimation: boolean }) {
+  const eventWrapperRef = useRef<HTMLDivElement>(null!);
+
   return (
-    <>
-      <Canvas className="bg-[#1D1D1D]" key="main-canvas">
+    <div
+      ref={eventWrapperRef}
+      className="absolute inset-0 w-full h-full overflow-hidden"
+    >
+      <Canvas
+        className="bg-[#1D1D1D]"
+        key="main-canvas"
+        eventSource={eventWrapperRef}
+        eventPrefix="client"
+        style={{ touchAction: "auto" }}
+      >
         <SceneContent startAnimation={startAnimation} />
       </Canvas>
-      {/* <GridOverlay /> */}
-    </>
+    </div>
   );
 }

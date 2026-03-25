@@ -3,50 +3,48 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Vector2 } from "three";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 
-export const CustomAberration = forwardRef((props, ref) => {
-  const effect = useMemo(() => new CustomAberrationEffect(), []);
-  const { size } = useThree();
+export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
+  (props, ref) => {
+    const effect = useMemo(() => new CustomAberrationEffect(), []);
+    const { size } = useThree();
 
-  const currentMouse = useRef(new Vector2(0.5, 0.5));
-  const targetMouse = useRef(new Vector2(0.5, 0.5));
-  const prevMouse = useRef(new Vector2(0.5, 0.5));
-  const intensity = useRef(0.0);
+    const currentMouse = useRef(new Vector2(0.5, 0.5));
+    const targetMouse = useRef(new Vector2(0.5, 0.5));
+    const prevMouse = useRef(new Vector2(0.5, 0.5));
+    const intensity = useRef(0.0);
 
-  useEffect(() => {
-    effect.uniforms.get("u_resolution")!.value.set(size.width, size.height);
-  }, [size, effect]);
+    useEffect(() => {
+      effect.uniforms.get("u_resolution")!.value.set(size.width, size.height);
+    }, [size, effect]);
 
-  useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      const x = e.clientX / window.innerWidth;
-      const y = 1.0 - e.clientY / window.innerHeight;
+    useFrame(({ pointer }, delta) => {
+      const mappedX = (pointer.x + 1) / 2;
+      const mappedY = (pointer.y + 1) / 2;
 
-      targetMouse.current.set(x, y);
-      intensity.current = 1.0;
-    };
+      const dx = mappedX - targetMouse.current.x;
+      const dy = mappedY - targetMouse.current.y;
 
-    window.addEventListener("pointermove", handlePointerMove);
+      if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+        intensity.current = 1.0;
+      }
 
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-    };
-  }, []);
+      targetMouse.current.set(mappedX, mappedY);
 
-  useFrame((state, delta) => {
-    prevMouse.current.copy(currentMouse.current);
+      prevMouse.current.copy(currentMouse.current);
 
-    const lerpFactor = 1 - Math.exp(-9.75 * delta);
-    currentMouse.current.lerp(targetMouse.current, lerpFactor);
+      const lerpFactor = 1 - Math.exp(-9.75 * delta);
+      currentMouse.current.lerp(targetMouse.current, lerpFactor);
 
-    intensity.current = Math.max(0.0, intensity.current - 3.0 * delta);
+      intensity.current = Math.max(0.0, intensity.current - 3.0 * delta);
 
-    effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
-    effect.uniforms.get("u_prevMouse")!.value.copy(prevMouse.current);
-    effect.uniforms.get("u_aberrationIntensity")!.value = intensity.current;
-    effect.uniforms.get("u_deltaTime")!.value = Math.max(delta, 0.0001);
-  });
+      effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
+      effect.uniforms.get("u_prevMouse")!.value.copy(prevMouse.current);
+      effect.uniforms.get("u_aberrationIntensity")!.value = intensity.current;
+      effect.uniforms.get("u_deltaTime")!.value = Math.max(delta, 0.0001);
+    });
 
-  return <primitive ref={ref} object={effect} dispose={null} />;
-});
+    return <primitive ref={ref} object={effect} dispose={null} />;
+  },
+);
 
 CustomAberration.displayName = "CustomAberration";
