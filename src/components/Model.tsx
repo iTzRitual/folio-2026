@@ -14,6 +14,22 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 
+const CONFIG = {
+  BASE_MODEL_Y: 0.1,
+  INTERACTION_LOCK_EPSILON: 0.001,
+  MODEL_UP_TRAVEL_FACTOR: 0.25,
+  SCALE_OUT_START: 0.2,
+  SCALE_OUT_END: 0.9,
+  RETURN_TO_CENTER_SMOOTHNESS: 8,
+  RETURN_VELOCITY_DAMPING: 10,
+  RETURN_SNAP_EPSILON: 0.002,
+  DETAILS_POPUP_START: 0.9,
+  DETAILS_POPUP_END: 1.0,
+  DETAILS_POPUP_SCALE: 0.6,
+  DETAILS_POPUP_X_FACTOR: 0.13,
+  DETAILS_POPUP_Y_SECTION_OFFSET: 1.1,
+};
+
 export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
@@ -39,19 +55,7 @@ export default function Model() {
   const isHoveringModel = useRef(false);
 
   const lastInteractionTime = useRef(0);
-  const BASE_MODEL_Y = 0.1;
-  const INTERACTION_LOCK_EPSILON = 0.001;
-  const MODEL_UP_TRAVEL_FACTOR = 0.25;
-  const SCALE_OUT_START = 0.2;
-  const SCALE_OUT_END = 0.9;
-  const RETURN_TO_CENTER_SMOOTHNESS = 8;
-  const RETURN_VELOCITY_DAMPING = 10;
-  const RETURN_SNAP_EPSILON = 0.002;
-  const DETAILS_POPUP_START = 0.9;
-  const DETAILS_POPUP_END = 1.0;
-  const DETAILS_POPUP_SCALE = 0.6;
-  const DETAILS_POPUP_X_FACTOR = 0.13;
-  const DETAILS_POPUP_Y_SECTION_OFFSET = 1.1;
+
   const { viewport } = useThree();
 
   useGSAP(() => {
@@ -94,7 +98,8 @@ export default function Model() {
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
-    const shouldLockInteraction = scrollProgress > INTERACTION_LOCK_EPSILON;
+    const shouldLockInteraction =
+      scrollProgress > CONFIG.INTERACTION_LOCK_EPSILON;
     const dt = Math.min(delta, 1 / 30);
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
@@ -110,8 +115,9 @@ export default function Model() {
     }
 
     if (shouldLockInteraction) {
-      const returnAlpha = 1 - Math.exp(-RETURN_TO_CENTER_SMOOTHNESS * dt);
-      const velocityDamping = Math.exp(-RETURN_VELOCITY_DAMPING * dt);
+      const returnAlpha =
+        1 - Math.exp(-CONFIG.RETURN_TO_CENTER_SMOOTHNESS * dt);
+      const velocityDamping = Math.exp(-CONFIG.RETURN_VELOCITY_DAMPING * dt);
 
       pos.current.x = THREE.MathUtils.lerp(pos.current.x, 0, returnAlpha);
       pos.current.y = THREE.MathUtils.lerp(pos.current.y, 0, returnAlpha);
@@ -119,9 +125,9 @@ export default function Model() {
       vel.current.multiplyScalar(velocityDamping);
 
       if (
-        Math.abs(pos.current.x) < RETURN_SNAP_EPSILON &&
-        Math.abs(pos.current.y) < RETURN_SNAP_EPSILON &&
-        vel.current.lengthSq() < RETURN_SNAP_EPSILON
+        Math.abs(pos.current.x) < CONFIG.RETURN_SNAP_EPSILON &&
+        Math.abs(pos.current.y) < CONFIG.RETURN_SNAP_EPSILON &&
+        vel.current.lengthSq() < CONFIG.RETURN_SNAP_EPSILON
       ) {
         pos.current.set(0, 0, 0);
         vel.current.set(0, 0, 0);
@@ -130,26 +136,28 @@ export default function Model() {
 
     if (animGroupRef.current) {
       const popupProgress = THREE.MathUtils.clamp(
-        (scrollProgress - DETAILS_POPUP_START) /
-          (DETAILS_POPUP_END - DETAILS_POPUP_START),
+        (scrollProgress - CONFIG.DETAILS_POPUP_START) /
+          (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
         0,
         1,
       );
 
       const heroYAtPopupStart =
-        BASE_MODEL_Y +
-        DETAILS_POPUP_START * viewport.height * MODEL_UP_TRAVEL_FACTOR;
+        CONFIG.BASE_MODEL_Y +
+        CONFIG.DETAILS_POPUP_START *
+          viewport.height *
+          CONFIG.MODEL_UP_TRAVEL_FACTOR;
       const heroYCurrent =
-        BASE_MODEL_Y +
-        scrollProgress * viewport.height * MODEL_UP_TRAVEL_FACTOR;
+        CONFIG.BASE_MODEL_Y +
+        scrollProgress * viewport.height * CONFIG.MODEL_UP_TRAVEL_FACTOR;
       const targetBaseY = -viewport.height * 0.25;
       const sectionTop = viewport.height / 2 - marginY * 0.35;
       const sectionSpacing = viewport.height * 0.25;
       const detailsTargetY =
         targetBaseY +
         sectionTop -
-        sectionSpacing * DETAILS_POPUP_Y_SECTION_OFFSET;
-      const detailsTargetX = viewport.width * DETAILS_POPUP_X_FACTOR;
+        sectionSpacing * CONFIG.DETAILS_POPUP_Y_SECTION_OFFSET;
+      const detailsTargetX = viewport.width * CONFIG.DETAILS_POPUP_X_FACTOR;
 
       animGroupRef.current.position.x = THREE.MathUtils.lerp(
         0,
@@ -157,7 +165,7 @@ export default function Model() {
         popupProgress,
       );
       animGroupRef.current.position.y =
-        scrollProgress < DETAILS_POPUP_START
+        scrollProgress < CONFIG.DETAILS_POPUP_START
           ? heroYCurrent
           : THREE.MathUtils.lerp(
               heroYAtPopupStart,
@@ -168,13 +176,14 @@ export default function Model() {
 
     if (transitionScaleGroupRef.current) {
       const scaleOutProgress = THREE.MathUtils.clamp(
-        (scrollProgress - SCALE_OUT_START) / (SCALE_OUT_END - SCALE_OUT_START),
+        (scrollProgress - CONFIG.SCALE_OUT_START) /
+          (CONFIG.SCALE_OUT_END - CONFIG.SCALE_OUT_START),
         0,
         1,
       );
       const popupProgress = THREE.MathUtils.clamp(
-        (scrollProgress - DETAILS_POPUP_START) /
-          (DETAILS_POPUP_END - DETAILS_POPUP_START),
+        (scrollProgress - CONFIG.DETAILS_POPUP_START) /
+          (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
         0,
         1,
       );
@@ -182,13 +191,13 @@ export default function Model() {
       const scaleOutValue = 1 - scaleOutProgress;
       const transitionScale = THREE.MathUtils.lerp(
         scaleOutValue,
-        DETAILS_POPUP_SCALE,
+        CONFIG.DETAILS_POPUP_SCALE,
         popupProgress,
       );
       transitionScaleGroupRef.current.scale.setScalar(transitionScale);
     }
 
-    const outerGroupY = animGroupRef.current?.position.y ?? BASE_MODEL_Y;
+    const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.BASE_MODEL_Y;
 
     const currentViewport = state.viewport.getCurrentViewport(
       state.camera,
