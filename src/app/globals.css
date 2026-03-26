@@ -2,6 +2,7 @@
 
 @theme {
   --font-aeonik: var(--font-aeonik);
+  --font-karla: var(--font-karla);
 }
 h1 .block-line-wrapper,
 p .block-line-wrapper {

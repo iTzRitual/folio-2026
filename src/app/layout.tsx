@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Boldonse } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -28,6 +29,22 @@ const aeonik = localFont({
   variable: "--font-aeonik",
 });
 
+const karla = localFont({
+  src: [
+    {
+      path: "../../public/fonts/Karla-ExtraBold.ttf",
+      weight: "800",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/Karla-Light.ttf",
+      weight: "300",
+      style: "normal",
+    },
+  ],
+  variable: "--font-karla",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,7 +52,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased ${aeonik.variable}`}>{children}</body>
+      <body className={`antialiased ${aeonik.variable} ${karla.variable}`}>
+        {children}
+      </body>
     </html>
   );
 }

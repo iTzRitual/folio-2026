@@ -48,15 +48,15 @@ export function HeroText() {
   });
 
   const titleAvailableWidth = viewport.width - 2 * marginX;
-  const titleFontSize = titleAvailableWidth * 0.125;
+  const titleFontSize = titleAvailableWidth * 0.127;
   const titlePixelFontSize = titleFontSize / pxTo3DWidth;
-  const fontVisualOffset = titleFontSize * 0.1;
+  const fontVisualOffset = titleFontSize * 0.14;
 
   const titleY = -viewport.height / 2 + marginY + fontVisualOffset;
 
   const subtitleY = viewport.height / 2 - marginY;
   const subtitleAvailableWidth = viewport.width - 2 * marginX;
-  const subtitleFontSize = subtitleAvailableWidth * 0.0257;
+  const subtitleFontSize = subtitleAvailableWidth * 0.0265;
   const subtitlePixelFontSize = subtitleFontSize / pxTo3DWidth;
 
   const professionAvailableWidth = viewport.width - 2 * marginX;

@@ -26,8 +26,11 @@ export function Subtitle({
         anchorX="center"
         anchorY="bottom"
         fontSize={calculatedFontSize}
-        font="fonts/Aeonik-Black.otf"
+        font="fonts/Karla-ExtraBold.ttf"
         lineHeight={1}
+        outlineWidth={0.001}
+        outlineColor="#BCBCBC"
+        letterSpacing={-0.03}
       >
         {children}
         <meshBasicMaterial
@@ -40,9 +43,10 @@ export function Subtitle({
 
       <Html
         as="div"
-        className="-translate-x-1/2 -translate-y-full whitespace-nowrap m-0 p-0 text-red-500/0 pointer-events-auto font-aeonik font-black leading-none"
+        className="-translate-x-1/2 -translate-y-full whitespace-nowrap m-0 p-0 text-red-500/0 pointer-events-auto font-karla font-extrabold leading-none"
         style={{
           fontSize: `${pixelFontSize}px`,
+          letterSpacing: `${-0.03}em`,
         }}
       >
         <Copy

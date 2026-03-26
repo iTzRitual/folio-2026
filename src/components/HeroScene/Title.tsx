@@ -57,6 +57,8 @@ export function Title({
   const HINT_SCROLL_SHOW_EPSILON = 0.0001;
   const STACKED_FADE_START = 0.12;
 
+  const visualFontCorrectionX = calculatedFontSize * 0.05;
+
   useGSAP(() => {
     if (
       !startTrigger ||
@@ -82,7 +84,10 @@ export function Title({
     introTimelineRef.current = tl;
 
     const targetX =
-      -viewportWidth / 2 + marginX + (textWidth3D * targetScale) / 2;
+      -viewportWidth / 2 +
+      marginX +
+      (textWidth3D * targetScale) / 2 -
+      visualFontCorrectionX;
 
     tl.to(
       textGroupRef.current.position,
@@ -153,7 +158,10 @@ export function Title({
     }
 
     const targetX =
-      -viewportWidth / 2 + marginX + (textWidth3D * targetScale) / 2;
+      -viewportWidth / 2 +
+      marginX +
+      (textWidth3D * targetScale) / 2 -
+      visualFontCorrectionX;
 
     if (
       hasUserScrolledRef.current &&
@@ -250,8 +258,11 @@ export function Title({
           anchorX="center"
           anchorY="top"
           fontSize={calculatedFontSize}
-          font="fonts/Aeonik-Black.otf"
+          font="fonts/Karla-ExtraBold.ttf"
           lineHeight={1}
+          outlineWidth={0.005}
+          outlineColor="white"
+          letterSpacing={-0.03}
           onSync={(textMesh) => {
             textMesh.geometry.computeBoundingBox();
             const box = textMesh.geometry.boundingBox;
@@ -274,8 +285,11 @@ export function Title({
           <div className="flex -translate-x-1/2">
             <div
               ref={htmlDivRef}
-              className="whitespace-nowrap text-red-500/0 font-aeonik font-black leading-none origin-top"
-              style={{ fontSize: `${pixelFontSize}px` }}
+              className="whitespace-nowrap text-red-500/0 font-karla font-extrabold leading-none origin-top"
+              style={{
+                fontSize: `${pixelFontSize}px`,
+                letterSpacing: `${-0.03}em`,
+              }}
             >
               <Copy
                 delay={0}
@@ -304,8 +318,9 @@ export function Title({
           anchorX="right"
           anchorY="middle"
           fontSize={calculatedFontSize * 0.15}
-          font="fonts/Aeonik-Light.otf"
+          font="fonts/Karla-Light.ttf"
           lineHeight={1}
+          letterSpacing={-0.02}
         >
           ( Scroll to explore CV )
           <meshBasicMaterial
@@ -321,8 +336,9 @@ export function Title({
             anchorX="right"
             anchorY="bottom"
             fontSize={stackedFontSize}
-            font="fonts/Aeonik-Light.otf"
+            font="fonts/Karla-Light.ttf"
             lineHeight={1}
+            letterSpacing={-0.02}
             color="#BEBEBE"
             position={[0, stackedFontSize * 0.1, 0]}
           >
@@ -339,8 +355,9 @@ export function Title({
             anchorX="right"
             anchorY="top"
             fontSize={stackedFontSize}
-            font="fonts/Aeonik-Light.otf"
+            font="fonts/Karla-Light.ttf"
             lineHeight={1}
+            letterSpacing={-0.02}
             color="#BEBEBE"
             position={[0, -stackedFontSize * 0.1, 0]}
           >

@@ -160,7 +160,8 @@ export function ProfessionLabel({
           anchorY={anchorY}
           fontSize={fontSize}
           lineHeight={1}
-          font="fonts/Aeonik-Light.otf"
+          font="fonts/Karla-Light.ttf"
+          letterSpacing={-0.02}
         >
           {children}
           <meshBasicMaterial
@@ -174,12 +175,13 @@ export function ProfessionLabel({
         <Html
           as="div"
           className={`
-            pointer-events-auto whitespace-nowrap m-0 p-0 text-red-500/0 font-aeonik font-light leading-none
+            pointer-events-auto whitespace-nowrap m-0 p-0 text-red-500/0 font-karla font-light leading-none
             ${isLeft ? "left-0" : "-translate-x-full"} 
             ${verticalPos === "above" ? "-translate-y-full" : "top-0"}
           `}
           style={{
             fontSize: `${pixelFontSize}px`,
+            letterSpacing: `${-0.02}em`,
           }}
         >
           <div ref={htmlOpacityRef} style={{ opacity: 1 }}>

@@ -136,7 +136,7 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-white font-aeonik font-black text-6xl pointer-events-none"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-white font-karla font-extrabold text-6xl pointer-events-none"
     >
       <div className="block-line-wrapper">
         <div
