@@ -30,7 +30,7 @@ const CONFIG = {
   DETAILS_POPUP_Y_SECTION_OFFSET: 1.1,
 };
 
-export default function Model() {
+export default function Model({ isMobile }: { isMobile?: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -138,83 +138,116 @@ export default function Model() {
     }
 
     if (animGroupRef.current) {
-      const popupProgress = THREE.MathUtils.clamp(
-        (scrollProgress - CONFIG.DETAILS_POPUP_START) /
-          (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
-        0,
-        1,
-      );
+      if (isMobile) {
+        const scrolledScreens = window.scrollY / window.innerHeight;
 
-      const heroYAtPopupStart =
-        CONFIG.BASE_MODEL_Y +
-        CONFIG.DETAILS_POPUP_START *
-          viewport.height *
-          CONFIG.MODEL_UP_TRAVEL_FACTOR;
-      const heroYCurrent =
-        CONFIG.BASE_MODEL_Y +
-        scrollProgress * viewport.height * CONFIG.MODEL_UP_TRAVEL_FACTOR;
-      const targetBaseY = -viewport.height * 0.25;
-      const sectionTop = viewport.height / 2 - marginY * 0.35;
-      const sectionSpacing = viewport.height * 0.25;
-      const detailsTargetY =
-        targetBaseY +
-        sectionTop -
-        sectionSpacing * CONFIG.DETAILS_POPUP_Y_SECTION_OFFSET;
-      const detailsTargetX = viewport.width * CONFIG.DETAILS_POPUP_X_FACTOR;
+        const targetY =
+          CONFIG.BASE_MODEL_Y + scrolledScreens * viewport.height * 1.05;
 
-      const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
-      const targetY =
-        scrollProgress < CONFIG.DETAILS_POPUP_START
-          ? heroYCurrent
-          : THREE.MathUtils.lerp(
-              heroYAtPopupStart,
-              detailsTargetY,
-              popupProgress,
-            );
+        animGroupRef.current.position.x = 0;
+        animGroupRef.current.position.y = THREE.MathUtils.damp(
+          animGroupRef.current.position.y,
+          targetY,
+          20,
+          dt,
+        );
+      } else {
+        const popupProgress = THREE.MathUtils.clamp(
+          (scrollProgress - CONFIG.DETAILS_POPUP_START) /
+            (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
+          0,
+          1,
+        );
 
-      animGroupRef.current.position.x = THREE.MathUtils.damp(
-        animGroupRef.current.position.x,
-        targetX,
-        10,
-        dt,
-      );
-      animGroupRef.current.position.y = THREE.MathUtils.damp(
-        animGroupRef.current.position.y,
-        targetY,
-        10,
-        dt,
-      );
+        const heroYAtPopupStart =
+          CONFIG.BASE_MODEL_Y +
+          CONFIG.DETAILS_POPUP_START *
+            viewport.height *
+            CONFIG.MODEL_UP_TRAVEL_FACTOR;
+        const heroYCurrent =
+          CONFIG.BASE_MODEL_Y +
+          scrollProgress * viewport.height * CONFIG.MODEL_UP_TRAVEL_FACTOR;
+        const targetBaseY = -viewport.height * 0.25;
+        const sectionTop = viewport.height / 2 - marginY * 0.35;
+        const sectionSpacing = viewport.height * 0.25;
+        const detailsTargetY =
+          targetBaseY +
+          sectionTop -
+          sectionSpacing * CONFIG.DETAILS_POPUP_Y_SECTION_OFFSET;
+        const detailsTargetX = viewport.width * CONFIG.DETAILS_POPUP_X_FACTOR;
+
+        const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
+        const targetY =
+          scrollProgress < CONFIG.DETAILS_POPUP_START
+            ? heroYCurrent
+            : THREE.MathUtils.lerp(
+                heroYAtPopupStart,
+                detailsTargetY,
+                popupProgress,
+              );
+
+        animGroupRef.current.position.x = THREE.MathUtils.damp(
+          animGroupRef.current.position.x,
+          targetX,
+          10,
+          dt,
+        );
+        animGroupRef.current.position.y = THREE.MathUtils.damp(
+          animGroupRef.current.position.y,
+          targetY,
+          10,
+          dt,
+        );
+      }
     }
 
     if (transitionScaleGroupRef.current) {
-      const scaleOutProgress = THREE.MathUtils.clamp(
-        (scrollProgress - CONFIG.SCALE_OUT_START) /
-          (CONFIG.SCALE_OUT_END - CONFIG.SCALE_OUT_START),
-        0,
-        1,
-      );
-      const popupProgress = THREE.MathUtils.clamp(
-        (scrollProgress - CONFIG.DETAILS_POPUP_START) /
-          (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
-        0,
-        1,
-      );
+      if (isMobile) {
+        const scaleOutProgress = THREE.MathUtils.clamp(
+          window.scrollY / (window.innerHeight * 0.8),
+          0,
+          1,
+        );
+        const targetScale = 1 - scaleOutProgress * 0.5;
 
-      const scaleOutValue = 1 - scaleOutProgress;
-      const targetScale = THREE.MathUtils.lerp(
-        scaleOutValue,
-        CONFIG.DETAILS_POPUP_SCALE,
-        popupProgress,
-      );
+        const currentScale = transitionScaleGroupRef.current.scale.x;
+        const smoothScale = THREE.MathUtils.damp(
+          currentScale,
+          targetScale,
+          15,
+          dt,
+        );
+        transitionScaleGroupRef.current.scale.setScalar(smoothScale);
+      } else {
+        const scaleOutProgress = THREE.MathUtils.clamp(
+          (scrollProgress - CONFIG.SCALE_OUT_START) /
+            (CONFIG.SCALE_OUT_END - CONFIG.SCALE_OUT_START),
+          0,
+          1,
+        );
+        const popupProgress = THREE.MathUtils.clamp(
+          (scrollProgress - CONFIG.DETAILS_POPUP_START) /
+            (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
+          0,
+          1,
+        );
 
-      const currentScale = transitionScaleGroupRef.current.scale.x;
-      const smoothScale = THREE.MathUtils.damp(
-        currentScale,
-        targetScale,
-        10,
-        dt,
-      );
-      transitionScaleGroupRef.current.scale.setScalar(smoothScale);
+        const scaleOutValue = 1 - scaleOutProgress;
+        const targetScale = THREE.MathUtils.lerp(
+          scaleOutValue,
+          CONFIG.DETAILS_POPUP_SCALE,
+          popupProgress,
+        );
+
+        const currentScale = transitionScaleGroupRef.current.scale.x;
+        const smoothScale = THREE.MathUtils.damp(
+          currentScale,
+          targetScale,
+          10,
+          dt,
+        );
+        transitionScaleGroupRef.current.scale.setScalar(smoothScale);
+      }
     }
 
     const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.BASE_MODEL_Y;

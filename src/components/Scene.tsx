@@ -13,28 +13,43 @@ import { HeroTransitionProvider } from "./HeroTransitionProvider";
 import { Suspense } from "react";
 import { Stats } from "@react-three/drei";
 
-function SceneContent({ startAnimation }: { startAnimation: boolean }) {
+function SceneContent({
+  startAnimation,
+  isMobile,
+}: {
+  startAnimation: boolean;
+  isMobile: boolean;
+}) {
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <color attach="background" args={["#1D1D1D"]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
-        {/* <Background /> */}
+
         <Suspense fallback={null}>
-          <Model />
+          <Model isMobile={isMobile} />
         </Suspense>
-        <HeroText />
-        <Details />
-        <EffectComposer>
-          <CustomAberration />
-        </EffectComposer>
+
+        {!isMobile && <HeroText />}
+        {!isMobile && <Details />}
+        {!isMobile && (
+          <EffectComposer>
+            <CustomAberration />
+          </EffectComposer>
+        )}
       </HeroTransitionProvider>
     </HeroLayoutProvider>
   );
 }
 
-export default function Scene({ startAnimation }: { startAnimation: boolean }) {
+export default function Scene({
+  startAnimation,
+  isMobile,
+}: {
+  startAnimation: boolean;
+  isMobile: boolean;
+}) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
   return (
@@ -43,13 +58,13 @@ export default function Scene({ startAnimation }: { startAnimation: boolean }) {
       className="absolute inset-0 w-full h-full overflow-hidden"
     >
       <Canvas
-        className="bg-[#1D1D1D]"
+        className="bg-transparent"
         key="main-canvas"
         eventSource={eventWrapperRef}
         eventPrefix="client"
         style={{ touchAction: "auto" }}
       >
-        <SceneContent startAnimation={startAnimation} />
+        <SceneContent startAnimation={startAnimation} isMobile={isMobile} />
         <Stats />
       </Canvas>
     </div>
