@@ -2,6 +2,7 @@ import { Effect } from "postprocessing";
 import { Uniform, Vector2 } from "three";
 
 const fragmentShader = `
+precision mediump float;
 uniform vec2 u_mouse;
 uniform float u_aberrationIntensity;
 uniform vec2 u_gridSize;

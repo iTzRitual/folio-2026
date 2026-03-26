@@ -41,7 +41,7 @@ const education = [
   {
     institution: "DSW University of Lower Silesia",
     degree: "Master's degree",
-    field: "Creative Media: Game and 3D Animation Design",
+    field: "Creative Media: 3D Animation",
   },
   {
     institution: "WSB Merito University Wroclaw",

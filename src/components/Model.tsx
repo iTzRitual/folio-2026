@@ -407,7 +407,11 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
             >
               <Center>
                 <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                  <MeshTransmissionMaterial {...materialProps} />
+                  <MeshTransmissionMaterial
+                    {...materialProps}
+                    resolution={256}
+                    samples={4}
+                  />
                 </Clone>
               </Center>
             </group>

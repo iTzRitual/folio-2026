@@ -34,7 +34,7 @@ function SceneContent({
         {!isMobile && <HeroText />}
         {!isMobile && <Details />}
         {!isMobile && (
-          <EffectComposer>
+          <EffectComposer multisampling={0}>
             <CustomAberration />
           </EffectComposer>
         )}
@@ -63,6 +63,7 @@ export default function Scene({
         eventSource={eventWrapperRef}
         eventPrefix="client"
         style={{ touchAction: "auto" }}
+        dpr={[1, 1.5]}
       >
         <SceneContent startAnimation={startAnimation} isMobile={isMobile} />
         <Stats />
