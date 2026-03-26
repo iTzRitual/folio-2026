@@ -14,7 +14,12 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
     const intensity = useRef(0.0);
 
     useEffect(() => {
-      effect.uniforms.get("u_resolution")!.value.set(size.width, size.height);
+      const aspectRatio = size.width / size.height;
+      const columns = 40.0;
+      const rows = columns / aspectRatio;
+
+      effect.uniforms.get("u_gridSize")!.value.set(columns, rows);
+      effect.uniforms.get("u_aspect")!.value.set(aspectRatio, 1.0);
     }, [size, effect]);
 
     useFrame(({ pointer }, delta) => {
@@ -29,7 +34,6 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
       }
 
       targetMouse.current.set(mappedX, mappedY);
-
       prevMouse.current.copy(currentMouse.current);
 
       const lerpFactor = 1 - Math.exp(-9.75 * delta);
@@ -41,10 +45,25 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
         1 - Math.exp(-3.0 * delta),
       );
 
+      if (intensity.current < 0.005) {
+        intensity.current = 0.0;
+      }
+
+      const safeDelta = Math.max(delta, 0.0001);
+      const velX =
+        intensity.current > 0
+          ? (currentMouse.current.x - prevMouse.current.x) *
+            (0.016666 / safeDelta)
+          : 0;
+      const velY =
+        intensity.current > 0
+          ? (currentMouse.current.y - prevMouse.current.y) *
+            (0.016666 / safeDelta)
+          : 0;
+
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
-      effect.uniforms.get("u_prevMouse")!.value.copy(prevMouse.current);
       effect.uniforms.get("u_aberrationIntensity")!.value = intensity.current;
-      effect.uniforms.get("u_deltaTime")!.value = Math.max(delta, 0.0001);
+      effect.uniforms.get("u_mouseVelocity")!.value.set(velX, velY);
     });
 
     return <primitive ref={ref} object={effect} dispose={null} />;
