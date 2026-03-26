@@ -139,10 +139,17 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
 
     if (animGroupRef.current) {
       if (isMobile) {
-        const scrolledScreens = window.scrollY / window.innerHeight;
+        const depthViewport = state.viewport.getCurrentViewport(
+          state.camera,
+          new THREE.Vector3(0, 0, 2),
+        );
 
+        const scrolledScreens = window.scrollY / window.innerHeight;
+        const mobileYOffset = 0.1;
         const targetY =
-          CONFIG.BASE_MODEL_Y + scrolledScreens * viewport.height * 1.05;
+          CONFIG.BASE_MODEL_Y +
+          mobileYOffset +
+          scrolledScreens * depthViewport.height;
 
         animGroupRef.current.position.x = 0;
         animGroupRef.current.position.y = THREE.MathUtils.damp(

@@ -6,6 +6,7 @@ import { ReactLenis } from "lenis/react";
 import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { Copy } from "@/components/Copy";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
@@ -43,14 +44,28 @@ export default function Home() {
           }}
         >
           {isMobile && (
-            <section className="relative w-full h-screen flex flex-col items-center justify-center pointer-events-none">
-              <h1 className="text-white text-4xl md:text-6xl font-bold uppercase text-center mt-[-10vh]">
-                Natan Mokrzycki
-              </h1>
-              <p className="text-white text-sm mt-4 max-w-xs text-center">
-                Bridging the gap between technical performance and high-end
-                visual aesthetics.
-              </p>
+            <section className="relative w-full h-screen flex flex-col items-center justify-around pointer-events-none font-aeonik px-4">
+              <Copy
+                delay={0.1}
+                blockColor="#BCBCBC"
+                direction="rightToLeft"
+                startTrigger={startScene}
+              >
+                <p className="text-[#BCBCBC] font-aeonik font-black text-center text-xl">
+                  Bridging the gap between technical performance and high-end
+                  visual aesthetics.
+                </p>
+              </Copy>
+              <Copy
+                delay={0}
+                blockColor="#FFFFFF"
+                direction="leftToRight"
+                startTrigger={startScene}
+              >
+                <h1 className="text-white font-black text-center w-full text-7xl">
+                  Natan Mokrzycki
+                </h1>
+              </Copy>
             </section>
           )}
 
