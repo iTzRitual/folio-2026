@@ -114,7 +114,7 @@ export function HeroText() {
           exitEnd={LABEL_EXIT_END}
           exitDistance={professionExitDistance}
         >
-          Software Engineer
+          Frontend Engineer
         </ProfessionLabel>
 
         <ProfessionLabel

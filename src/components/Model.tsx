@@ -377,6 +377,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                 if (isInteractionLockedRef.current) return;
                 isDragging.current = true;
                 document.body.style.cursor = "grabbing";
+                document.body.style.userSelect = "none";
                 (e.target as Element).setPointerCapture(e.pointerId);
                 e.stopPropagation();
               }}
@@ -386,6 +387,14 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                 document.body.style.cursor = isHoveringModel.current
                   ? "grab"
                   : "auto";
+                document.body.style.userSelect = "";
+                (e.target as Element).releasePointerCapture(e.pointerId);
+              }}
+              onPointerCancel={(e) => {
+                if (isMobile || isInteractionLockedRef.current) return;
+                isDragging.current = false;
+                document.body.style.cursor = "auto";
+                document.body.style.userSelect = "";
                 (e.target as Element).releasePointerCapture(e.pointerId);
               }}
             >

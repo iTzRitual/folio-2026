@@ -69,7 +69,7 @@ export default function Home() {
             </section>
           )}
 
-          <section className="relative w-full h-screen pointer-events-auto"></section>
+          <section className="relative w-full h-screen pointer-events-none"></section>
         </main>
       </div>
     </>

@@ -30,10 +30,10 @@ const projects = [
     name: "3D Interactive Configurator",
   },
   {
-    name: "MagScan Warehouse App",
+    name: "RN Warehouse App",
   },
   {
-    name: "E-commerce Transformations",
+    name: "E-commerce lorem",
   },
 ];
 

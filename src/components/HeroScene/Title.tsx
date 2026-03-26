@@ -326,7 +326,7 @@ export function Title({
             color="#BEBEBE"
             position={[0, stackedFontSize * 0.1, 0]}
           >
-            Software Engineer
+            Frontend Engineer
             <meshBasicMaterial
               ref={stackedTopRef}
               transparent
