@@ -4,7 +4,7 @@ export const heroContent = {
         "Bridging the gap between performance and high-end visual aesthetics.",
     professions: ["Frontend Engineer", "Creative Technologist"],
     scrollHint: "Scroll to explore CV",
-};
+} as const;
 
 export const experienceData = [
     {
@@ -17,7 +17,7 @@ export const experienceData = [
         position: "Co-Founder",
         duration: "2023 - 2024",
     },
-];
+] as const;
 export const projectsData = [
     {
         name: "3D Interactive Configurator",
@@ -28,7 +28,7 @@ export const projectsData = [
     {
         name: "E-commerce lorem",
     },
-];
+] as const;
 export const educationData = [
     {
         institution: "DSW University of Lower Silesia",
@@ -40,7 +40,7 @@ export const educationData = [
         degree: "Bachelor of Engineering",
         field: "Computer Science",
     },
-];
+] as const;
 export const skillsData = [
     "Visual Design",
     "UI/UX Design",
@@ -55,4 +55,4 @@ export const skillsData = [
     "Liquid",
     "Figma",
     "After Effects",
-];
+] as const;

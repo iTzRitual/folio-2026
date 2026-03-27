@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useProgress } from "@react-three/drei";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { CONFIG } from "../config/constants";
 
 interface LoaderProps {
   onExitStart: () => void;
@@ -41,7 +42,7 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
 
     tl.to(blockRef.current, {
       scaleX: 1,
-      duration: 0.5,
+      duration: CONFIG.loader.REVEAL_DURATION,
       ease: "power4.inOut",
     });
 
@@ -52,7 +53,7 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
     tl.set(blockRef.current, { transformOrigin: "right center" });
     tl.to(blockRef.current, {
       scaleX: 0,
-      duration: 0.5,
+      duration: CONFIG.loader.REVEAL_DURATION,
       ease: "power4.inOut",
     });
   };
@@ -76,14 +77,14 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
       tl.set(blockRef.current, { transformOrigin: "right center", scaleX: 0 });
       tl.to(blockRef.current, {
         scaleX: 1,
-        duration: 0.5,
+        duration: CONFIG.loader.REVEAL_DURATION,
         ease: "power4.inOut",
       });
       tl.set(odometerWrapperRef.current, { opacity: 1 });
       tl.set(blockRef.current, { transformOrigin: "left center" });
       tl.to(blockRef.current, {
         scaleX: 0,
-        duration: 0.5,
+        duration: CONFIG.loader.REVEAL_DURATION,
         ease: "power4.inOut",
       });
     },
@@ -95,7 +96,7 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
       const targetProgress = Math.max(progress, 31);
       odometerTween.current = gsap.to(progressProxy.current, {
         value: targetProgress,
-        duration: 2,
+        duration: CONFIG.loader.ODOMETER_DURATION,
         ease: "power2.out",
         paused: !isRevealed.current,
         onUpdate: () => {

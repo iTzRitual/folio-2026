@@ -5,6 +5,7 @@ import { useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { CONFIG, THEME, FONTS } from "../../config/constants";
 
 interface TitleProps {
   children: React.ReactNode;
@@ -52,12 +53,15 @@ export function Title({
   const [textWidth3D, setTextWidth3D] = useState(0);
   const [isScrollHintReady, setIsScrollHintReady] = useState(false);
 
-  const targetScale = 0.75;
-  const HINT_SCROLL_HIDE_EPSILON = 0.0005;
-  const HINT_SCROLL_SHOW_EPSILON = 0.0001;
-  const STACKED_FADE_START = 0.12;
+  const {
+    TARGET_SCALE: targetScale,
+    HINT_SCROLL_HIDE_EPSILON,
+    HINT_SCROLL_SHOW_EPSILON,
+    STACKED_FADE_START,
+  } = CONFIG.title;
 
-  const visualFontCorrectionX = calculatedFontSize * 0.05;
+  const visualFontCorrectionX =
+    calculatedFontSize * CONFIG.title.VISUAL_FONT_CORRECTION_X;
 
   useGSAP(() => {
     if (
@@ -70,10 +74,14 @@ export function Title({
       return;
     }
 
-    const delay = isFirstRun.current ? 2.5 : 0;
-    const duration = isFirstRun.current ? 1.5 : 0;
-    const fadeDuration = isFirstRun.current ? 1.2 : 0;
-    const fadePosition = isFirstRun.current ? 0.8 : 0;
+    const delay = isFirstRun.current ? CONFIG.title.DELAY_FIRST_RUN : 0;
+    const duration = isFirstRun.current ? CONFIG.title.DURATION_FIRST_RUN : 0;
+    const fadeDuration = isFirstRun.current
+      ? CONFIG.title.FADE_DURATION_FIRST_RUN
+      : 0;
+    const fadePosition = isFirstRun.current
+      ? CONFIG.title.FADE_POSITION_FIRST_RUN
+      : 0;
 
     const tl = gsap.timeline({
       delay: delay,
@@ -258,7 +266,7 @@ export function Title({
           anchorX="center"
           anchorY="top"
           fontSize={calculatedFontSize}
-          font="fonts/Karla-ExtraBold.ttf"
+          font={FONTS.karlaExtraBold}
           lineHeight={1}
           outlineWidth={0.005}
           outlineColor="white"
@@ -277,7 +285,7 @@ export function Title({
             ref={materialRef}
             transparent
             opacity={0}
-            color="white"
+            color={THEME.white}
           />
         </Text>
 
@@ -318,7 +326,7 @@ export function Title({
           anchorX="right"
           anchorY="middle"
           fontSize={calculatedFontSize * 0.15}
-          font="fonts/Karla-Light.ttf"
+          font={FONTS.karlaLight}
           lineHeight={1}
           letterSpacing={-0.02}
         >
@@ -327,7 +335,7 @@ export function Title({
             ref={scrollTextRef}
             transparent
             opacity={0}
-            color="#A0A0A0"
+            color={THEME.hint}
           />
         </Text>
 
@@ -336,10 +344,10 @@ export function Title({
             anchorX="right"
             anchorY="bottom"
             fontSize={stackedFontSize}
-            font="fonts/Karla-Light.ttf"
+            font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color="#BEBEBE"
+            color={THEME.stacked}
             position={[0, stackedFontSize * 0.1, 0]}
           >
             Frontend Engineer
@@ -347,7 +355,7 @@ export function Title({
               ref={stackedTopRef}
               transparent
               opacity={0}
-              color="#BEBEBE"
+              color={THEME.stacked}
             />
           </Text>
 
@@ -355,10 +363,10 @@ export function Title({
             anchorX="right"
             anchorY="top"
             fontSize={stackedFontSize}
-            font="fonts/Karla-Light.ttf"
+            font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color="#BEBEBE"
+            color={THEME.stacked}
             position={[0, -stackedFontSize * 0.1, 0]}
           >
             Creative Technologist
@@ -366,7 +374,7 @@ export function Title({
               ref={stackedBottomRef}
               transparent
               opacity={0}
-              color="#BEBEBE"
+              color={THEME.stacked}
             />
           </Text>
         </group>

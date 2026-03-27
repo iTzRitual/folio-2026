@@ -13,6 +13,7 @@ import { HeroTransitionProvider } from "./HeroTransitionProvider";
 import { Suspense } from "react";
 import { Stats } from "@react-three/drei";
 import { GridOverlay } from "./HeroScene/GridOverlay";
+import { THEME } from "../config/constants";
 
 function SceneContent({
   startAnimation,
@@ -24,7 +25,7 @@ function SceneContent({
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
-        <color attach="background" args={["#1D1D1D"]} />
+        <color attach="background" args={[THEME.darkest]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
 
