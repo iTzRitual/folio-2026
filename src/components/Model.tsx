@@ -13,22 +13,7 @@ import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-
-const CONFIG = {
-  BASE_MODEL_Y: 0.1,
-  INTERACTION_LOCK_EPSILON: 0.001,
-  MODEL_UP_TRAVEL_FACTOR: 0.25,
-  SCALE_OUT_START: 0.2,
-  SCALE_OUT_END: 0.9,
-  RETURN_TO_CENTER_SMOOTHNESS: 8,
-  RETURN_VELOCITY_DAMPING: 10,
-  RETURN_SNAP_EPSILON: 0.002,
-  DETAILS_POPUP_START: 0.9,
-  DETAILS_POPUP_END: 1.0,
-  DETAILS_POPUP_SCALE: 0.6,
-  DETAILS_POPUP_X_FACTOR: 0.13,
-  DETAILS_POPUP_Y_SECTION_OFFSET: 1.1,
-};
+import { CONFIG } from "../config/constants";
 
 export default function Model({ isMobile }: { isMobile?: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
@@ -99,7 +84,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const shouldLockInteraction =
-      scrollProgress > CONFIG.INTERACTION_LOCK_EPSILON;
+      scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
     const dt = Math.min(delta, 1 / 30);
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
@@ -118,17 +103,17 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       pos.current.x = THREE.MathUtils.damp(
         pos.current.x,
         0,
-        CONFIG.RETURN_TO_CENTER_SMOOTHNESS,
+        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
         dt,
       );
       pos.current.y = THREE.MathUtils.damp(
         pos.current.y,
         0,
-        CONFIG.RETURN_TO_CENTER_SMOOTHNESS,
+        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
         dt,
       );
 
-      const velocityDamping = Math.exp(-CONFIG.RETURN_VELOCITY_DAMPING * dt);
+      const velocityDamping = Math.exp(-CONFIG.model.RETURN_VELOCITY_DAMPING * dt);
       vel.current.multiplyScalar(velocityDamping);
 
       if (pos.current.lengthSq() < 0.0025) {
@@ -147,7 +132,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         const scrolledScreens = window.scrollY / window.innerHeight;
         const mobileYOffset = 0.1;
         const targetY =
-          CONFIG.BASE_MODEL_Y +
+          CONFIG.model.BASE_MODEL_Y +
           mobileYOffset +
           scrolledScreens * depthViewport.height;
 
@@ -160,32 +145,32 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         );
       } else {
         const popupProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.DETAILS_POPUP_START) /
-            (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
+          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
+            (CONFIG.model.DETAILS_POPUP_END - CONFIG.model.DETAILS_POPUP_START),
           0,
           1,
         );
 
         const heroYAtPopupStart =
-          CONFIG.BASE_MODEL_Y +
-          CONFIG.DETAILS_POPUP_START *
+          CONFIG.model.BASE_MODEL_Y +
+          CONFIG.model.DETAILS_POPUP_START *
             viewport.height *
-            CONFIG.MODEL_UP_TRAVEL_FACTOR;
+            CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
         const heroYCurrent =
-          CONFIG.BASE_MODEL_Y +
-          scrollProgress * viewport.height * CONFIG.MODEL_UP_TRAVEL_FACTOR;
+          CONFIG.model.BASE_MODEL_Y +
+          scrollProgress * viewport.height * CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
         const targetBaseY = -viewport.height * 0.25;
         const sectionTop = viewport.height / 2 - marginY * 0.35;
         const sectionSpacing = viewport.height * 0.25;
         const detailsTargetY =
           targetBaseY +
           sectionTop -
-          sectionSpacing * CONFIG.DETAILS_POPUP_Y_SECTION_OFFSET;
-        const detailsTargetX = viewport.width * CONFIG.DETAILS_POPUP_X_FACTOR;
+          sectionSpacing * CONFIG.model.DETAILS_POPUP_Y_SECTION_OFFSET;
+        const detailsTargetX = viewport.width * CONFIG.model.DETAILS_POPUP_X_FACTOR;
 
         const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
         const targetY =
-          scrollProgress < CONFIG.DETAILS_POPUP_START
+          scrollProgress < CONFIG.model.DETAILS_POPUP_START
             ? heroYCurrent
             : THREE.MathUtils.lerp(
                 heroYAtPopupStart,
@@ -227,14 +212,14 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         transitionScaleGroupRef.current.scale.setScalar(smoothScale);
       } else {
         const scaleOutProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.SCALE_OUT_START) /
-            (CONFIG.SCALE_OUT_END - CONFIG.SCALE_OUT_START),
+          (scrollProgress - CONFIG.model.SCALE_OUT_START) /
+            (CONFIG.model.SCALE_OUT_END - CONFIG.model.SCALE_OUT_START),
           0,
           1,
         );
         const popupProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.DETAILS_POPUP_START) /
-            (CONFIG.DETAILS_POPUP_END - CONFIG.DETAILS_POPUP_START),
+          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
+            (CONFIG.model.DETAILS_POPUP_END - CONFIG.model.DETAILS_POPUP_START),
           0,
           1,
         );
@@ -242,7 +227,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         const scaleOutValue = 1 - scaleOutProgress;
         const targetScale = THREE.MathUtils.lerp(
           scaleOutValue,
-          CONFIG.DETAILS_POPUP_SCALE,
+          CONFIG.model.DETAILS_POPUP_SCALE,
           popupProgress,
         );
 
@@ -257,7 +242,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       }
     }
 
-    const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.BASE_MODEL_Y;
+    const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.model.BASE_MODEL_Y;
 
     const currentViewport = state.viewport.getCurrentViewport(
       state.camera,
@@ -335,9 +320,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
 
     if (mesh.current) {
       const t = state.clock.getElapsedTime();
-      mesh.current.rotation.z += dt * 1.2;
-      mesh.current.rotation.x = Math.sin(t * 2) * 0.2;
-      mesh.current.rotation.y = Math.cos(t * 2) * 0.1;
+      mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
+      mesh.current.rotation.x = Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) * CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
+      mesh.current.rotation.y = Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) * CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
   });
 

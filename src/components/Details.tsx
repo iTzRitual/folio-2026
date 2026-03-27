@@ -15,6 +15,7 @@ import {
   educationData,
   skillsData,
 } from "@/data/content";
+import { CONFIG, THEME } from "../config/constants";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -34,7 +35,7 @@ export function Details() {
       scrollTrigger: {
         trigger: document.body,
         start: "top top",
-        end: "+=50%",
+        end: CONFIG.detailsLayout.SCROLL_TRIGGER_END,
         scrub: true,
       },
       onUpdate: () => {
@@ -70,13 +71,13 @@ export function Details() {
     }
   };
 
-  const headingSize = (viewport.width - marginX * 2) * 0.03;
-  const bodySize = headingSize * 0.5;
+  const headingSize = (viewport.width - marginX * 2) * CONFIG.detailsLayout.HEADING_SIZE_MULT;
+  const bodySize = headingSize * CONFIG.detailsLayout.BODY_SIZE_MULT;
   const headingPixelSize = headingSize / pxTo3DWidth;
   const bodyPixelSize = bodySize / pxTo3DWidth;
 
-  const sectionTravel = viewport.height * 1.16;
-  const targetBaseY = -viewport.height * 0.25;
+  const sectionTravel = viewport.height * CONFIG.detailsLayout.SECTION_TRAVEL_MULT;
+  const targetBaseY = viewport.height * CONFIG.detailsLayout.TARGET_BASE_Y_MULT;
 
   useFrame(() => {
     const detailsProgress = progressRef.current;
@@ -88,16 +89,16 @@ export function Details() {
     }
   });
 
-  const sectionTop = viewport.height / 2 - marginY * 0.35;
-  const sectionSpacing = viewport.height * 0.25;
+  const sectionTop = viewport.height / 2 - marginY * CONFIG.detailsLayout.SECTION_TOP_OFF_MULT;
+  const sectionSpacing = viewport.height * CONFIG.detailsLayout.SECTION_SPACING_MULT;
 
   const leftTitleX = leftX;
-  const rightTitleX = rightX - viewport.width * 0.2;
+  const rightTitleX = rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
   const rightBodyX = rightX;
 
-  const gap = viewport.width * 0.08;
-  const bodyTopOffset = headingSize * 0.38;
-  const bodyLineHeight = bodySize * 1.5;
+  const gap = viewport.width * CONFIG.detailsLayout.GAP_MULT;
+  const bodyTopOffset = headingSize * CONFIG.detailsLayout.BODY_TOP_OFFSET_MULT;
+  const bodyLineHeight = bodySize * CONFIG.detailsLayout.BODY_LINE_HEIGHT_MULT;
 
   const bodyPositions = useMemo(() => {
     return {
@@ -143,11 +144,11 @@ export function Details() {
         pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
         fontWeightClass="font-light"
-        color="#FFFFFF"
-        blockColor="#FFFFFF"
-        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        color={THEME.white}
+        blockColor={THEME.white}
+        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
         startTrigger={startTrigger}
-        delay={0.1}
+        delay={CONFIG.detailsTimings.EXPERIENCE_HEADING_DELAY}
         direction="leftToRight"
         lineHeight={1}
         onSync={handleTitleSync("experience")}
@@ -168,11 +169,11 @@ export function Details() {
           pixelFontSize={bodyPixelSize}
           font="fonts/Aeonik-Light.otf"
           fontWeightClass="font-light"
-          color="#D6D6D6"
-          blockColor="#D6D6D6"
-          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          color={THEME.light}
+          blockColor={THEME.light}
+          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={0.18 + index * 0.07}
+          delay={CONFIG.detailsTimings.EXPERIENCE_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
           direction="leftToRight"
           lineHeight={1}
         />
@@ -187,11 +188,11 @@ export function Details() {
         pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
         fontWeightClass="font-light"
-        color="#FFFFFF"
-        blockColor="#FFFFFF"
-        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        color={THEME.white}
+        blockColor={THEME.white}
+        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
         startTrigger={startTrigger}
-        delay={0.3}
+        delay={CONFIG.detailsTimings.PROJECTS_HEADING_DELAY}
         direction="leftToRight"
         lineHeight={1}
         onSync={handleTitleSync("projects")}
@@ -215,11 +216,11 @@ export function Details() {
           pixelFontSize={bodyPixelSize}
           font="fonts/Aeonik-Light.otf"
           fontWeightClass="font-light"
-          color="#D6D6D6"
-          blockColor="#D6D6D6"
-          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          color={THEME.light}
+          blockColor={THEME.light}
+          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={0.38 + index * 0.07}
+          delay={CONFIG.detailsTimings.PROJECTS_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
           direction="leftToRight"
           lineHeight={1}
         />
@@ -234,11 +235,11 @@ export function Details() {
         pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
         fontWeightClass="font-light"
-        color="#FFFFFF"
-        blockColor="#FFFFFF"
-        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        color={THEME.white}
+        blockColor={THEME.white}
+        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
         startTrigger={startTrigger}
-        delay={0.5}
+        delay={CONFIG.detailsTimings.EDUCATION_HEADING_DELAY}
         direction="leftToRight"
         lineHeight={1}
         onSync={handleTitleSync("education")}
@@ -262,11 +263,11 @@ export function Details() {
           pixelFontSize={bodyPixelSize}
           font="fonts/Aeonik-Light.otf"
           fontWeightClass="font-light"
-          color="#D6D6D6"
-          blockColor="#D6D6D6"
-          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          color={THEME.light}
+          blockColor={THEME.light}
+          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={0.58 + index * 0.07}
+          delay={CONFIG.detailsTimings.EDUCATION_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
           direction="leftToRight"
           lineHeight={1}
         />
@@ -281,11 +282,11 @@ export function Details() {
         pixelFontSize={headingPixelSize}
         font="fonts/Aeonik-Light.otf"
         fontWeightClass="font-light"
-        color="#FFFFFF"
-        blockColor="#FFFFFF"
-        selectionClassName="selection:bg-[#FFFFFF] selection:text-[#1D1D1D]"
+        color={THEME.white}
+        blockColor={THEME.white}
+        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
         startTrigger={startTrigger}
-        delay={0.12}
+        delay={CONFIG.detailsTimings.SKILLS_HEADING_DELAY}
         direction="rightToLeft"
         lineHeight={1}
       />
@@ -305,11 +306,11 @@ export function Details() {
           pixelFontSize={bodyPixelSize}
           font="fonts/Aeonik-Light.otf"
           fontWeightClass="font-light"
-          color="#D6D6D6"
-          blockColor="#D6D6D6"
-          selectionClassName="selection:bg-[#D6D6D6] selection:text-[#1D1D1D]"
+          color={THEME.light}
+          blockColor={THEME.light}
+          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={0.2 + index * 0.06}
+          delay={CONFIG.detailsTimings.SKILLS_BODY_DELAY + index * CONFIG.detailsTimings.SKILLS_STAGGER_STEP}
           direction="rightToLeft"
           lineHeight={1}
         />

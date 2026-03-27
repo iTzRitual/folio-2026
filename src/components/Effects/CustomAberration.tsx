@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Vector2, MathUtils } from "three";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
+import { CONFIG } from "../../config/constants";
 
 export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
   (props, ref) => {
@@ -15,7 +16,7 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
 
     useEffect(() => {
       const aspectRatio = size.width / size.height;
-      const columns = 40.0;
+      const columns = CONFIG.customAberration.COLUMNS;
       const rows = columns / aspectRatio;
 
       effect.uniforms.get("u_gridSize")!.value.set(columns, rows);
@@ -36,29 +37,29 @@ export const CustomAberration = forwardRef<CustomAberrationEffect, unknown>(
       targetMouse.current.set(mappedX, mappedY);
       prevMouse.current.copy(currentMouse.current);
 
-      const lerpFactor = 1 - Math.exp(-9.75 * delta);
+      const lerpFactor = 1 - Math.exp(-CONFIG.customAberration.LERP_FACTOR_MULT * delta);
       currentMouse.current.lerp(targetMouse.current, lerpFactor);
 
       intensity.current = MathUtils.lerp(
         intensity.current,
         0,
-        1 - Math.exp(-3.0 * delta),
+        1 - Math.exp(-CONFIG.customAberration.INTENSITY_LERP_MULT * delta),
       );
 
-      if (intensity.current < 0.005) {
+      if (intensity.current < CONFIG.customAberration.INTENSITY_MIN) {
         intensity.current = 0.0;
       }
 
-      const safeDelta = Math.max(delta, 0.0001);
+      const safeDelta = Math.max(delta, CONFIG.customAberration.SAFE_DELTA_MIN);
       const velX =
         intensity.current > 0
           ? (currentMouse.current.x - prevMouse.current.x) *
-            (0.016666 / safeDelta)
+            (CONFIG.customAberration.VEL_MULT / safeDelta)
           : 0;
       const velY =
         intensity.current > 0
           ? (currentMouse.current.y - prevMouse.current.y) *
-            (0.016666 / safeDelta)
+            (CONFIG.customAberration.VEL_MULT / safeDelta)
           : 0;
 
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);

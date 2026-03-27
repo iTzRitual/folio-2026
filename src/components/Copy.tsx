@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { SplitText } from "gsap/SplitText";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { CONFIG } from "../config/constants";
 
 gsap.registerPlugin(SplitText, ScrollTrigger);
 
@@ -25,8 +26,8 @@ export function Copy({
   animateOnScroll = false,
   delay = 0,
   blockColor = "#ffffff",
-  stagger = 0.15,
-  duration = 0.75,
+  stagger = CONFIG.copy.STAGGER,
+  duration = CONFIG.copy.DURATION,
   onReveal,
   direction = "leftToRight",
   startTrigger = true,
@@ -68,7 +69,7 @@ export function Copy({
         const split = SplitText.create(element, {
           type: "lines",
           linesClass: "block-line++",
-          lineThreshold: 0.1,
+          lineThreshold: CONFIG.copy.LINE_THRESHOLD,
         });
 
         splitRefs.current.push(split);

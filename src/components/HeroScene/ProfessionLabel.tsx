@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type MutableRefObject } from "react";
 import { Copy } from "../Copy";
 import * as THREE from "three";
+import { CONFIG } from "../../config/constants";
 
 interface ProfessionLabelProps {
   children: React.ReactNode;
@@ -30,7 +31,7 @@ export function ProfessionLabel({
   align,
   verticalPos,
   direction,
-  lineDelay = 1.5,
+  lineDelay = CONFIG.professionLabel.LINE_DELAY,
   startTrigger,
   viewportWidth,
   fontSize,
@@ -144,7 +145,7 @@ export function ProfessionLabel({
             revealMask = step(1.0 - uProgress, vUv.x);
           }
 
-          gl_FragColor = vec4(uColor, alpha * 0.4 * revealMask * uOpacity);
+          gl_FragColor = vec4(uColor, alpha * ${CONFIG.professionLabel.ALPHA_MULTIPLIER} * revealMask * uOpacity);
         }
       `,
       transparent: true,
@@ -161,7 +162,7 @@ export function ProfessionLabel({
           fontSize={fontSize}
           lineHeight={1}
           font="fonts/Karla-Light.ttf"
-          letterSpacing={-0.02}
+          letterSpacing={CONFIG.professionLabel.LETTER_SPACING}
         >
           {children}
           <meshBasicMaterial
@@ -181,12 +182,12 @@ export function ProfessionLabel({
           `}
           style={{
             fontSize: `${pixelFontSize}px`,
-            letterSpacing: `${-0.02}em`,
+            letterSpacing: `${CONFIG.professionLabel.LETTER_SPACING}em`,
           }}
         >
           <div ref={htmlOpacityRef} style={{ opacity: 1 }}>
             <Copy
-              delay={0.2}
+              delay={CONFIG.professionLabel.DELAY}
               direction={direction}
               blockColor="#BEBEBE"
               startTrigger={startTrigger}

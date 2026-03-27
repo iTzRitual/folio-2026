@@ -12,7 +12,6 @@ import { Details } from "./Details";
 import { HeroTransitionProvider } from "./HeroTransitionProvider";
 import { Suspense } from "react";
 import { Stats } from "@react-three/drei";
-import { GridOverlay } from "./HeroScene/GridOverlay";
 import { THEME } from "../config/constants";
 
 function SceneContent({
@@ -70,7 +69,6 @@ export default function Scene({
         <SceneContent startAnimation={startAnimation} isMobile={isMobile} />
         <Stats />
       </Canvas>
-      <GridOverlay />
     </div>
   );
 }

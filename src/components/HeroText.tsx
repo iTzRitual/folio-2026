@@ -8,9 +8,10 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { heroContent } from "@/data/content";
+import { CONFIG } from "../config/constants";
 
-const LABEL_EXIT_START = 0.001;
-const LABEL_EXIT_END = 0.08;
+const LABEL_EXIT_START = CONFIG.heroText.LABEL_EXIT_START;
+const LABEL_EXIT_END = CONFIG.heroText.LABEL_EXIT_END;
 
 export function HeroText() {
   const {
@@ -32,10 +33,10 @@ export function HeroText() {
 
   useFrame(() => {
     const heroExit = progressRef.current;
-    const titleYOffset = heroExit * viewport.height * 0.7;
-    const subtitleProgress = 1 - Math.pow(1 - heroExit, 1.05);
-    const subtitleYOffset = subtitleProgress * viewport.height * 0.22;
-    const heroYOffset = heroExit * viewport.height * 1.05;
+    const titleYOffset = heroExit * viewport.height * CONFIG.heroLayout.TITLE_Y_MULTIPLIER;
+    const subtitleProgress = 1 - Math.pow(1 - heroExit, CONFIG.heroLayout.SUBTITLE_PROGRESS_POWER);
+    const subtitleYOffset = subtitleProgress * viewport.height * CONFIG.heroLayout.SUBTITLE_Y_MULTIPLIER;
+    const heroYOffset = heroExit * viewport.height * CONFIG.heroLayout.HERO_Y_MULTIPLIER;
 
     if (titleGroupRef.current) {
       titleGroupRef.current.position.y = titleYOffset;
@@ -49,24 +50,24 @@ export function HeroText() {
   });
 
   const titleAvailableWidth = viewport.width - 2 * marginX;
-  const titleFontSize = titleAvailableWidth * 0.127;
+  const titleFontSize = titleAvailableWidth * CONFIG.heroLayout.TITLE_FONT_SIZE;
   const titlePixelFontSize = titleFontSize / pxTo3DWidth;
-  const fontVisualOffset = titleFontSize * 0.14;
+  const fontVisualOffset = titleFontSize * CONFIG.heroLayout.TITLE_FONT_VISUAL_OFFSET;
 
   const titleY = -viewport.height / 2 + marginY + fontVisualOffset;
 
   const subtitleY = viewport.height / 2 - marginY;
   const subtitleAvailableWidth = viewport.width - 2 * marginX;
-  const subtitleFontSize = subtitleAvailableWidth * 0.0265;
+  const subtitleFontSize = subtitleAvailableWidth * CONFIG.heroLayout.SUBTITLE_FONT_SIZE;
   const subtitlePixelFontSize = subtitleFontSize / pxTo3DWidth;
 
   const professionAvailableWidth = viewport.width - 2 * marginX;
-  const professionFontSize = professionAvailableWidth * 0.02;
+  const professionFontSize = professionAvailableWidth * CONFIG.heroLayout.PROFESSION_FONT_SIZE;
   const professionPixelFontSize = professionFontSize / pxTo3DWidth;
-  const professionPaddingY = 8 * pxTo3DHeight;
-  const professionLineThickness = 1 * pxTo3DHeight;
-  const professionLineWidth = viewport.width * 0.9;
-  const professionExitDistance = viewport.width * 0.14;
+  const professionPaddingY = CONFIG.heroLayout.PROFESSION_PADDING_Y * pxTo3DHeight;
+  const professionLineThickness = CONFIG.heroLayout.PROFESSION_LINE_THICKNESS * pxTo3DHeight;
+  const professionLineWidth = viewport.width * CONFIG.heroLayout.PROFESSION_LINE_WIDTH;
+  const professionExitDistance = viewport.width * CONFIG.heroLayout.PROFESSION_EXIT_DISTANCE;
 
   return (
     <>
