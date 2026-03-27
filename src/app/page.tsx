@@ -45,14 +45,14 @@ export default function Home() {
           }}
         >
           {isMobile && (
-            <section className="relative w-full h-screen flex flex-col items-center justify-around pointer-events-none font-aeonik px-4">
+            <section className="relative w-full h-screen flex flex-col items-center justify-around pointer-events-none font-karla px-4">
               <Copy
                 delay={0.1}
                 blockColor="#BCBCBC"
                 direction="rightToLeft"
                 startTrigger={startScene}
               >
-                <p className="text-[#BCBCBC] font-aeonik font-black text-center text-xl">
+                <p className="text-[#BCBCBC] font-karla font-black text-center text-xl">
                   {heroContent.subtitle}
                 </p>
               </Copy>

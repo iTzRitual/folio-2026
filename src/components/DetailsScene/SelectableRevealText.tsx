@@ -21,6 +21,8 @@ interface SelectableRevealTextProps {
   animateOnScroll?: boolean;
   direction?: "leftToRight" | "rightToLeft";
   lineHeight?: number;
+  letterSpacing?: number;
+  htmlLetterSpacingOffset?: number;
   blockColor?: string;
   selectionClassName?: string;
   onSync?: (mesh: Mesh) => void;
@@ -41,6 +43,8 @@ export function SelectableRevealText({
   animateOnScroll = true,
   direction = "leftToRight",
   lineHeight = 1,
+  letterSpacing = -0.03,
+  htmlLetterSpacingOffset = -0.004,
   blockColor,
   selectionClassName = "selection:bg-[#BCBCBC] selection:text-[#1D1D1D]",
   onSync,
@@ -68,6 +72,7 @@ export function SelectableRevealText({
         fontSize={calculatedFontSize}
         font={font}
         lineHeight={lineHeight}
+        letterSpacing={letterSpacing}
         onSync={onSync}
       >
         {text}
@@ -81,8 +86,11 @@ export function SelectableRevealText({
 
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <div
-          className={`whitespace-nowrap m-0 p-0 text-transparent pointer-events-auto font-aeonik ${fontWeightClass} leading-none`}
-          style={{ fontSize: `${pixelFontSize}px` }}
+          className={`whitespace-nowrap m-0 p-0 text-transparent pointer-events-auto font-karla ${fontWeightClass} leading-none`}
+          style={{
+            fontSize: `${pixelFontSize}px`,
+            letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
+          }}
         >
           <Copy
             animateOnScroll={animateOnScroll}

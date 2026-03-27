@@ -8,7 +8,7 @@ export const heroContent = {
 
 export const experienceData = [
     {
-        company: "Nowa Lukasz Walter",
+        company: "Nowa Łukasz Walter",
         position: "Frontend Engineer",
         duration: "2018 - Present",
     },

@@ -15,7 +15,7 @@ import {
   educationData,
   skillsData,
 } from "@/data/content";
-import { CONFIG, THEME } from "../config/constants";
+import { CONFIG, THEME, FONTS } from "../config/constants";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -71,12 +71,14 @@ export function Details() {
     }
   };
 
-  const headingSize = (viewport.width - marginX * 2) * CONFIG.detailsLayout.HEADING_SIZE_MULT;
+  const headingSize =
+    (viewport.width - marginX * 2) * CONFIG.detailsLayout.HEADING_SIZE_MULT;
   const bodySize = headingSize * CONFIG.detailsLayout.BODY_SIZE_MULT;
   const headingPixelSize = headingSize / pxTo3DWidth;
   const bodyPixelSize = bodySize / pxTo3DWidth;
 
-  const sectionTravel = viewport.height * CONFIG.detailsLayout.SECTION_TRAVEL_MULT;
+  const sectionTravel =
+    viewport.height * CONFIG.detailsLayout.SECTION_TRAVEL_MULT;
   const targetBaseY = viewport.height * CONFIG.detailsLayout.TARGET_BASE_Y_MULT;
 
   useFrame(() => {
@@ -89,11 +91,14 @@ export function Details() {
     }
   });
 
-  const sectionTop = viewport.height / 2 - marginY * CONFIG.detailsLayout.SECTION_TOP_OFF_MULT;
-  const sectionSpacing = viewport.height * CONFIG.detailsLayout.SECTION_SPACING_MULT;
+  const sectionTop =
+    viewport.height / 2 - marginY * CONFIG.detailsLayout.SECTION_TOP_OFF_MULT;
+  const sectionSpacing =
+    viewport.height * CONFIG.detailsLayout.SECTION_SPACING_MULT;
 
   const leftTitleX = leftX;
-  const rightTitleX = rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
+  const rightTitleX =
+    rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
   const rightBodyX = rightX;
 
   const gap = viewport.width * CONFIG.detailsLayout.GAP_MULT;
@@ -142,7 +147,7 @@ export function Details() {
         anchorY="top"
         calculatedFontSize={headingSize}
         pixelFontSize={headingPixelSize}
-        font="fonts/Aeonik-Light.otf"
+        font={FONTS.karlaLight}
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
@@ -167,13 +172,16 @@ export function Details() {
           anchorY="top"
           calculatedFontSize={bodySize}
           pixelFontSize={bodyPixelSize}
-          font="fonts/Aeonik-Light.otf"
+          font={FONTS.karlaLight}
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
           selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={CONFIG.detailsTimings.EXPERIENCE_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
+          delay={
+            CONFIG.detailsTimings.EXPERIENCE_BODY_DELAY +
+            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
+          }
           direction="leftToRight"
           lineHeight={1}
         />
@@ -186,7 +194,7 @@ export function Details() {
         anchorY="top"
         calculatedFontSize={headingSize}
         pixelFontSize={headingPixelSize}
-        font="fonts/Aeonik-Light.otf"
+        font={FONTS.karlaLight}
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
@@ -214,13 +222,16 @@ export function Details() {
           anchorY="top"
           calculatedFontSize={bodySize}
           pixelFontSize={bodyPixelSize}
-          font="fonts/Aeonik-Light.otf"
+          font={FONTS.karlaLight}
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
           selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={CONFIG.detailsTimings.PROJECTS_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
+          delay={
+            CONFIG.detailsTimings.PROJECTS_BODY_DELAY +
+            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
+          }
           direction="leftToRight"
           lineHeight={1}
         />
@@ -233,7 +244,7 @@ export function Details() {
         anchorY="top"
         calculatedFontSize={headingSize}
         pixelFontSize={headingPixelSize}
-        font="fonts/Aeonik-Light.otf"
+        font={FONTS.karlaLight}
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
@@ -261,13 +272,16 @@ export function Details() {
           anchorY="top"
           calculatedFontSize={bodySize}
           pixelFontSize={bodyPixelSize}
-          font="fonts/Aeonik-Light.otf"
+          font={FONTS.karlaLight}
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
           selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={CONFIG.detailsTimings.EDUCATION_BODY_DELAY + index * CONFIG.detailsTimings.BODY_STAGGER_STEP}
+          delay={
+            CONFIG.detailsTimings.EDUCATION_BODY_DELAY +
+            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
+          }
           direction="leftToRight"
           lineHeight={1}
         />
@@ -280,7 +294,7 @@ export function Details() {
         anchorY="top"
         calculatedFontSize={headingSize}
         pixelFontSize={headingPixelSize}
-        font="fonts/Aeonik-Light.otf"
+        font={FONTS.karlaLight}
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
@@ -304,13 +318,16 @@ export function Details() {
           anchorY="top"
           calculatedFontSize={bodySize}
           pixelFontSize={bodyPixelSize}
-          font="fonts/Aeonik-Light.otf"
+          font={FONTS.karlaLight}
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
           selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
           startTrigger={startTrigger}
-          delay={CONFIG.detailsTimings.SKILLS_BODY_DELAY + index * CONFIG.detailsTimings.SKILLS_STAGGER_STEP}
+          delay={
+            CONFIG.detailsTimings.SKILLS_BODY_DELAY +
+            index * CONFIG.detailsTimings.SKILLS_STAGGER_STEP
+          }
           direction="rightToLeft"
           lineHeight={1}
         />
