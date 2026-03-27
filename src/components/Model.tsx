@@ -64,7 +64,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
   const materialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
     roughness: { value: 0.2, min: 0, max: 1, step: 0.1 },
-    transmission: { value: 0.9, min: 0, max: 1, step: 0.1 },
+    transmission: { value: 0.97, min: 0, max: 1, step: 0.01 },
     ior: { value: 0.9, min: 0, max: 3, step: 0.1 },
     chromaticAberration: { value: 1.0, min: 0, max: 1, step: 0.01 },
     backside: { value: false },
@@ -113,7 +113,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         dt,
       );
 
-      const velocityDamping = Math.exp(-CONFIG.model.RETURN_VELOCITY_DAMPING * dt);
+      const velocityDamping = Math.exp(
+        -CONFIG.model.RETURN_VELOCITY_DAMPING * dt,
+      );
       vel.current.multiplyScalar(velocityDamping);
 
       if (pos.current.lengthSq() < 0.0025) {
@@ -158,7 +160,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
             CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
         const heroYCurrent =
           CONFIG.model.BASE_MODEL_Y +
-          scrollProgress * viewport.height * CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
+          scrollProgress *
+            viewport.height *
+            CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
         const targetBaseY = -viewport.height * 0.25;
         const sectionTop = viewport.height / 2 - marginY * 0.35;
         const sectionSpacing = viewport.height * 0.25;
@@ -166,7 +170,8 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           targetBaseY +
           sectionTop -
           sectionSpacing * CONFIG.model.DETAILS_POPUP_Y_SECTION_OFFSET;
-        const detailsTargetX = viewport.width * CONFIG.model.DETAILS_POPUP_X_FACTOR;
+        const detailsTargetX =
+          viewport.width * CONFIG.model.DETAILS_POPUP_X_FACTOR;
 
         const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
         const targetY =
@@ -242,7 +247,8 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       }
     }
 
-    const outerGroupY = animGroupRef.current?.position.y ?? CONFIG.model.BASE_MODEL_Y;
+    const outerGroupY =
+      animGroupRef.current?.position.y ?? CONFIG.model.BASE_MODEL_Y;
 
     const currentViewport = state.viewport.getCurrentViewport(
       state.camera,
@@ -321,8 +327,12 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     if (mesh.current) {
       const t = state.clock.getElapsedTime();
       mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
-      mesh.current.rotation.x = Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) * CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
-      mesh.current.rotation.y = Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) * CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
+      mesh.current.rotation.x =
+        Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+        CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
+      mesh.current.rotation.y =
+        Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+        CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
   });
 

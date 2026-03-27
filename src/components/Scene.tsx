@@ -1,17 +1,16 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
 import { HeroLayoutProvider } from "./HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
-import { Environment } from "@react-three/drei";
+import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { HeroTransitionProvider } from "./HeroTransitionProvider";
 import { Suspense } from "react";
-import { Stats } from "@react-three/drei";
 import { THEME } from "../config/constants";
 
 function SceneContent({
@@ -53,6 +52,8 @@ export default function Scene({
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
+  const [dpr, setDpr] = useState(1);
+
   return (
     <div
       ref={eventWrapperRef}
@@ -64,8 +65,35 @@ export default function Scene({
         eventSource={eventWrapperRef}
         eventPrefix="client"
         style={{ touchAction: "auto" }}
-        dpr={[1, 1.5]}
+        dpr={dpr}
       >
+        <PerformanceMonitor
+          bounds={() => [45, 55]}
+          step={1}
+          onDecline={() => {
+            setDpr((prevDpr) => {
+              if (prevDpr >= 1.5) {
+                return 1.0;
+              }
+              if (prevDpr > 0.75) {
+                return 0.75;
+              }
+              return prevDpr;
+            });
+          }}
+          onIncline={() => {
+            setDpr((prevDpr) => {
+              if (prevDpr <= 0.75) {
+                return 1.0;
+              }
+              if (prevDpr < 1.5) {
+                return 1.5;
+              }
+              return prevDpr;
+            });
+          }}
+          flipflops={3}
+        />
         <SceneContent startAnimation={startAnimation} isMobile={isMobile} />
         <Stats />
       </Canvas>
