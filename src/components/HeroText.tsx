@@ -7,6 +7,7 @@ import { Group } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { heroContent } from "@/data/content";
 
 const LABEL_EXIT_START = 0.001;
 const LABEL_EXIT_END = 0.08;
@@ -82,7 +83,7 @@ export function HeroText() {
           transitionEnd={LABEL_EXIT_END}
           stackedFontSize={professionFontSize}
         >
-          Natan Mokrzycki
+          {heroContent.title}
         </Title>
       </group>
       <group position={[0, 0, 0]} ref={subtitleGroupRef}>
@@ -92,8 +93,7 @@ export function HeroText() {
           calculatedFontSize={subtitleFontSize}
           pixelFontSize={subtitlePixelFontSize}
         >
-          Bridging the gap between technical performance and high-end visual
-          aesthetics.
+          {heroContent.subtitle}
         </Subtitle>
       </group>
       <group position={[0, 0, 0]} ref={heroGroupRef}>
@@ -114,7 +114,7 @@ export function HeroText() {
           exitEnd={LABEL_EXIT_END}
           exitDistance={professionExitDistance}
         >
-          Frontend Engineer
+          {heroContent.professions[0]}
         </ProfessionLabel>
 
         <ProfessionLabel
@@ -134,7 +134,7 @@ export function HeroText() {
           exitEnd={LABEL_EXIT_END}
           exitDistance={professionExitDistance}
         >
-          Creative Technologist
+          {heroContent.professions[1]}
         </ProfessionLabel>
       </group>
     </>

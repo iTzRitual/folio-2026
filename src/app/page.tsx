@@ -7,6 +7,7 @@ import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Copy } from "@/components/Copy";
+import { heroContent } from "@/data/content";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
@@ -52,8 +53,7 @@ export default function Home() {
                 startTrigger={startScene}
               >
                 <p className="text-[#BCBCBC] font-aeonik font-black text-center text-xl">
-                  Bridging the gap between technical performance and high-end
-                  visual aesthetics.
+                  {heroContent.subtitle}
                 </p>
               </Copy>
               <Copy
@@ -63,7 +63,7 @@ export default function Home() {
                 startTrigger={startScene}
               >
                 <h1 className="text-white font-black text-center w-full text-7xl">
-                  Natan Mokrzycki
+                  {heroContent.title}
                 </h1>
               </Copy>
             </section>

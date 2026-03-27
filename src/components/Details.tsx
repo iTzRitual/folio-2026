@@ -9,62 +9,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { SelectableRevealText } from "./DetailsScene/SelectableRevealText";
+import {
+  experienceData,
+  projectsData,
+  educationData,
+  skillsData,
+} from "@/data/content";
 
 gsap.registerPlugin(ScrollTrigger);
-
-const experience = [
-  {
-    company: "Nowa Lukasz Walter",
-    position: "Frontend Engineer",
-    duration: "2018 - Present",
-  },
-  {
-    company: "Galactic Reborn",
-    position: "Co-Founder",
-    duration: "2023 - 2024",
-  },
-];
-
-const projects = [
-  {
-    name: "3D Interactive Configurator",
-  },
-  {
-    name: "RN Warehouse App",
-  },
-  {
-    name: "E-commerce lorem",
-  },
-];
-
-const education = [
-  {
-    institution: "DSW University of Lower Silesia",
-    degree: "Master's degree",
-    field: "Creative Media: 3D Animation",
-  },
-  {
-    institution: "WSB Merito University Wroclaw",
-    degree: "Bachelor of Engineering",
-    field: "Computer Science",
-  },
-];
-
-const skills = [
-  "Visual Design",
-  "UI/UX Design",
-  "React",
-  "React Native",
-  "Three.js",
-  "React Three Fiber",
-  "GSAP",
-  "Blender",
-  "JavaScript",
-  "TypeScript",
-  "Liquid",
-  "Figma",
-  "After Effects",
-];
 
 export function Details() {
   const { viewport, marginX, marginY, leftX, rightX, pxTo3DWidth } =
@@ -157,7 +109,7 @@ export function Details() {
 
   const experienceText = useMemo(
     () =>
-      experience
+      experienceData
         .map((exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`)
         .join("\n")
         .split("\n"),
@@ -165,20 +117,20 @@ export function Details() {
   );
 
   const projectsText = useMemo(
-    () => projects.map((project) => `${project.name}`),
+    () => projectsData.map((project) => `${project.name}`),
     [],
   );
 
   const educationText = useMemo(
     () =>
-      education
+      educationData
         .map((edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`)
         .join("\n")
         .split("\n"),
     [],
   );
 
-  const skillsText = useMemo(() => skills.join("\n").split("\n"), []);
+  const skillsText = useMemo(() => skillsData.join("\n").split("\n"), []);
 
   return (
     <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
