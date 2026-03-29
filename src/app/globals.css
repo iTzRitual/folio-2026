@@ -10,7 +10,8 @@ p .block-line-wrapper {
 
 .block-line-wrapper {
   position: relative;
-  width: max-content;
+  width: fit-content;
+  max-width: 100%;
   display: block;
 }
 

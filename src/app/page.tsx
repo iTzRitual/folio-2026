@@ -7,7 +7,12 @@ import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Copy } from "@/components/Copy";
-import { heroContent } from "@/data/content";
+import {
+  heroContent,
+  experienceData,
+  projectsData,
+  educationData,
+} from "@/data/content";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
   ssr: false,
@@ -25,7 +30,7 @@ export default function Home() {
       <Leva collapsed />
       <ReactLenis root />
 
-      <div className="relative w-full min-h-screen bg-[#1D1D1D]">
+      <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
         <div className="fixed inset-0 z-0 pointer-events-none">
           {!removeLoader && (
             <Loader
@@ -45,14 +50,14 @@ export default function Home() {
           }}
         >
           {isMobile && (
-            <section className="relative w-full h-screen flex flex-col items-center justify-around pointer-events-none font-karla px-4">
+            <section className="relative w-full h-screen max-w-full overflow-x-hidden flex flex-col items-center justify-around pointer-events-none font-karla px-4">
               <Copy
                 delay={0.1}
                 blockColor="#BCBCBC"
                 direction="rightToLeft"
                 startTrigger={startScene}
               >
-                <p className="text-[#BCBCBC] font-karla font-black text-center text-xl">
+                <p className="max-w-full wrap-break-word text-[#BCBCBC] font-karla font-black text-center text-xl">
                   {heroContent.subtitle}
                 </p>
               </Copy>
@@ -62,14 +67,62 @@ export default function Home() {
                 direction="leftToRight"
                 startTrigger={startScene}
               >
-                <h1 className="text-white font-black text-center w-full text-7xl">
+                <h1 className="w-full max-w-full wrap-break-word text-white font-black text-center text-[clamp(3rem,14vw,4.5rem)] leading-[0.95]">
                   {heroContent.title}
                 </h1>
               </Copy>
             </section>
           )}
 
-          <section className="relative w-full h-screen pointer-events-none"></section>
+          {isMobile && (
+            <section className="relative w-full max-w-full overflow-x-hidden pointer-events-none px-6 pb-36">
+              <div className="mb-12">
+                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                  Experience
+                </h3>
+                <ul>
+                  {experienceData.map((item, index) => (
+                    <li
+                      key={index}
+                      className="text-white font-karla text-left w-full text-lg"
+                    >
+                      - {item.position} at {item.company} ({item.duration})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mb-12">
+                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                  Recent Projects
+                </h3>
+                <ul>
+                  {projectsData.map((item, index) => (
+                    <li
+                      key={index}
+                      className="text-white font-karla text-left w-full text-lg"
+                    >
+                      - {item.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mb-12">
+                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                  Education
+                </h3>
+                <ul>
+                  {educationData.map((item, index) => (
+                    <li
+                      key={index}
+                      className="text-white font-karla text-left w-full text-lg"
+                    >
+                      - {item.degree} in {item.field} from {item.institution}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
         </main>
       </div>
     </>
