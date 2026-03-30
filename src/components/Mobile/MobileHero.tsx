@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy } from "@/components/Copy";
+import { AnimatedRevealText } from "@/components/AnimatedRevealText";
 import { heroContent } from "@/data/content";
 
 interface MobileHeroProps {
@@ -10,7 +10,7 @@ interface MobileHeroProps {
 export const MobileHero = ({ startScene }: MobileHeroProps) => {
   return (
     <section className="relative w-full h-screen max-w-full overflow-x-hidden flex flex-col items-start justify-around pointer-events-none font-karla px-4">
-      <Copy
+      <AnimatedRevealText
         delay={0.1}
         blockColor="#BCBCBC"
         direction="rightToLeft"
@@ -19,8 +19,8 @@ export const MobileHero = ({ startScene }: MobileHeroProps) => {
         <p className="max-w-full wrap-break-word text-[#BCBCBC] font-karla font-black text-xl text-left">
           {heroContent.subtitle}
         </p>
-      </Copy>
-      <Copy
+      </AnimatedRevealText>
+      <AnimatedRevealText
         delay={0}
         blockColor="#FFFFFF"
         direction="leftToRight"
@@ -37,7 +37,7 @@ export const MobileHero = ({ startScene }: MobileHeroProps) => {
             {profession}
           </h3>
         ))}
-      </Copy>
+      </AnimatedRevealText>
     </section>
   );
 };

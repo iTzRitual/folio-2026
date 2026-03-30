@@ -1,6 +1,6 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { Copy } from "../Copy";
+import { AnimatedRevealText } from "../AnimatedRevealText";
 import { useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -299,7 +299,7 @@ export function Title({
                 letterSpacing: `${-0.03}em`,
               }}
             >
-              <Copy
+              <AnimatedRevealText
                 delay={0}
                 startTrigger={startTrigger}
                 onReveal={() => {
@@ -309,7 +309,7 @@ export function Title({
                 <h1 className="selection:bg-[#E2E2E2] selection:text-[#1D1D1D] m-0">
                   {children}
                 </h1>
-              </Copy>
+              </AnimatedRevealText>
             </div>
           </div>
         </Html>

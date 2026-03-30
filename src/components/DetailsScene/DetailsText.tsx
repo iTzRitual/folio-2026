@@ -2,11 +2,11 @@
 
 import { Html, Text } from "@react-three/drei";
 import { useMemo, useRef } from "react";
-import { Copy } from "../Copy";
+import { AnimatedRevealText } from "../AnimatedRevealText";
 import type { Mesh } from "three";
 import * as THREE from "three";
 
-interface SelectableRevealTextProps {
+interface DetailsTextProps {
   text: string;
   position: [number, number, number];
   anchorX: "left" | "center" | "right";
@@ -28,7 +28,7 @@ interface SelectableRevealTextProps {
   onSync?: (mesh: Mesh) => void;
 }
 
-export function SelectableRevealText({
+export function DetailsText({
   text,
   position,
   anchorX,
@@ -48,7 +48,7 @@ export function SelectableRevealText({
   blockColor,
   selectionClassName = "selection:bg-[#BCBCBC] selection:text-[#1D1D1D]",
   onSync,
-}: SelectableRevealTextProps) {
+}: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const xAlignClass = useMemo(() => {
@@ -92,7 +92,7 @@ export function SelectableRevealText({
             letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
           }}
         >
-          <Copy
+          <AnimatedRevealText
             animateOnScroll={animateOnScroll}
             delay={delay}
             blockColor={revealColor}
@@ -108,7 +108,7 @@ export function SelectableRevealText({
             >
               {text}
             </p>
-          </Copy>
+          </AnimatedRevealText>
         </div>
       </Html>
     </group>

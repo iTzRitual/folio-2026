@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Copy } from "@/components/Copy";
+import { AnimatedRevealText } from "@/components/AnimatedRevealText";
 import { experienceData, projectsData, educationData } from "@/data/content";
 
 interface SectionProps {
@@ -13,7 +13,7 @@ interface SectionProps {
 const Section = ({ title, delay, children }: SectionProps) => {
   return (
     <div className="mb-12">
-      <Copy
+      <AnimatedRevealText
         delay={delay}
         blockColor="#FFFFFF"
         direction="leftToRight"
@@ -22,15 +22,15 @@ const Section = ({ title, delay, children }: SectionProps) => {
         <h3 className="text-white font-black text-left w-full text-3xl pb-2">
           {title}
         </h3>
-      </Copy>
-      <Copy
+      </AnimatedRevealText>
+      <AnimatedRevealText
         delay={delay + 0.1}
         blockColor="#BCBCBC"
         direction="leftToRight"
         animateOnScroll={true}
       >
         <ul>{children}</ul>
-      </Copy>
+      </AnimatedRevealText>
     </div>
   );
 };

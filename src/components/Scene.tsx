@@ -5,11 +5,11 @@ import { useRef, useState } from "react";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
-import { HeroLayoutProvider } from "./HeroLayoutProvider";
+import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
-import { HeroTransitionProvider } from "./HeroTransitionProvider";
+import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { Suspense } from "react";
 import { THEME } from "../config/constants";
 

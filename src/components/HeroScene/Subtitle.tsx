@@ -1,5 +1,5 @@
 import { Text, Html } from "@react-three/drei";
-import { Copy } from "../Copy";
+import { AnimatedRevealText } from "../AnimatedRevealText";
 import { useRef } from "react";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
@@ -50,7 +50,7 @@ export function Subtitle({
           letterSpacing: `${CONFIG.subtitle.LETTER_SPACING}em`,
         }}
       >
-        <Copy
+        <AnimatedRevealText
           delay={CONFIG.subtitle.DELAY}
           blockColor="#BCBCBC"
           direction="rightToLeft"
@@ -62,7 +62,7 @@ export function Subtitle({
           <p className="selection:bg-[#BCBCBC] selection:text-[#1D1D1D]">
             {children}
           </p>
-        </Copy>
+        </AnimatedRevealText>
       </Html>
     </group>
   );

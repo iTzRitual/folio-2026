@@ -1,7 +1,7 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type MutableRefObject } from "react";
-import { Copy } from "../Copy";
+import { AnimatedRevealText } from "../AnimatedRevealText";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
 
@@ -186,7 +186,7 @@ export function ProfessionLabel({
           }}
         >
           <div ref={htmlOpacityRef} style={{ opacity: 1 }}>
-            <Copy
+            <AnimatedRevealText
               delay={CONFIG.professionLabel.DELAY}
               direction={direction}
               blockColor="#BEBEBE"
@@ -198,7 +198,7 @@ export function ProfessionLabel({
               <p className="selection:bg-[#BEBEBE] selection:text-[#1D1D1D]">
                 {children}
               </p>
-            </Copy>
+            </AnimatedRevealText>
           </div>
         </Html>
       </group>

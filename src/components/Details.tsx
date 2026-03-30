@@ -8,7 +8,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useAnimationContext } from "@/context/AnimationContext";
-import { SelectableRevealText } from "./DetailsScene/SelectableRevealText";
+import { DetailsText } from "./DetailsScene/DetailsText";
 import {
   experienceData,
   projectsData,
@@ -140,7 +140,7 @@ export function Details() {
 
   return (
     <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
-      <SelectableRevealText
+      <DetailsText
         text="Experience"
         position={[leftTitleX, sectionTop, 0]}
         anchorX="left"
@@ -160,7 +160,7 @@ export function Details() {
       />
 
       {experienceText.map((line, index) => (
-        <SelectableRevealText
+        <DetailsText
           key={`exp-${line}`}
           text={line}
           position={[
@@ -187,7 +187,7 @@ export function Details() {
         />
       ))}
 
-      <SelectableRevealText
+      <DetailsText
         text="Featured Projects"
         position={[leftTitleX, sectionTop - sectionSpacing, 0]}
         anchorX="left"
@@ -207,7 +207,7 @@ export function Details() {
       />
 
       {projectsText.map((line, index) => (
-        <SelectableRevealText
+        <DetailsText
           key={`proj-${line}`}
           text={line}
           position={[
@@ -237,7 +237,7 @@ export function Details() {
         />
       ))}
 
-      <SelectableRevealText
+      <DetailsText
         text="Education"
         position={[leftTitleX, sectionTop - sectionSpacing * 2, 0]}
         anchorX="left"
@@ -257,7 +257,7 @@ export function Details() {
       />
 
       {educationText.map((line, index) => (
-        <SelectableRevealText
+        <DetailsText
           key={`edu-${line}`}
           text={line}
           position={[
@@ -287,7 +287,7 @@ export function Details() {
         />
       ))}
 
-      <SelectableRevealText
+      <DetailsText
         text="Skills"
         position={[rightTitleX, sectionTop, 0]}
         anchorX="left"
@@ -306,7 +306,7 @@ export function Details() {
       />
 
       {skillsText.map((line, index) => (
-        <SelectableRevealText
+        <DetailsText
           key={`skill-${line}`}
           text={line}
           position={[

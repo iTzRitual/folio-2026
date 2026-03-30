@@ -9,7 +9,7 @@ import { CONFIG } from "../config/constants";
 
 gsap.registerPlugin(SplitText, ScrollTrigger);
 
-interface CopyProps {
+interface AnimatedRevealTextProps {
   children: React.ReactNode;
   animateOnScroll?: boolean;
   delay?: number;
@@ -21,7 +21,7 @@ interface CopyProps {
   startTrigger?: boolean;
 }
 
-export function Copy({
+export function AnimatedRevealText({
   children,
   animateOnScroll = false,
   delay = 0,
@@ -31,7 +31,7 @@ export function Copy({
   onReveal,
   direction = "leftToRight",
   startTrigger = true,
-}: CopyProps) {
+}: AnimatedRevealTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onRevealRef = useRef(onReveal);
   useLayoutEffect(() => {
