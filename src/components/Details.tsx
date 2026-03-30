@@ -151,7 +151,8 @@ export function Details() {
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
-        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
+        selectionBgColor={THEME.white}
+        selectionColor={THEME.darkest}
         startTrigger={startTrigger}
         delay={CONFIG.detailsTimings.EXPERIENCE_HEADING_DELAY}
         direction="leftToRight"
@@ -176,7 +177,8 @@ export function Details() {
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
-          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
+          selectionBgColor={THEME.light}
+          selectionColor={THEME.darkest}
           startTrigger={startTrigger}
           delay={
             CONFIG.detailsTimings.EXPERIENCE_BODY_DELAY +
@@ -198,7 +200,8 @@ export function Details() {
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
-        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
+        selectionBgColor={THEME.white}
+        selectionColor={THEME.darkest}
         startTrigger={startTrigger}
         delay={CONFIG.detailsTimings.PROJECTS_HEADING_DELAY}
         direction="leftToRight"
@@ -226,7 +229,8 @@ export function Details() {
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
-          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
+          selectionBgColor={THEME.light}
+          selectionColor={THEME.darkest}
           startTrigger={startTrigger}
           delay={
             CONFIG.detailsTimings.PROJECTS_BODY_DELAY +
@@ -248,7 +252,8 @@ export function Details() {
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
-        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
+        selectionBgColor={THEME.white}
+        selectionColor={THEME.darkest}
         startTrigger={startTrigger}
         delay={CONFIG.detailsTimings.EDUCATION_HEADING_DELAY}
         direction="leftToRight"
@@ -276,7 +281,8 @@ export function Details() {
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
-          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
+          selectionBgColor={THEME.light}
+          selectionColor={THEME.darkest}
           startTrigger={startTrigger}
           delay={
             CONFIG.detailsTimings.EDUCATION_BODY_DELAY +
@@ -298,7 +304,8 @@ export function Details() {
         fontWeightClass="font-light"
         color={THEME.white}
         blockColor={THEME.white}
-        selectionClassName={`selection:bg-[${THEME.white}] selection:text-[${THEME.darkest}]`}
+        selectionBgColor={THEME.white}
+        selectionColor={THEME.darkest}
         startTrigger={startTrigger}
         delay={CONFIG.detailsTimings.SKILLS_HEADING_DELAY}
         direction="rightToLeft"
@@ -322,7 +329,8 @@ export function Details() {
           fontWeightClass="font-light"
           color={THEME.light}
           blockColor={THEME.light}
-          selectionClassName={`selection:bg-[${THEME.light}] selection:text-[${THEME.darkest}]`}
+          selectionBgColor={THEME.light}
+          selectionColor={THEME.darkest}
           startTrigger={startTrigger}
           delay={
             CONFIG.detailsTimings.SKILLS_BODY_DELAY +
