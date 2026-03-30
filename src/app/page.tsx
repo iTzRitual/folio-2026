@@ -50,14 +50,14 @@ export default function Home() {
           }}
         >
           {isMobile && (
-            <section className="relative w-full h-screen max-w-full overflow-x-hidden flex flex-col items-center justify-around pointer-events-none font-karla px-4">
+            <section className="relative w-full h-screen max-w-full overflow-x-hidden flex flex-col items-start justify-around pointer-events-none font-karla px-4">
               <Copy
                 delay={0.1}
                 blockColor="#BCBCBC"
                 direction="rightToLeft"
                 startTrigger={startScene}
               >
-                <p className="max-w-full wrap-break-word text-[#BCBCBC] font-karla font-black text-center text-xl">
+                <p className="max-w-full wrap-break-word text-[#BCBCBC] font-karla font-black text-xl text-left">
                   {heroContent.subtitle}
                 </p>
               </Copy>
@@ -67,59 +67,109 @@ export default function Home() {
                 direction="leftToRight"
                 startTrigger={startScene}
               >
-                <h1 className="w-full max-w-full wrap-break-word text-white font-black text-center text-[clamp(3rem,14vw,4.5rem)] leading-[0.95]">
+                <h1 className="w-full max-w-full wrap-break-word text-white font-black text-[clamp(3rem,14vw,4.5rem)] leading-[0.95] text-left mb-2">
                   {heroContent.title}
                 </h1>
+                {heroContent.professions.map((profession, index) => (
+                  <h3
+                    key={index}
+                    className="text-white font-light text-left w-full text-lg"
+                  >
+                    {profession}
+                  </h3>
+                ))}
               </Copy>
             </section>
           )}
 
           {isMobile && (
-            <section className="relative w-full max-w-full overflow-x-hidden pointer-events-none px-6 pb-36">
+            <section className="relative w-full max-w-full overflow-x-hidden pointer-events-none px-4 pb-18">
               <div className="mb-12">
-                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
-                  Experience
-                </h3>
-                <ul>
-                  {experienceData.map((item, index) => (
-                    <li
-                      key={index}
-                      className="text-white font-karla text-left w-full text-lg"
-                    >
-                      - {item.position} at {item.company} ({item.duration})
-                    </li>
-                  ))}
-                </ul>
+                <Copy
+                  delay={0.2}
+                  blockColor="#FFFFFF"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                    Experience
+                  </h3>
+                </Copy>
+                <Copy
+                  delay={0.3}
+                  blockColor="#BCBCBC"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <ul>
+                    {experienceData.map((item, index) => (
+                      <li
+                        key={index}
+                        className="text-white font-karla text-left w-full text-lg"
+                      >
+                        - {item.position} at {item.company} ({item.duration})
+                      </li>
+                    ))}
+                  </ul>
+                </Copy>
               </div>
               <div className="mb-12">
-                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
-                  Recent Projects
-                </h3>
-                <ul>
-                  {projectsData.map((item, index) => (
-                    <li
-                      key={index}
-                      className="text-white font-karla text-left w-full text-lg"
-                    >
-                      - {item.name}
-                    </li>
-                  ))}
-                </ul>
+                <Copy
+                  delay={0.4}
+                  blockColor="#FFFFFF"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                    Recent Projects
+                  </h3>
+                </Copy>
+                <Copy
+                  delay={0.5}
+                  blockColor="#BCBCBC"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <ul>
+                    {projectsData.map((item, index) => (
+                      <li
+                        key={index}
+                        className="text-white font-karla text-left w-full text-lg"
+                      >
+                        - {item.name}
+                      </li>
+                    ))}
+                  </ul>
+                </Copy>
               </div>
               <div className="mb-12">
-                <h3 className="text-white font-black text-left w-full text-3xl pb-2">
-                  Education
-                </h3>
-                <ul>
-                  {educationData.map((item, index) => (
-                    <li
-                      key={index}
-                      className="text-white font-karla text-left w-full text-lg"
-                    >
-                      - {item.degree} in {item.field} from {item.institution}
-                    </li>
-                  ))}
-                </ul>
+                <Copy
+                  delay={0.6}
+                  blockColor="#FFFFFF"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+                    Education
+                  </h3>
+                </Copy>
+                <Copy
+                  delay={0.7}
+                  blockColor="#BCBCBC"
+                  direction="leftToRight"
+                  animateOnScroll={true}
+                >
+                  <ul>
+                    {educationData.map((item, index) => (
+                      <li
+                        key={index}
+                        className="text-white font-karla text-left w-full text-lg"
+                      >
+                        - {item.degree} in {item.field} from {item.institution}
+                      </li>
+                    ))}
+                  </ul>
+                </Copy>
               </div>
             </section>
           )}
