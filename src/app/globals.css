@@ -3,6 +3,16 @@
 @theme {
   --font-karla: var(--font-karla);
 }
+
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 h1 .block-line-wrapper,
 p .block-line-wrapper {
   margin: 0;

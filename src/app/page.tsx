@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ReactLenis } from "lenis/react";
 import { Leva } from "leva";
@@ -20,10 +20,29 @@ export default function Home() {
   const [removeLoader, setRemoveLoader] = useState(false);
   const isMobile = useIsMobile();
 
+  useEffect(() => {
+    const isLoaderActive = !removeLoader;
+
+    if (isLoaderActive) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+
+      window.scrollTo(0, 0);
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [removeLoader]);
+
   return (
     <>
       <Leva collapsed />
-      <ReactLenis root />
+      {removeLoader && <ReactLenis root />}
 
       <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
         <div className="fixed inset-0 z-0 pointer-events-none">
