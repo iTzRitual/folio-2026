@@ -21,7 +21,7 @@ export const CONFIG = {
     },
     model: {
         BASE_MODEL_Y: 0.1,
-        INTERACTION_LOCK_EPSILON: 0.001,
+        INTERACTION_LOCK_EPSILON: 0.07,
         MODEL_UP_TRAVEL_FACTOR: 0.25,
         SCALE_OUT_START: 0.2,
         SCALE_OUT_END: 0.9,
