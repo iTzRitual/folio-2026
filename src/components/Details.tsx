@@ -9,6 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { DetailsText } from "./DetailsScene/DetailsText";
+import { DetailsLink } from "./DetailsScene/DetailsLink";
 import {
   experienceData,
   projectsData,
@@ -122,11 +123,6 @@ export function Details() {
     [],
   );
 
-  const projectsText = useMemo(
-    () => projectsData.map((project) => `${project.name}`),
-    [],
-  );
-
   const educationText = useMemo(
     () =>
       educationData
@@ -209,10 +205,11 @@ export function Details() {
         onSync={handleTitleSync("projects")}
       />
 
-      {projectsText.map((line, index) => (
-        <DetailsText
-          key={`proj-${line}`}
-          text={line}
+      {projectsData.map((project, index) => (
+        <DetailsLink
+          key={`proj-${project.name}`}
+          text={project.name}
+          href={project.link}
           position={[
             bodyPositions.projects,
             sectionTop -

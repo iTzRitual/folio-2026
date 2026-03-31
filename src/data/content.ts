@@ -20,13 +20,16 @@ export const experienceData = [
 ] as const;
 export const projectsData = [
     {
-        name: "3D Interactive Configurator",
+        name: "Folio 2026 - Github",
+        link: "https://github.com/iTzRitual/folio-2026"
     },
     {
-        name: "RN Warehouse App",
+        name: "Controller Configurator - Github",
+        link: "https://github.com/iTzRitual/r3f-controller-configurator-2025"
     },
     {
-        name: "E-commerce lorem",
+        name: "Commercial Portfolio - Github",
+        link: "https://github.com/iTzRitual/commercial-portfolio"
     },
 ] as const;
 export const educationData = [
