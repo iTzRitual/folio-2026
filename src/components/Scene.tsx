@@ -16,9 +16,11 @@ import { THEME } from "../config/constants";
 function SceneContent({
   startAnimation,
   isMobile,
+  isDebug,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
+  isDebug: boolean;
 }) {
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
@@ -28,7 +30,7 @@ function SceneContent({
         <Environment preset="city" />
 
         <Suspense fallback={null}>
-          <Model isMobile={isMobile} />
+          <Model isMobile={isMobile} isDebug={isDebug} />
         </Suspense>
 
         {!isMobile && <HeroText />}
@@ -46,9 +48,11 @@ function SceneContent({
 export default function Scene({
   startAnimation,
   isMobile,
+  isDebug,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
+  isDebug: boolean;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
@@ -94,8 +98,8 @@ export default function Scene({
           }}
           flipflops={3}
         />
-        <SceneContent startAnimation={startAnimation} isMobile={isMobile} />
-        <Stats />
+        <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} />
+        {isDebug && <Stats />}
       </Canvas>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { ReactLenis } from "lenis/react";
 import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
@@ -19,6 +20,8 @@ export default function Home() {
   const [startScene, setStartScene] = useState(false);
   const [removeLoader, setRemoveLoader] = useState(false);
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const isDebug = pathname === "/debug";
 
   useEffect(() => {
     const isLoaderActive = !removeLoader;
@@ -41,7 +44,7 @@ export default function Home() {
 
   return (
     <>
-      <Leva collapsed />
+      <Leva collapsed hidden={!isDebug} />
       {removeLoader && <ReactLenis root />}
 
       <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
@@ -53,7 +56,7 @@ export default function Home() {
             />
           )}
           <div className="w-full h-full pointer-events-auto">
-            <DynamicScene startAnimation={startScene} isMobile={isMobile} />
+            <DynamicScene startAnimation={startScene} isMobile={isMobile} isDebug={isDebug} />
           </div>
         </div>
 

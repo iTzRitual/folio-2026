@@ -15,7 +15,7 @@ import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { CONFIG } from "../config/constants";
 
-export default function Model({ isMobile }: { isMobile?: boolean }) {
+export default function Model({ isMobile, isDebug = false }: { isMobile?: boolean, isDebug?: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -61,7 +61,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     });
   }, [startTrigger]);
 
-  const materialProps = useControls({
+  const levaMaterialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
     roughness: { value: 0.2, min: 0, max: 1, step: 0.1 },
     transmission: { value: 0.97, min: 0, max: 1, step: 0.01 },
@@ -71,15 +71,31 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     scale: { value: 0.8, min: 0, max: 3, step: 0.05 },
   });
 
+  const materialProps = isDebug ? levaMaterialProps : {
+    thickness: 0.65,
+    roughness: 0.2,
+    transmission: 0.97,
+    ior: 0.9,
+    chromaticAberration: 1.0,
+    backside: false,
+    scale: 0.8,
+  };
+
   const responsiveScale = baseResponsiveScale * materialProps.scale;
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
   const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
 
-  const skullRotation = useControls("Skull Rotation", {
+  const levaSkullRotation = useControls("Skull Rotation", {
     x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
     y: { value: -3.13, min: -Math.PI, max: Math.PI, step: 0.05 },
     z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
+
+  const skullRotation = isDebug ? levaSkullRotation : {
+    x: -1.3,
+    y: -3.13,
+    z: 0.85,
+  };
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
