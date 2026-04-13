@@ -1,43 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  --font-karla: var(--font-karla);
+    --font-karla: var(--font-karla);
 }
 
 html {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 html::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 h1 .block-line-wrapper,
 p .block-line-wrapper {
-  margin: 0;
+    margin: 0;
 }
 
 .block-line-wrapper {
-  position: relative;
-  width: fit-content;
-  max-width: 100%;
-  display: block;
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+    display: block;
 }
 
 .block-line {
-  position: relative;
-  display: block;
+    position: relative;
+    display: block;
 }
 
 .block-revealer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 101%;
-  height: 110%;
-  pointer-events: none;
-  will-change: transform;
-  z-index: 1;
-  border-radius: 0.5rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 101%;
+    height: 110%;
+    pointer-events: none;
+    will-change: transform;
+    z-index: 1;
+    border-radius: 0.5rem;
+}
+
+.no-js-fallback {
+    display: none;
+}
+
+.no-js .no-js-fallback {
+    display: flex;
+}
+
+.no-js .js-only-app {
+    display: none !important;
 }
