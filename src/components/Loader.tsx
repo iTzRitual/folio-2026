@@ -5,6 +5,7 @@ import { useProgress } from "@react-three/drei";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CONFIG } from "../config/constants";
+import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
 interface LoaderProps {
   onExitStart: () => void;
@@ -96,7 +97,9 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
       const targetProgress = Math.max(progress, 31);
       odometerTween.current = gsap.to(progressProxy.current, {
         value: targetProgress,
-        duration: CONFIG.loader.ODOMETER_DURATION,
+        duration: IS_REPEAT_VISIT
+          ? CONFIG.loader.ODOMETER_DURATION_REPEAT
+          : CONFIG.loader.ODOMETER_DURATION,
         ease: "power2.out",
         paused: !isRevealed.current,
         onUpdate: () => {

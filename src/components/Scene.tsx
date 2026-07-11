@@ -12,6 +12,7 @@ import { Details } from "./Details";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { Suspense } from "react";
 import { THEME } from "../config/constants";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 function SceneContent({
   startAnimation,
@@ -22,6 +23,8 @@ function SceneContent({
   isMobile: boolean;
   isDebug: boolean;
 }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
@@ -35,7 +38,7 @@ function SceneContent({
 
         {!isMobile && <HeroText />}
         {!isMobile && <Details />}
-        {!isMobile && (
+        {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
             <CustomAberration />
           </EffectComposer>

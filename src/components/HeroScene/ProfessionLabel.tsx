@@ -4,6 +4,7 @@ import { useMemo, useRef, type MutableRefObject } from "react";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 interface ProfessionLabelProps {
   children: React.ReactNode;
@@ -50,6 +51,7 @@ export function ProfessionLabel({
   const lineMeshRef = useRef<THREE.Mesh>(null);
   const htmlOpacityRef = useRef<HTMLDivElement>(null);
   const textRevealedRef = useRef(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const elapsed = useRef(0);
 
@@ -103,7 +105,9 @@ export function ProfessionLabel({
 
       lineMaterialRef.current.uniforms.uOpacity.value = fadeOpacity;
 
-      if (elapsed.current >= lineDelay) {
+      if (prefersReducedMotion) {
+        lineMaterialRef.current.uniforms.uProgress.value = 1.0;
+      } else if (elapsed.current >= lineDelay) {
         lineMaterialRef.current.uniforms.uProgress.value = THREE.MathUtils.lerp(
           lineMaterialRef.current.uniforms.uProgress.value,
           1.0,

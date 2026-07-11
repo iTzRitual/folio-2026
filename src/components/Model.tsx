@@ -13,6 +13,7 @@ import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
 
 export default function Model({ isMobile, isDebug = false }: { isMobile?: boolean, isDebug?: boolean }) {
@@ -30,6 +31,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { progressRef } = useHeroTransition();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
@@ -51,6 +53,19 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
       return;
     }
 
+    if (prefersReducedMotion) {
+      animGroupRef.current.scale.set(0.95, 0.95, 0.95);
+      gsap.to(animGroupRef.current.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.4,
+        ease: "power2.out",
+        delay: 0.5,
+      });
+      return;
+    }
+
     gsap.to(animGroupRef.current.scale, {
       x: 1,
       y: 1,
@@ -59,7 +74,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
       ease: "elastic.out(1, 0.5)",
       delay: 1,
     });
-  }, [startTrigger]);
+  }, [startTrigger, prefersReducedMotion]);
 
   const levaMaterialProps = useControls({
     thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
@@ -318,7 +333,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           let targetX = 0;
           let targetY = 0;
 
-          if (isHoveringCenter.current) {
+          if (isHoveringCenter.current && !prefersReducedMotion) {
             targetX = cursorX;
             targetY = cursorY;
           }
@@ -340,7 +355,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
       interactiveGroupRef.current.position.copy(pos.current);
     }
 
-    if (mesh.current) {
+    if (mesh.current && !prefersReducedMotion) {
       const t = state.clock.getElapsedTime();
       mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
       mesh.current.rotation.x =

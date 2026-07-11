@@ -1,29 +1,53 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { ReactLenis } from "lenis/react";
+import { ReactLenis, type LenisRef } from "lenis/react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Leva } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { MobileHero } from "@/components/Mobile/MobileHero";
 import { MobileContent } from "@/components/Mobile/MobileContent";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
+import { CONFIG } from "@/config/constants";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
     ssr: false,
 });
 
-const TIMELINE_VIEWPORTS = 1.5;
+const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
     const isMobile = useIsMobile();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const pathname = usePathname();
     const isDebug = pathname === "/debug";
+    const lenisRef = useRef<LenisRef>(null);
+
+    useEffect(() => {
+        if (!removeLoader || prefersReducedMotion) return;
+        const lenis = lenisRef.current?.lenis;
+        if (!lenis) return;
+
+        lenis.on("scroll", ScrollTrigger.update);
+        const update = (time: number) => lenis.raf(time * 1000);
+        gsap.ticker.add(update);
+        gsap.ticker.lagSmoothing(0);
+
+        return () => {
+            gsap.ticker.remove(update);
+            lenis.off("scroll", ScrollTrigger.update);
+        };
+    }, [removeLoader, prefersReducedMotion]);
 
     useEffect(() => {
         const isLoaderActive = !removeLoader;
@@ -48,7 +72,9 @@ export default function Home() {
             <NoJsContent />
             <div className="js-only-app">
                 <Leva collapsed hidden={!isDebug} />
-                {removeLoader && <ReactLenis root />}
+                {removeLoader && !prefersReducedMotion && (
+                    <ReactLenis root ref={lenisRef} options={{ autoRaf: false }} />
+                )}
 
                 <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
                     <div className="fixed inset-0 z-0 pointer-events-none">

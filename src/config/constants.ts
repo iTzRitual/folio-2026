@@ -14,10 +14,18 @@ export const FONTS = {
     karlaExtraBold: "fonts/Karla-ExtraBold.ttf",
 } as const;
 
+const SCROLL_TIMELINE_VIEWPORTS = 1.5;
+
 export const CONFIG = {
+    scrollTimeline: {
+        VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
+        // extra scroll distance beyond the first viewport, as a ScrollTrigger end string
+        TRIGGER_END: `+=${(SCROLL_TIMELINE_VIEWPORTS - 1) * 100}%`,
+    },
     loader: {
         REVEAL_DURATION: 0.5,
         ODOMETER_DURATION: 2,
+        ODOMETER_DURATION_REPEAT: 0.5,
     },
     model: {
         BASE_MODEL_Y: 0.1,
@@ -39,7 +47,6 @@ export const CONFIG = {
         IDLE_ROTATION_SPEED: 2,
     },
     detailsLayout: {
-        SCROLL_TRIGGER_END: "+=50%",
         HEADING_SIZE_MULT: 0.03,
         BODY_SIZE_MULT: 0.5,
         SECTION_TRAVEL_MULT: 1.16,
@@ -50,6 +57,13 @@ export const CONFIG = {
         GAP_MULT: 0.08,
         BODY_TOP_OFFSET_MULT: 0.38,
         BODY_LINE_HEIGHT_MULT: 1.5,
+    },
+    detailsLink: {
+        HOVER_COLOR: "#FFFFFF",
+        COLOR_DURATION: 0.15,
+        ARROW_NUDGE_FACTOR: 0.25,
+        ARROW_DURATION: 0.2,
+        UNDERLINE_PHASE_DURATION: 0.25,
     },
     detailsTimings: {
         EXPERIENCE_HEADING_DELAY: 0.1,
@@ -74,6 +88,7 @@ export const CONFIG = {
         STACKED_FADE_START: 0.12,
         VISUAL_FONT_CORRECTION_X: 0.05,
         DELAY_FIRST_RUN: 2.5,
+        DELAY_REPEAT: 0.8,
         DURATION_FIRST_RUN: 1.5,
         FADE_DURATION_FIRST_RUN: 1.2,
         FADE_POSITION_FIRST_RUN: 0.8,

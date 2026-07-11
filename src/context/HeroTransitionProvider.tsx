@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { HeroTransitionContextProvider } from "@/context/HeroTransitionContext";
+import { CONFIG } from "@/config/constants";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -24,7 +25,7 @@ export function HeroTransitionProvider({
       scrollTrigger: {
         trigger: document.body,
         start: "top top",
-        end: "+=50%",
+        end: CONFIG.scrollTimeline.TRIGGER_END,
         scrub: true,
       },
       onUpdate: () => {

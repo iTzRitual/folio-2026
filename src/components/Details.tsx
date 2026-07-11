@@ -4,10 +4,8 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { Group, Mesh } from "three";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
 import { useAnimationContext } from "@/context/AnimationContext";
+import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { DetailsText } from "./DetailsScene/DetailsText";
 import { DetailsLink } from "./DetailsScene/DetailsLink";
 import {
@@ -18,37 +16,12 @@ import {
 } from "@/data/content";
 import { CONFIG, THEME, FONTS } from "../config/constants";
 
-gsap.registerPlugin(ScrollTrigger);
-
 export function Details() {
   const { viewport, marginX, marginY, leftX, rightX, pxTo3DWidth } =
     useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const progressRef = useRef(0);
+  const { progressRef } = useHeroTransition();
   const rootGroupRef = useRef<Group>(null);
-
-  useGSAP(() => {
-    const scrollState = { progress: 0 };
-
-    const tween = gsap.to(scrollState, {
-      progress: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: document.body,
-        start: "top top",
-        end: CONFIG.detailsLayout.SCROLL_TRIGGER_END,
-        scrub: true,
-      },
-      onUpdate: () => {
-        progressRef.current = Math.min(Math.max(scrollState.progress, 0), 1);
-      },
-    });
-
-    return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
-    };
-  }, []);
 
   const [titleWidths, setTitleWidths] = useState({
     experience: 0,

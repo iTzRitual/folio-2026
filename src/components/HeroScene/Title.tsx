@@ -6,6 +6,8 @@ import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CONFIG, THEME, FONTS } from "../../config/constants";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
 interface TitleProps {
   children: React.ReactNode;
@@ -52,6 +54,7 @@ export function Title({
 
   const [textWidth3D, setTextWidth3D] = useState(0);
   const [isScrollHintReady, setIsScrollHintReady] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const {
     TARGET_SCALE: targetScale,
@@ -74,7 +77,36 @@ export function Title({
       return;
     }
 
-    const delay = isFirstRun.current ? CONFIG.title.DELAY_FIRST_RUN : 0;
+    if (prefersReducedMotion) {
+      const reducedTargetX =
+        -viewportWidth / 2 +
+        marginX +
+        (textWidth3D * targetScale) / 2 -
+        visualFontCorrectionX;
+      gsap.set(textGroupRef.current.position, { x: reducedTargetX });
+      gsap.set(textGroupRef.current.scale, {
+        x: targetScale,
+        y: targetScale,
+        z: targetScale,
+      });
+      gsap.set(htmlDivRef.current, { scale: targetScale });
+      gsap.to(scrollTextRef.current, {
+        opacity: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      isFirstRun.current = false;
+      compactAppliedRef.current = true;
+      hintVisibleRef.current = true;
+      setIsScrollHintReady(true);
+      return;
+    }
+
+    const delay = isFirstRun.current
+      ? IS_REPEAT_VISIT
+        ? CONFIG.title.DELAY_REPEAT
+        : CONFIG.title.DELAY_FIRST_RUN
+      : 0;
     const duration = isFirstRun.current ? CONFIG.title.DURATION_FIRST_RUN : 0;
     const fadeDuration = isFirstRun.current
       ? CONFIG.title.FADE_DURATION_FIRST_RUN
@@ -149,7 +181,7 @@ export function Title({
       }
       tl.kill();
     };
-  }, [startTrigger, textWidth3D, viewportWidth, marginX]);
+  }, [startTrigger, textWidth3D, viewportWidth, marginX, prefersReducedMotion]);
 
   useFrame(() => {
     const hasStartedScroll =
@@ -246,8 +278,9 @@ export function Title({
     }
 
     if (stackedGroupRef.current) {
-      stackedGroupRef.current.position.x =
-        viewportWidth * 0.08 * (1 - stackedProgress);
+      stackedGroupRef.current.position.x = prefersReducedMotion
+        ? 0
+        : viewportWidth * 0.08 * (1 - stackedProgress);
     }
 
     if (stackedTopRef.current) {

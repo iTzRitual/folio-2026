@@ -2,9 +2,11 @@
 
 import { Html, Text } from "@react-three/drei";
 import { useMemo, useRef, useState, useEffect } from "react";
+import gsap from "gsap";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import type { Mesh } from "three";
 import * as THREE from "three";
+import { CONFIG } from "../../config/constants";
 
 interface DetailsLinkProps {
   text: string;
@@ -56,6 +58,11 @@ export function DetailsLink({
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const underlineRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
+  const underlineMeshRef = useRef<THREE.Mesh>(null);
+  const arrowMeshRef = useRef<THREE.Mesh>(null);
+  const hoverProxy = useRef({ t: 0 });
+  const slideProxy = useRef({ s: 1 });
+  const slideTl = useRef<gsap.core.Timeline | null>(null);
 
   const [textDimensions, setTextDimensions] = useState({
     width: 0,
@@ -109,6 +116,95 @@ export function DetailsLink({
   const arrowY =
     -calculatedFontSize * 0.15 - 1.5 * (calculatedFontSize / pixelFontSize);
 
+  const finePointer = () =>
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const reducedMotion = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const applyHoverColor = () => {
+    const c = new THREE.Color().lerpColors(
+      new THREE.Color(color),
+      new THREE.Color(CONFIG.detailsLink.HOVER_COLOR),
+      hoverProxy.current.t,
+    );
+    materialRef.current?.color.copy(c);
+    underlineRef.current?.color.copy(c);
+    arrowRef.current?.color.copy(c);
+  };
+
+  const handleEnter = () => {
+    if (!finePointer()) return;
+    gsap.to(hoverProxy.current, {
+      t: 1,
+      duration: CONFIG.detailsLink.COLOR_DURATION,
+      ease: "power2.out",
+      overwrite: true,
+      onUpdate: applyHoverColor,
+    });
+    if (reducedMotion()) return;
+
+    if (arrowMeshRef.current) {
+      const nudge = arrowSize * CONFIG.detailsLink.ARROW_NUDGE_FACTOR;
+      gsap.to(arrowMeshRef.current.position, {
+        x: arrowX + nudge,
+        y: arrowY + nudge,
+        duration: CONFIG.detailsLink.ARROW_DURATION,
+        ease: "power2.out",
+        overwrite: true,
+      });
+    }
+
+    if (underlineMeshRef.current && !slideTl.current?.isActive()) {
+      const mesh = underlineMeshRef.current;
+      const w = underlineWidth;
+      const d = CONFIG.detailsLink.UNDERLINE_PHASE_DURATION;
+      slideProxy.current.s = 1;
+      slideTl.current = gsap
+        .timeline()
+        .to(slideProxy.current, {
+          // wipe out, pivot on the right edge
+          s: 0,
+          duration: d,
+          ease: "power2.inOut",
+          onUpdate: () => {
+            mesh.scale.x = Math.max(slideProxy.current.s, 0.0001);
+            mesh.position.x = w - (w * slideProxy.current.s) / 2;
+          },
+        })
+        .to(slideProxy.current, {
+          // wipe back in, pivot on the left edge
+          s: 1,
+          duration: d,
+          ease: "power2.inOut",
+          onUpdate: () => {
+            mesh.scale.x = Math.max(slideProxy.current.s, 0.0001);
+            mesh.position.x = (w * slideProxy.current.s) / 2;
+          },
+        });
+    }
+  };
+
+  const handleLeave = () => {
+    if (!finePointer()) return;
+    gsap.to(hoverProxy.current, {
+      t: 0,
+      duration: CONFIG.detailsLink.COLOR_DURATION,
+      ease: "power2.out",
+      overwrite: true,
+      onUpdate: applyHoverColor,
+    });
+    if (arrowMeshRef.current) {
+      gsap.to(arrowMeshRef.current.position, {
+        x: arrowX,
+        y: arrowY,
+        duration: CONFIG.detailsLink.ARROW_DURATION,
+        ease: "power2.out",
+        overwrite: true,
+      });
+    }
+    // underline slide completes on its own — do not reverse it
+  };
+
   return (
     <group position={position}>
       <Text
@@ -131,7 +227,7 @@ export function DetailsLink({
 
       {textDimensions.width > 0 && (
         <>
-          <mesh position={[underlineX, underlineY, 0]}>
+          <mesh ref={underlineMeshRef} position={[underlineX, underlineY, 0]}>
             <planeGeometry args={[underlineWidth, underlineThickness]} />
             <meshBasicMaterial
               ref={underlineRef}
@@ -142,7 +238,7 @@ export function DetailsLink({
           </mesh>
 
           {arrowTex && (
-            <mesh position={[arrowX, arrowY, 0]}>
+            <mesh ref={arrowMeshRef} position={[arrowX, arrowY, 0]}>
               <planeGeometry args={[arrowSize, arrowSize]} />
               <meshBasicMaterial
                 ref={arrowRef}
@@ -161,6 +257,8 @@ export function DetailsLink({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
           className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block no-underline outline-none`}
           style={{
             fontSize: `${pixelFontSize}px`,

@@ -6,6 +6,7 @@ import { SplitText } from "gsap/SplitText";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { CONFIG } from "../config/constants";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 gsap.registerPlugin(SplitText, ScrollTrigger);
 
@@ -33,6 +34,7 @@ export function AnimatedRevealText({
   startTrigger = true,
 }: AnimatedRevealTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const onRevealRef = useRef(onReveal);
   useLayoutEffect(() => {
     onRevealRef.current = onReveal;
@@ -46,6 +48,14 @@ export function AnimatedRevealText({
   useGSAP(
     () => {
       if (!containerRef.current) return;
+
+      if (prefersReducedMotion) {
+        if (!startTrigger) return;
+        const call = gsap.delayedCall(delay, () => {
+          onRevealRef.current?.(0);
+        });
+        return () => call.kill();
+      }
 
       splitRefs.current = [];
       lines.current = [];
@@ -229,6 +239,7 @@ export function AnimatedRevealText({
         duration,
         direction,
         startTrigger,
+        prefersReducedMotion,
       ],
     },
   );
