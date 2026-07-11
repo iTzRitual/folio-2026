@@ -49,6 +49,17 @@ export default function Home() {
         };
     }, [removeLoader, prefersReducedMotion]);
 
+    // Always start at the top on load — the browser's automatic scroll
+    // restoration would otherwise re-apply the pre-refresh position (even
+    // after our scrollTo below), leaving the scroll-linked WebGL scene
+    // mid-timeline while the loader plays.
+    useEffect(() => {
+        if ("scrollRestoration" in window.history) {
+            window.history.scrollRestoration = "manual";
+        }
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         const isLoaderActive = !removeLoader;
 
