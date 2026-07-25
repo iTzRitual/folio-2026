@@ -15,6 +15,7 @@ import { MobileHero } from "@/components/Mobile/MobileHero";
 import { MobileContent } from "@/components/Mobile/MobileContent";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
+import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,6 +36,27 @@ export default function Home() {
     const isDebug = pathname === "/debug";
     const lenisRef = useRef<LenisRef>(null);
     const lenis = useLenis();
+    const [overflowViewports, setOverflowViewports] = useState(0);
+
+    useEffect(() => {
+        if (isMobile) return;
+
+        const update = () =>
+            setOverflowViewports(
+                calculateDetailsOverflowViewports({
+                    viewportWidth: window.innerWidth,
+                    viewportHeight: window.innerHeight,
+                }),
+            );
+
+        update();
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+    }, [isMobile]);
+
+    useEffect(() => {
+        ScrollTrigger.refresh();
+    }, [overflowViewports]);
 
     useEffect(() => {
         if (!removeLoader || prefersReducedMotion) return;
@@ -117,7 +139,7 @@ export default function Home() {
                         style={{
                             height: isMobile
                                 ? "auto"
-                                : `${TIMELINE_VIEWPORTS * 100}vh`,
+                                : `${(TIMELINE_VIEWPORTS + overflowViewports) * 100}vh`,
                         }}
                     >
                         {isMobile && <MobileHero startScene={startScene} />}

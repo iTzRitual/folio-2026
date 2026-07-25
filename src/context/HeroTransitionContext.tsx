@@ -7,6 +7,7 @@ import {
 
 export interface HeroTransitionContextType {
   progressRef: MutableRefObject<number>;
+  detailsScrollRef: MutableRefObject<number>;
 }
 
 const HeroTransitionContext = createContext<

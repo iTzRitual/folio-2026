@@ -6,310 +6,212 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { Group, Mesh } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { DetailsText } from "./DetailsScene/DetailsText";
-import { DetailsLink } from "./DetailsScene/DetailsLink";
+import {
+  DetailsSection,
+  type DetailsSectionItem,
+} from "./DetailsScene/DetailsSection";
 import {
   experienceData,
   projectsData,
   educationData,
   skillsData,
 } from "@/data/content";
-import { CONFIG, THEME, FONTS } from "../config/constants";
+import {
+  DETAILS_SECTIONS,
+  calculateDetailsLayout,
+} from "@/lib/detailsLayout";
+import { CONFIG } from "../config/constants";
 
 export function Details() {
-  const { viewport, marginX, marginY, leftX, rightX, pxTo3DWidth } =
-    useHeroLayout();
+  const {
+    size,
+    viewport,
+    marginY,
+    leftX,
+    rightX,
+    pxTo3DWidth,
+    pxTo3DHeight,
+  } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef } = useHeroTransition();
+  const { progressRef, detailsScrollRef } = useHeroTransition();
   const rootGroupRef = useRef<Group>(null);
 
-  const [titleWidths, setTitleWidths] = useState({
-    experience: 0,
-    projects: 0,
-    education: 0,
-  });
+  const [headingWidths, setHeadingWidths] = useState<Record<string, number>>({});
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const revealedRef = useRef<Record<string, boolean>>({});
 
-  const handleTitleSync = (titleKey: string) => (mesh: Mesh) => {
-    if (mesh?.geometry) {
-      mesh.geometry.computeBoundingBox();
+  const handleHeadingSync = (key: string) => (mesh: Mesh) => {
+    if (!mesh?.geometry) return;
 
-      if (mesh.geometry.boundingBox) {
-        const { max, min } = mesh.geometry.boundingBox;
-        const width = max.x - min.x;
+    mesh.geometry.computeBoundingBox();
+    const box = mesh.geometry.boundingBox;
+    if (!box) return;
 
-        setTitleWidths((prev) => {
-          if (prev[titleKey as keyof typeof prev] === width) return prev;
-          return { ...prev, [titleKey]: width };
-        });
-      }
-    }
+    const width = box.max.x - box.min.x;
+    setHeadingWidths((prev) => (prev[key] === width ? prev : { ...prev, [key]: width }));
   };
 
-  const headingSize =
-    (viewport.width - marginX * 2) * CONFIG.detailsLayout.HEADING_SIZE_MULT;
-  const bodySize = headingSize * CONFIG.detailsLayout.BODY_SIZE_MULT;
-  const headingPixelSize = headingSize / pxTo3DWidth;
-  const bodyPixelSize = bodySize / pxTo3DWidth;
+  const layout = useMemo(
+    () =>
+      calculateDetailsLayout({
+        viewportWidth: size.width,
+        viewportHeight: size.height,
+      }),
+    [size.width, size.height],
+  );
+
+  const headingSize = layout.headingFontSize * pxTo3DWidth;
+  const bodySize = layout.bodyFontSize * pxTo3DWidth;
+  const bodyLineHeight = layout.bodyLineHeight * pxTo3DHeight;
 
   const sectionTravel =
     viewport.height * CONFIG.detailsLayout.SECTION_TRAVEL_MULT;
   const targetBaseY = viewport.height * CONFIG.detailsLayout.TARGET_BASE_Y_MULT;
-
-  useFrame(() => {
-    const detailsProgress = progressRef.current;
-    const baseY =
-      -sectionTravel + (sectionTravel + targetBaseY) * detailsProgress;
-
-    if (rootGroupRef.current) {
-      rootGroupRef.current.position.y = baseY;
-    }
-  });
-
   const sectionTop =
     viewport.height / 2 - marginY * CONFIG.detailsLayout.SECTION_TOP_OFF_MULT;
-  const sectionSpacing =
-    viewport.height * CONFIG.detailsLayout.SECTION_SPACING_MULT;
 
-  const leftTitleX = leftX;
-  const rightTitleX =
-    rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
-  const rightBodyX = rightX;
+  const sectionY = (key: string) => {
+    const offsets = layout.sections[key];
+    return {
+      headingY: sectionTop - offsets.headingY * pxTo3DHeight,
+      bodyY: sectionTop - offsets.bodyY * pxTo3DHeight,
+    };
+  };
 
   const gap = viewport.width * CONFIG.detailsLayout.GAP_MULT;
-  const bodyTopOffset = headingSize * CONFIG.detailsLayout.BODY_TOP_OFFSET_MULT;
-  const bodyLineHeight = bodySize * CONFIG.detailsLayout.BODY_LINE_HEIGHT_MULT;
+  const bodyColumnX = useMemo(() => {
+    const widest = DETAILS_SECTIONS.filter((s) => s.column === "left").reduce(
+      (max, s) => Math.max(max, headingWidths[s.key] ?? 0),
+      0,
+    );
+    return leftX + widest + gap;
+  }, [leftX, gap, headingWidths]);
 
-  const bodyPositions = useMemo(() => {
-    return {
-      experience: leftTitleX + titleWidths.experience + gap,
-      projects: leftTitleX + titleWidths.projects + gap,
-      education: leftTitleX + titleWidths.education + gap,
-    };
-  }, [leftTitleX, titleWidths, gap]);
+  const rightTitleX =
+    rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
 
-  const experienceText = useMemo(
+  useFrame(() => {
+    const baseY =
+      -sectionTravel + (sectionTravel + targetBaseY) * progressRef.current;
+    const groupY = baseY + detailsScrollRef.current * pxTo3DHeight;
+
+    if (rootGroupRef.current) {
+      rootGroupRef.current.position.y = groupY;
+    }
+
+    const revealEdge =
+      -viewport.height / 2 +
+      viewport.height * CONFIG.detailsLayout.REVEAL_MARGIN_MULT;
+
+    let changed = false;
+    for (const section of DETAILS_SECTIONS) {
+      if (revealedRef.current[section.key]) continue;
+
+      const worldY =
+        groupY + sectionTop - layout.sections[section.key].headingY * pxTo3DHeight;
+
+      if (worldY > revealEdge) {
+        revealedRef.current[section.key] = true;
+        changed = true;
+      }
+    }
+
+    if (changed) setRevealed({ ...revealedRef.current });
+  });
+
+  const experienceItems: DetailsSectionItem[] = useMemo(
     () =>
-      experienceData
-        .map((exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`)
-        .join("\n")
-        .split("\n"),
+      experienceData.map((exp) => ({
+        text: `${exp.duration} / ${exp.position} @ ${exp.company}`,
+      })),
     [],
   );
 
-  const educationText = useMemo(
-    () =>
-      educationData
-        .map((edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`)
-        .join("\n")
-        .split("\n"),
+  const projectItems: DetailsSectionItem[] = useMemo(
+    () => projectsData.map((project) => ({ text: project.name, href: project.link })),
     [],
   );
 
-  const skillsText = useMemo(() => skillsData.join("\n").split("\n"), []);
+  const educationItems: DetailsSectionItem[] = useMemo(
+    () =>
+      educationData.map((edu) => ({
+        text: `${edu.field} (${edu.degree}) @ ${edu.institution}`,
+      })),
+    [],
+  );
+
+  const skillItems: DetailsSectionItem[] = useMemo(
+    () => skillsData.map((skill) => ({ text: skill })),
+    [],
+  );
+
+  const shared = {
+    headingFontSize: headingSize,
+    bodyFontSize: bodySize,
+    bodyLineHeight,
+    pxTo3DWidth,
+  };
 
   return (
     <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
-      <DetailsText
-        text="Experience"
-        position={[leftTitleX, sectionTop, 0]}
-        anchorX="left"
-        anchorY="top"
-        calculatedFontSize={headingSize}
-        pixelFontSize={headingPixelSize}
-        font={FONTS.karlaLight}
-        fontWeightClass="font-light"
-        color={THEME.white}
-        blockColor={THEME.white}
-        selectionBgColor={THEME.white}
-        selectionColor={THEME.darkest}
-        startTrigger={startTrigger}
-        delay={CONFIG.detailsTimings.EXPERIENCE_HEADING_DELAY}
+      <DetailsSection
+        heading="Experience"
+        items={experienceItems}
+        headingX={leftX}
+        headingY={sectionY("experience").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("experience").bodyY}
+        bodyAnchorX="left"
         direction="leftToRight"
-        lineHeight={1}
-        onSync={handleTitleSync("experience")}
+        startTrigger={startTrigger && !!revealed.experience}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        onHeadingSync={handleHeadingSync("experience")}
+        {...shared}
       />
 
-      {experienceText.map((line, index) => (
-        <DetailsText
-          key={`exp-${line}`}
-          text={line}
-          position={[
-            bodyPositions.experience,
-            sectionTop - bodyTopOffset - index * bodyLineHeight,
-            0,
-          ]}
-          anchorX="left"
-          anchorY="top"
-          calculatedFontSize={bodySize}
-          pixelFontSize={bodyPixelSize}
-          font={FONTS.karlaLight}
-          fontWeightClass="font-light"
-          color={THEME.light}
-          blockColor={THEME.light}
-          selectionBgColor={THEME.light}
-          selectionColor={THEME.darkest}
-          startTrigger={startTrigger}
-          delay={
-            CONFIG.detailsTimings.EXPERIENCE_BODY_DELAY +
-            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
-          }
-          direction="leftToRight"
-          lineHeight={1}
-        />
-      ))}
-
-      <DetailsText
-        text="Featured Projects"
-        position={[leftTitleX, sectionTop - sectionSpacing, 0]}
-        anchorX="left"
-        anchorY="top"
-        calculatedFontSize={headingSize}
-        pixelFontSize={headingPixelSize}
-        font={FONTS.karlaLight}
-        fontWeightClass="font-light"
-        color={THEME.white}
-        blockColor={THEME.white}
-        selectionBgColor={THEME.white}
-        selectionColor={THEME.darkest}
-        startTrigger={startTrigger}
-        delay={CONFIG.detailsTimings.PROJECTS_HEADING_DELAY}
+      <DetailsSection
+        heading="Featured Projects"
+        items={projectItems}
+        headingX={leftX}
+        headingY={sectionY("projects").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("projects").bodyY}
+        bodyAnchorX="left"
         direction="leftToRight"
-        lineHeight={1}
-        onSync={handleTitleSync("projects")}
+        startTrigger={startTrigger && !!revealed.projects}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        onHeadingSync={handleHeadingSync("projects")}
+        {...shared}
       />
 
-      {projectsData.map((project, index) => (
-        <DetailsLink
-          key={`proj-${project.name}`}
-          text={project.name}
-          href={project.link}
-          position={[
-            bodyPositions.projects,
-            sectionTop -
-              sectionSpacing -
-              bodyTopOffset -
-              index * bodyLineHeight,
-            0,
-          ]}
-          anchorX="left"
-          anchorY="top"
-          calculatedFontSize={bodySize}
-          pixelFontSize={bodyPixelSize}
-          font={FONTS.karlaLight}
-          fontWeightClass="font-light"
-          color={THEME.light}
-          blockColor={THEME.light}
-          selectionBgColor={THEME.light}
-          selectionColor={THEME.darkest}
-          startTrigger={startTrigger}
-          delay={
-            CONFIG.detailsTimings.PROJECTS_BODY_DELAY +
-            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
-          }
-          direction="leftToRight"
-          lineHeight={1}
-        />
-      ))}
-
-      <DetailsText
-        text="Education"
-        position={[leftTitleX, sectionTop - sectionSpacing * 2, 0]}
-        anchorX="left"
-        anchorY="top"
-        calculatedFontSize={headingSize}
-        pixelFontSize={headingPixelSize}
-        font={FONTS.karlaLight}
-        fontWeightClass="font-light"
-        color={THEME.white}
-        blockColor={THEME.white}
-        selectionBgColor={THEME.white}
-        selectionColor={THEME.darkest}
-        startTrigger={startTrigger}
-        delay={CONFIG.detailsTimings.EDUCATION_HEADING_DELAY}
+      <DetailsSection
+        heading="Education"
+        items={educationItems}
+        headingX={leftX}
+        headingY={sectionY("education").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("education").bodyY}
+        bodyAnchorX="left"
         direction="leftToRight"
-        lineHeight={1}
-        onSync={handleTitleSync("education")}
+        startTrigger={startTrigger && !!revealed.education}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        onHeadingSync={handleHeadingSync("education")}
+        {...shared}
       />
 
-      {educationText.map((line, index) => (
-        <DetailsText
-          key={`edu-${line}`}
-          text={line}
-          position={[
-            bodyPositions.education,
-            sectionTop -
-              sectionSpacing * 2 -
-              bodyTopOffset -
-              index * bodyLineHeight,
-            0,
-          ]}
-          anchorX="left"
-          anchorY="top"
-          calculatedFontSize={bodySize}
-          pixelFontSize={bodyPixelSize}
-          font={FONTS.karlaLight}
-          fontWeightClass="font-light"
-          color={THEME.light}
-          blockColor={THEME.light}
-          selectionBgColor={THEME.light}
-          selectionColor={THEME.darkest}
-          startTrigger={startTrigger}
-          delay={
-            CONFIG.detailsTimings.EDUCATION_BODY_DELAY +
-            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
-          }
-          direction="leftToRight"
-          lineHeight={1}
-        />
-      ))}
-
-      <DetailsText
-        text="Skills"
-        position={[rightTitleX, sectionTop, 0]}
-        anchorX="left"
-        anchorY="top"
-        calculatedFontSize={headingSize}
-        pixelFontSize={headingPixelSize}
-        font={FONTS.karlaLight}
-        fontWeightClass="font-light"
-        color={THEME.white}
-        blockColor={THEME.white}
-        selectionBgColor={THEME.white}
-        selectionColor={THEME.darkest}
-        startTrigger={startTrigger}
-        delay={CONFIG.detailsTimings.SKILLS_HEADING_DELAY}
+      <DetailsSection
+        heading="Skills"
+        items={skillItems}
+        headingX={rightTitleX}
+        headingY={sectionY("skills").headingY}
+        bodyX={rightX}
+        bodyY={sectionY("skills").bodyY}
+        bodyAnchorX="right"
         direction="rightToLeft"
-        lineHeight={1}
+        startTrigger={startTrigger && !!revealed.skills}
+        staggerStep={CONFIG.detailsTimings.SKILLS_STAGGER_STEP}
+        {...shared}
       />
-
-      {skillsText.map((line, index) => (
-        <DetailsText
-          key={`skill-${line}`}
-          text={line}
-          position={[
-            rightBodyX,
-            sectionTop - bodyTopOffset - index * bodyLineHeight,
-            0,
-          ]}
-          anchorX="right"
-          anchorY="top"
-          calculatedFontSize={bodySize}
-          pixelFontSize={bodyPixelSize}
-          font={FONTS.karlaLight}
-          fontWeightClass="font-light"
-          color={THEME.light}
-          blockColor={THEME.light}
-          selectionBgColor={THEME.light}
-          selectionColor={THEME.darkest}
-          startTrigger={startTrigger}
-          delay={
-            CONFIG.detailsTimings.SKILLS_BODY_DELAY +
-            index * CONFIG.detailsTimings.SKILLS_STAGGER_STEP
-          }
-          direction="rightToLeft"
-          lineHeight={1}
-        />
-      ))}
     </group>
   );
 }
