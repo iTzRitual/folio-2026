@@ -9,13 +9,28 @@ export const heroContent = {
 export const experienceData = [
     {
         company: "Nowa Łukasz Walter",
+        position: "Fullstack Engineer",
+        duration: "2026 - Present",
+    },
+    {
+        company: "Nowa Łukasz Walter",
         position: "Frontend Engineer",
-        duration: "2018 - Present",
+        duration: "2024 - 2026",
     },
     {
         company: "Galactic Reborn",
         position: "Co-Founder",
         duration: "2023 - 2024",
+    },
+    {
+        company: "Nowa Łukasz Walter",
+        position: "Frontend Developer",
+        duration: "2020 - 2024",
+    },
+    {
+        company: "Nowa Łukasz Walter",
+        position: "Ecommerce Specialist",
+        duration: "2018 - 2020",
     },
 ] as const;
 export const projectsData = [

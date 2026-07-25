@@ -19,8 +19,6 @@ const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 export const CONFIG = {
     scrollTimeline: {
         VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
-        // extra scroll distance beyond the first viewport, as a ScrollTrigger end string
-        TRIGGER_END: `+=${(SCROLL_TIMELINE_VIEWPORTS - 1) * 100}%`,
     },
     loader: {
         REVEAL_DURATION: 0.5,
@@ -48,15 +46,18 @@ export const CONFIG = {
     },
     detailsLayout: {
         HEADING_SIZE_MULT: 0.03,
+        HEADING_MIN_PX: 26,
+        HEADING_MAX_PX: 72,
         BODY_SIZE_MULT: 0.5,
         SECTION_TRAVEL_MULT: 1.16,
         TARGET_BASE_Y_MULT: -0.25,
         SECTION_TOP_OFF_MULT: 0.35,
-        SECTION_SPACING_MULT: 0.25,
+        SECTION_GAP_MULT: 2.4,
         RIGHT_TITLE_OFFSET_MULT: 0.2,
         GAP_MULT: 0.08,
         BODY_TOP_OFFSET_MULT: 0.38,
         BODY_LINE_HEIGHT_MULT: 1.5,
+        REVEAL_MARGIN_MULT: 0.04,
     },
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",
@@ -66,14 +67,8 @@ export const CONFIG = {
         UNDERLINE_PHASE_DURATION: 0.25,
     },
     detailsTimings: {
-        EXPERIENCE_HEADING_DELAY: 0.1,
-        EXPERIENCE_BODY_DELAY: 0.18,
-        PROJECTS_HEADING_DELAY: 0.3,
-        PROJECTS_BODY_DELAY: 0.38,
-        EDUCATION_HEADING_DELAY: 0.5,
-        EDUCATION_BODY_DELAY: 0.58,
-        SKILLS_HEADING_DELAY: 0.12,
-        SKILLS_BODY_DELAY: 0.2,
+        HEADING_DELAY: 0.1,
+        BODY_DELAY: 0.18,
         BODY_STAGGER_STEP: 0.07,
         SKILLS_STAGGER_STEP: 0.06,
     },

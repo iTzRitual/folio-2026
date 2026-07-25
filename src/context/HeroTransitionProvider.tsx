@@ -15,9 +15,13 @@ export function HeroTransitionProvider({
   children,
 }: HeroTransitionProviderProps) {
   const progressRef = useRef(0);
+  const detailsScrollRef = useRef(0);
 
   useGSAP(() => {
     const scrollState = { progress: 0 };
+
+    const transitionDistance = () =>
+      window.innerHeight * (CONFIG.scrollTimeline.VIEWPORTS - 1);
 
     const tween = gsap.to(scrollState, {
       progress: 1,
@@ -25,7 +29,7 @@ export function HeroTransitionProvider({
       scrollTrigger: {
         trigger: document.body,
         start: "top top",
-        end: CONFIG.scrollTimeline.TRIGGER_END,
+        end: () => `+=${transitionDistance()}`,
         scrub: true,
       },
       onUpdate: () => {
@@ -33,14 +37,27 @@ export function HeroTransitionProvider({
       },
     });
 
+    const readDetailsScroll = (scroll: number) => {
+      detailsScrollRef.current = Math.max(0, scroll - transitionDistance());
+    };
+
+    const detailsTrigger = ScrollTrigger.create({
+      trigger: document.body,
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate: (self) => readDetailsScroll(self.scroll()),
+      onRefresh: (self) => readDetailsScroll(self.scroll()),
+    });
+
     return () => {
       tween.scrollTrigger?.kill();
       tween.kill();
+      detailsTrigger.kill();
     };
   }, []);
 
   return (
-    <HeroTransitionContextProvider value={{ progressRef }}>
+    <HeroTransitionContextProvider value={{ progressRef, detailsScrollRef }}>
       {children}
     </HeroTransitionContextProvider>
   );
