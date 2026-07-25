@@ -24,6 +24,8 @@ const DynamicScene = dynamic(() => import("@/components/Scene"), {
 
 const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
+const LENIS_OPTIONS = { autoRaf: false } as const;
+
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
@@ -90,7 +92,7 @@ export default function Home() {
             <div className="js-only-app">
                 <Leva collapsed hidden={!isDebug} />
                 {removeLoader && !prefersReducedMotion && (
-                    <ReactLenis root ref={lenisRef} options={{ autoRaf: false }} />
+                    <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
                 )}
 
                 <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
