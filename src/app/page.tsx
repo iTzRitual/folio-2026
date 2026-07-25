@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { ReactLenis, type LenisRef } from "lenis/react";
+import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Leva } from "leva";
@@ -32,22 +32,28 @@ export default function Home() {
     const pathname = usePathname();
     const isDebug = pathname === "/debug";
     const lenisRef = useRef<LenisRef>(null);
+    const lenis = useLenis();
 
     useEffect(() => {
         if (!removeLoader || prefersReducedMotion) return;
-        const lenis = lenisRef.current?.lenis;
-        if (!lenis) return;
 
-        lenis.on("scroll", ScrollTrigger.update);
-        const update = (time: number) => lenis.raf(time * 1000);
+        const update = (time: number) =>
+            lenisRef.current?.lenis?.raf(time * 1000);
         gsap.ticker.add(update);
         gsap.ticker.lagSmoothing(0);
 
         return () => {
             gsap.ticker.remove(update);
-            lenis.off("scroll", ScrollTrigger.update);
         };
     }, [removeLoader, prefersReducedMotion]);
+
+    useEffect(() => {
+        if (!lenis) return;
+        lenis.on("scroll", ScrollTrigger.update);
+        return () => {
+            lenis.off("scroll", ScrollTrigger.update);
+        };
+    }, [lenis]);
 
     // Always start at the top on load — the browser's automatic scroll
     // restoration would otherwise re-apply the pre-refresh position (even
