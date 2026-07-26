@@ -13,15 +13,18 @@ import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { Suspense } from "react";
 import { THEME } from "../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import type { BioVariant } from "@/data/content";
 
 function SceneContent({
   startAnimation,
   isMobile,
   isDebug,
+  bioVariant,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
   isDebug: boolean;
+  bioVariant: BioVariant;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -37,7 +40,7 @@ function SceneContent({
         </Suspense>
 
         {!isMobile && <HeroText />}
-        {!isMobile && <Details />}
+        {!isMobile && <Details bioVariant={bioVariant} />}
         {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
             <CustomAberration />
@@ -52,10 +55,12 @@ export default function Scene({
   startAnimation,
   isMobile,
   isDebug,
+  bioVariant,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
   isDebug: boolean;
+  bioVariant: BioVariant;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
@@ -101,7 +106,7 @@ export default function Scene({
           }}
           flipflops={3}
         />
-        <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} />
+        <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} bioVariant={bioVariant} />
         {isDebug && <Stats />}
       </Canvas>
     </div>

@@ -4,17 +4,14 @@ import {
     projectsData,
     educationData,
     skillsData,
-    bioData,
+    bioVariants,
+    DEFAULT_BIO_VARIANT,
+    type BioVariant,
 } from "@/data/content";
 import { calculateHeroSafeZone } from "./heroSafeZone";
+import { measureTextWidth, wrapParagraphs } from "./textMetrics";
 
 export type DetailsColumn = "left" | "right";
-
-export interface DetailsSectionSpec {
-    key: string;
-    lineCount: number;
-    column: DetailsColumn;
-}
 
 export interface DetailsSectionOffsets {
     headingY: number;
@@ -26,6 +23,9 @@ export interface DetailsLayout {
     bodyFontSize: number;
     bodyLineHeight: number;
     bodyTopOffset: number;
+    bodyColumnOffset: number;
+    bodyMaxWidth: number;
+    bioLines: string[];
     sections: Record<string, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
@@ -35,21 +35,25 @@ export interface DetailsLayout {
 interface DetailsLayoutInput {
     viewportWidth: number;
     viewportHeight: number;
-    sections?: readonly DetailsSectionSpec[];
+    bioVariant?: BioVariant;
+    fontsReady?: boolean;
 }
 
-export const DETAILS_SECTIONS: readonly DetailsSectionSpec[] = [
-    { key: "experience", lineCount: experienceData.length, column: "left" },
-    { key: "projects", lineCount: projectsData.length, column: "left" },
-    { key: "education", lineCount: educationData.length, column: "left" },
-    { key: "bio", lineCount: bioData.length, column: "left" },
-    { key: "skills", lineCount: skillsData.length, column: "right" },
-];
+export const SECTION_HEADINGS = {
+    experience: "Experience",
+    projects: "Featured Projects",
+    education: "Education",
+    bio: "Bio",
+    skills: "Skills",
+} as const;
+
+const LEFT_COLUMN = ["experience", "projects", "education", "bio"] as const;
 
 export function calculateDetailsLayout({
     viewportWidth,
     viewportHeight,
-    sections = DETAILS_SECTIONS,
+    bioVariant = DEFAULT_BIO_VARIANT,
+    fontsReady = false,
 }: DetailsLayoutInput): DetailsLayout {
     const { marginX, marginY } = calculateHeroSafeZone({
         viewportWidth,
@@ -68,19 +72,55 @@ export function calculateDetailsLayout({
     const bodyTopOffset = headingFontSize * L.BODY_TOP_OFFSET_MULT;
     const sectionGap = headingFontSize * L.SECTION_GAP_MULT;
 
+    const widestHeading = LEFT_COLUMN.reduce(
+        (max, key) =>
+            Math.max(
+                max,
+                measureTextWidth(
+                    SECTION_HEADINGS[key],
+                    headingFontSize,
+                    L.LETTER_SPACING,
+                    fontsReady,
+                ),
+            ),
+        0,
+    );
+
+    const bodyColumnOffset = widestHeading + viewportWidth * L.GAP_MULT;
+    const bodyMaxWidth = contentWidth - bodyColumnOffset;
+
+    const bioLines = wrapParagraphs(
+        bioVariants[bioVariant],
+        bodyMaxWidth,
+        bodyFontSize,
+        L.LETTER_SPACING,
+        fontsReady,
+    );
+
+    const lineCounts: Record<string, number> = {
+        experience: experienceData.length,
+        projects: projectsData.length,
+        education: educationData.length,
+        bio: bioLines.length,
+        skills: skillsData.length,
+    };
+
     const cursors: Record<DetailsColumn, number> = { left: 0, right: 0 };
     const offsets: Record<string, DetailsSectionOffsets> = {};
 
-    for (const section of sections) {
-        const top = cursors[section.column];
-        offsets[section.key] = { headingY: top, bodyY: top + bodyTopOffset };
+    const place = (key: string, column: DetailsColumn) => {
+        const top = cursors[column];
+        offsets[key] = { headingY: top, bodyY: top + bodyTopOffset };
 
         const height = Math.max(
             headingFontSize,
-            bodyTopOffset + section.lineCount * bodyLineHeight,
+            bodyTopOffset + lineCounts[key] * bodyLineHeight,
         );
-        cursors[section.column] = top + height + sectionGap;
-    }
+        cursors[column] = top + height + sectionGap;
+    };
+
+    for (const key of LEFT_COLUMN) place(key, "left");
+    place("skills", "right");
 
     const contentHeight = Math.max(
         0,
@@ -97,6 +137,9 @@ export function calculateDetailsLayout({
         bodyFontSize,
         bodyLineHeight,
         bodyTopOffset,
+        bodyColumnOffset,
+        bodyMaxWidth,
+        bioLines,
         sections: offsets,
         contentHeight,
         usableHeight,
@@ -107,9 +150,16 @@ export function calculateDetailsLayout({
 export function calculateDetailsOverflowViewports({
     viewportWidth,
     viewportHeight,
-}: Omit<DetailsLayoutInput, "sections">): number {
+    bioVariant,
+    fontsReady,
+}: DetailsLayoutInput): number {
     if (viewportHeight <= 0) return 0;
 
-    const { overflow } = calculateDetailsLayout({ viewportWidth, viewportHeight });
+    const { overflow } = calculateDetailsLayout({
+        viewportWidth,
+        viewportHeight,
+        bioVariant,
+        fontsReady,
+    });
     return overflow / viewportHeight;
 }
