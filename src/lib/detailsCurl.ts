@@ -25,14 +25,18 @@ export interface CurlSettings {
 export function applyCurlSettings(
     viewportHeight: number,
     titleSettledBottomY: number,
+    contentRestY: number,
     settings: CurlSettings,
 ) {
+    const radius = Math.max(viewportHeight * settings.radiusMult, 0.0001);
+
+    curlUniforms.uCurlRadius.value = radius;
     curlUniforms.uCurlFoldY.value =
-        titleSettledBottomY + viewportHeight * settings.foldOffsetMult;
-    curlUniforms.uCurlRadius.value = Math.max(
-        viewportHeight * settings.radiusMult,
-        0.0001,
-    );
+        Math.max(
+            contentRestY,
+            titleSettledBottomY - settings.fadeAngleEnd * radius,
+        ) +
+        viewportHeight * settings.foldOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
     curlFadeRange.start = settings.fadeAngleStart;

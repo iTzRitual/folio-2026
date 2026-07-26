@@ -96,25 +96,6 @@ export function Details({
     fadeAngleEnd,
   } = curl;
 
-  useLayoutEffect(() => {
-    applyCurlSettings(viewport.height, titleSettledBottomY, {
-      foldOffsetMult,
-      radiusMult,
-      maxAngle,
-      fadeAngleStart,
-      fadeAngleEnd,
-      bend: prefersReducedMotion ? 0 : 1,
-    });
-  }, [
-    viewport.height,
-    titleSettledBottomY,
-    foldOffsetMult,
-    radiusMult,
-    maxAngle,
-    fadeAngleStart,
-    fadeAngleEnd,
-    prefersReducedMotion,
-  ]);
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
   const fontsReady = useFontsReady();
@@ -151,6 +132,29 @@ export function Details({
       bodyY: sectionTop - offsets.bodyY * pxTo3DHeight,
     };
   };
+
+  const contentRestY = targetBaseY + sectionTop;
+
+  useLayoutEffect(() => {
+    applyCurlSettings(viewport.height, titleSettledBottomY, contentRestY, {
+      foldOffsetMult,
+      radiusMult,
+      maxAngle,
+      fadeAngleStart,
+      fadeAngleEnd,
+      bend: prefersReducedMotion ? 0 : 1,
+    });
+  }, [
+    viewport.height,
+    titleSettledBottomY,
+    contentRestY,
+    foldOffsetMult,
+    radiusMult,
+    maxAngle,
+    fadeAngleStart,
+    fadeAngleEnd,
+    prefersReducedMotion,
+  ]);
 
   const bodyColumnX = leftX + layout.bodyColumnOffset * pxTo3DWidth;
 
