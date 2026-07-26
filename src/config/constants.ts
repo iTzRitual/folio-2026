@@ -57,6 +57,7 @@ export const CONFIG = {
         GAP_MULT: 0.08,
         BODY_TOP_OFFSET_MULT: 0.38,
         BODY_LINE_HEIGHT_MULT: 1.5,
+        LETTER_SPACING: -0.03,
         REVEAL_MARGIN_MULT: 0.04,
     },
     detailsLink: {

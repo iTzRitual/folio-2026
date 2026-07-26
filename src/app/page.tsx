@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Leva } from "leva";
+import { Leva, useControls } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -16,6 +16,12 @@ import { MobileContent } from "@/components/Mobile/MobileContent";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
+import { useFontsReady } from "@/hooks/useFontsReady";
+import {
+    bioVariants,
+    DEFAULT_BIO_VARIANT,
+    type BioVariant,
+} from "@/data/content";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -37,6 +43,17 @@ export default function Home() {
     const lenisRef = useRef<LenisRef>(null);
     const lenis = useLenis();
     const [overflowViewports, setOverflowViewports] = useState(0);
+    const fontsReady = useFontsReady();
+
+    const levaBio = useControls("Bio", {
+        variant: {
+            value: DEFAULT_BIO_VARIANT,
+            options: Object.keys(bioVariants) as BioVariant[],
+        },
+    });
+    const bioVariant: BioVariant = isDebug
+        ? levaBio.variant
+        : DEFAULT_BIO_VARIANT;
 
     useEffect(() => {
         if (isMobile) return;
@@ -46,13 +63,15 @@ export default function Home() {
                 calculateDetailsOverflowViewports({
                     viewportWidth: window.innerWidth,
                     viewportHeight: window.innerHeight,
+                    bioVariant,
+                    fontsReady,
                 }),
             );
 
         update();
         window.addEventListener("resize", update);
         return () => window.removeEventListener("resize", update);
-    }, [isMobile]);
+    }, [isMobile, bioVariant, fontsReady]);
 
     useEffect(() => {
         ScrollTrigger.refresh();
@@ -130,6 +149,7 @@ export default function Home() {
                                 startAnimation={startScene}
                                 isMobile={isMobile}
                                 isDebug={isDebug}
+                                bioVariant={bioVariant}
                             />
                         </div>
                     </div>

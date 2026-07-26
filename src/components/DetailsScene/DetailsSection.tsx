@@ -1,6 +1,5 @@
 "use client";
 
-import type { Mesh } from "three";
 import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
 import { CONFIG, THEME, FONTS } from "@/config/constants";
@@ -25,7 +24,6 @@ interface DetailsSectionProps {
     pxTo3DWidth: number;
     startTrigger: boolean;
     staggerStep: number;
-    onHeadingSync?: (mesh: Mesh) => void;
 }
 
 export function DetailsSection({
@@ -43,7 +41,6 @@ export function DetailsSection({
     pxTo3DWidth,
     startTrigger,
     staggerStep,
-    onHeadingSync,
 }: DetailsSectionProps) {
     return (
         <>
@@ -64,7 +61,7 @@ export function DetailsSection({
                 delay={CONFIG.detailsTimings.HEADING_DELAY}
                 direction={direction}
                 lineHeight={1}
-                onSync={onHeadingSync}
+                letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
             />
 
             {items.map((item, index) => {
@@ -89,6 +86,7 @@ export function DetailsSection({
                     delay: CONFIG.detailsTimings.BODY_DELAY + index * staggerStep,
                     direction,
                     lineHeight: 1,
+                    letterSpacing: CONFIG.detailsLayout.LETTER_SPACING,
                 };
 
                 return item.href ? (

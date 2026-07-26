@@ -79,13 +79,30 @@ export const educationData = [
         field: "Computer Science",
     },
 ] as const;
-export const bioData = [
-    "I'm a frontend engineer who drifted into real-time graphics and never",
-    "came back. I started in ecommerce, building storefronts that had to load",
-    "fast on bad connections, and that constraint still shapes how I work.",
-    "Today I spend most of my time in WebGL, where the same discipline",
-    "applies: every millisecond of frame time is a design decision.",
-] as const;
+export const bioVariants = {
+    narrative: [
+        "I'm a frontend engineer who drifted into real-time graphics and never came back. I started in ecommerce, building storefronts that had to load fast on bad connections, and that constraint still shapes how I work. Today I spend most of my time in WebGL, where the same discipline applies: every millisecond of frame time is a design decision.",
+    ],
+    manifesto: [
+        "I build interfaces that behave like objects, not documents.",
+        "Ten years between commercial ecommerce and real-time 3D.",
+        "I care about the frame budget as much as the typography.",
+        "Currently exploring WebGPU and procedural geometry.",
+    ],
+    facts: [
+        "Based in / Wrocław, Poland",
+        "Focus / Real-time 3D, WebGL, creative frontend",
+        "Toolkit / React, Three.js, GSAP, Blender",
+        "Open to / Freelance and full-time roles",
+        "Contact / hello@natanmokrzycki.com",
+    ],
+} as const;
+
+export type BioVariant = keyof typeof bioVariants;
+
+export const DEFAULT_BIO_VARIANT: BioVariant = "narrative";
+
+export const bioData = bioVariants[DEFAULT_BIO_VARIANT];
 
 export const skillsData = [
     "Visual Design",

@@ -3,9 +3,10 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
-import { Group, Mesh } from "three";
+import { Group } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useFontsReady } from "@/hooks/useFontsReady";
 import {
   DetailsSection,
   type DetailsSectionItem,
@@ -15,15 +16,20 @@ import {
   projectsData,
   educationData,
   skillsData,
-  bioData,
+  DEFAULT_BIO_VARIANT,
+  type BioVariant,
 } from "@/data/content";
 import {
-  DETAILS_SECTIONS,
+  SECTION_HEADINGS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
 import { CONFIG } from "../config/constants";
 
-export function Details() {
+export function Details({
+  bioVariant = DEFAULT_BIO_VARIANT,
+}: {
+  bioVariant?: BioVariant;
+}) {
   const {
     size,
     viewport,
@@ -35,30 +41,21 @@ export function Details() {
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef } = useHeroTransition();
+  const fontsReady = useFontsReady();
   const rootGroupRef = useRef<Group>(null);
 
-  const [headingWidths, setHeadingWidths] = useState<Record<string, number>>({});
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const revealedRef = useRef<Record<string, boolean>>({});
-
-  const handleHeadingSync = (key: string) => (mesh: Mesh) => {
-    if (!mesh?.geometry) return;
-
-    mesh.geometry.computeBoundingBox();
-    const box = mesh.geometry.boundingBox;
-    if (!box) return;
-
-    const width = box.max.x - box.min.x;
-    setHeadingWidths((prev) => (prev[key] === width ? prev : { ...prev, [key]: width }));
-  };
 
   const layout = useMemo(
     () =>
       calculateDetailsLayout({
         viewportWidth: size.width,
         viewportHeight: size.height,
+        bioVariant,
+        fontsReady,
       }),
-    [size.width, size.height],
+    [size.width, size.height, bioVariant, fontsReady],
   );
 
   const headingSize = layout.headingFontSize * pxTo3DWidth;
@@ -79,14 +76,7 @@ export function Details() {
     };
   };
 
-  const gap = viewport.width * CONFIG.detailsLayout.GAP_MULT;
-  const bodyColumnX = useMemo(() => {
-    const widest = DETAILS_SECTIONS.filter((s) => s.column === "left").reduce(
-      (max, s) => Math.max(max, headingWidths[s.key] ?? 0),
-      0,
-    );
-    return leftX + widest + gap;
-  }, [leftX, gap, headingWidths]);
+  const bodyColumnX = leftX + layout.bodyColumnOffset * pxTo3DWidth;
 
   const rightTitleX =
     rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
@@ -105,14 +95,14 @@ export function Details() {
       viewport.height * CONFIG.detailsLayout.REVEAL_MARGIN_MULT;
 
     let changed = false;
-    for (const section of DETAILS_SECTIONS) {
-      if (revealedRef.current[section.key]) continue;
+    for (const key of Object.keys(layout.sections)) {
+      if (revealedRef.current[key]) continue;
 
       const worldY =
-        groupY + sectionTop - layout.sections[section.key].headingY * pxTo3DHeight;
+        groupY + sectionTop - layout.sections[key].headingY * pxTo3DHeight;
 
       if (worldY > revealEdge) {
-        revealedRef.current[section.key] = true;
+        revealedRef.current[key] = true;
         changed = true;
       }
     }
@@ -142,8 +132,8 @@ export function Details() {
   );
 
   const bioItems: DetailsSectionItem[] = useMemo(
-    () => bioData.map((line) => ({ text: line })),
-    [],
+    () => layout.bioLines.map((line) => ({ text: line })),
+    [layout.bioLines],
   );
 
   const skillItems: DetailsSectionItem[] = useMemo(
@@ -161,7 +151,7 @@ export function Details() {
   return (
     <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
       <DetailsSection
-        heading="Experience"
+        heading={SECTION_HEADINGS.experience}
         items={experienceItems}
         headingX={leftX}
         headingY={sectionY("experience").headingY}
@@ -171,12 +161,11 @@ export function Details() {
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.experience}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
-        onHeadingSync={handleHeadingSync("experience")}
         {...shared}
       />
 
       <DetailsSection
-        heading="Featured Projects"
+        heading={SECTION_HEADINGS.projects}
         items={projectItems}
         headingX={leftX}
         headingY={sectionY("projects").headingY}
@@ -186,12 +175,11 @@ export function Details() {
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.projects}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
-        onHeadingSync={handleHeadingSync("projects")}
         {...shared}
       />
 
       <DetailsSection
-        heading="Education"
+        heading={SECTION_HEADINGS.education}
         items={educationItems}
         headingX={leftX}
         headingY={sectionY("education").headingY}
@@ -201,12 +189,11 @@ export function Details() {
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.education}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
-        onHeadingSync={handleHeadingSync("education")}
         {...shared}
       />
 
       <DetailsSection
-        heading="Bio"
+        heading={SECTION_HEADINGS.bio}
         items={bioItems}
         headingX={leftX}
         headingY={sectionY("bio").headingY}
@@ -216,12 +203,11 @@ export function Details() {
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.bio}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
-        onHeadingSync={handleHeadingSync("bio")}
         {...shared}
       />
 
       <DetailsSection
-        heading="Skills"
+        heading={SECTION_HEADINGS.skills}
         items={skillItems}
         headingX={rightTitleX}
         headingY={sectionY("skills").headingY}
