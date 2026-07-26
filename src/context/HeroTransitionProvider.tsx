@@ -16,6 +16,7 @@ export function HeroTransitionProvider({
 }: HeroTransitionProviderProps) {
   const progressRef = useRef(0);
   const detailsScrollRef = useRef(0);
+  const modelAnchorRef = useRef({ x: 0, y: 0 });
 
   useGSAP(() => {
     const scrollState = { progress: 0 };
@@ -57,7 +58,7 @@ export function HeroTransitionProvider({
   }, []);
 
   return (
-    <HeroTransitionContextProvider value={{ progressRef, detailsScrollRef }}>
+    <HeroTransitionContextProvider value={{ progressRef, detailsScrollRef, modelAnchorRef }}>
       {children}
     </HeroTransitionContextProvider>
   );

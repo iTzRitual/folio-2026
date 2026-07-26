@@ -26,6 +26,10 @@ export interface DetailsLayout {
     bodyColumnOffset: number;
     bodyMaxWidth: number;
     bioLines: string[];
+    bioImageWidth: number;
+    bioImageHeight: number;
+    bioTextOffset: number;
+    bioTextMaxWidth: number;
     sections: Record<string, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
@@ -47,9 +51,13 @@ export const SECTION_HEADINGS = {
     skills: "Skills",
 } as const;
 
-const LEFT_COLUMN = ["experience", "projects", "education", "bio"] as const;
+const STACKED_SECTIONS = ["experience", "projects", "education"] as const;
 
-export const DETAILS_SECTION_KEYS = [...LEFT_COLUMN, "skills"] as const;
+export const DETAILS_SECTION_KEYS = [
+    ...STACKED_SECTIONS,
+    "bio",
+    "skills",
+] as const;
 
 export function calculateDetailsLayout({
     viewportWidth,
@@ -74,7 +82,7 @@ export function calculateDetailsLayout({
     const bodyTopOffset = headingFontSize * L.BODY_TOP_OFFSET_MULT;
     const sectionGap = headingFontSize * L.SECTION_GAP_MULT;
 
-    const widestHeading = LEFT_COLUMN.reduce(
+    const widestHeading = STACKED_SECTIONS.reduce(
         (max, key) =>
             Math.max(
                 max,
@@ -91,9 +99,14 @@ export function calculateDetailsLayout({
     const bodyColumnOffset = widestHeading + viewportWidth * L.GAP_MULT;
     const bodyMaxWidth = contentWidth - bodyColumnOffset;
 
+    const bioImageWidth = contentWidth * L.BIO_IMAGE_WIDTH_MULT;
+    const bioImageHeight = bioImageWidth * L.BIO_IMAGE_ASPECT;
+    const bioTextOffset = bioImageWidth + viewportWidth * L.BIO_COLUMN_GAP_MULT;
+    const bioTextMaxWidth = contentWidth - bioTextOffset;
+
     const bioLines = wrapParagraphs(
         bioVariants[bioVariant],
-        bodyMaxWidth,
+        bioTextMaxWidth,
         bodyFontSize,
         L.LETTER_SPACING,
         fontsReady,
@@ -103,7 +116,6 @@ export function calculateDetailsLayout({
         experience: experienceData.length,
         projects: projectsData.length,
         education: educationData.length,
-        bio: bioLines.length,
         skills: skillsData.length,
     };
 
@@ -121,7 +133,18 @@ export function calculateDetailsLayout({
         cursors[column] = top + height + sectionGap;
     };
 
-    for (const key of LEFT_COLUMN) place(key, "left");
+    for (const key of STACKED_SECTIONS) place(key, "left");
+
+    const bioHeadingY = cursors.left;
+    const bioContentY = bioHeadingY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
+    offsets.bio = { headingY: bioHeadingY, bodyY: bioContentY };
+
+    const bioBodyHeight = Math.max(
+        bioImageHeight,
+        bioLines.length * bodyLineHeight,
+    );
+    cursors.left = bioContentY + bioBodyHeight + sectionGap;
+
     place("skills", "right");
 
     const contentHeight = Math.max(
@@ -142,6 +165,10 @@ export function calculateDetailsLayout({
         bodyColumnOffset,
         bodyMaxWidth,
         bioLines,
+        bioImageWidth,
+        bioImageHeight,
+        bioTextOffset,
+        bioTextMaxWidth,
         sections: offsets,
         contentHeight,
         usableHeight,

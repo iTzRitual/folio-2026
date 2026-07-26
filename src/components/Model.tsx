@@ -24,13 +24,12 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
 
   const {
-    marginY,
     grabAreaRadius: baseGrabAreaRadius,
     stickyAreaRadius: baseStickyAreaRadius,
     responsiveScale: baseResponsiveScale,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef } = useHeroTransition();
+  const { progressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
@@ -194,15 +193,8 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           scrollProgress *
             viewport.height *
             CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
-        const targetBaseY = -viewport.height * 0.25;
-        const sectionTop = viewport.height / 2 - marginY * 0.35;
-        const sectionSpacing = viewport.height * 0.25;
-        const detailsTargetY =
-          targetBaseY +
-          sectionTop -
-          sectionSpacing * CONFIG.model.DETAILS_POPUP_Y_SECTION_OFFSET;
-        const detailsTargetX =
-          viewport.width * CONFIG.model.DETAILS_POPUP_X_FACTOR;
+        const detailsTargetY = modelAnchorRef.current.y;
+        const detailsTargetX = modelAnchorRef.current.x;
 
         const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
         const targetY =

@@ -5,9 +5,15 @@ import {
   type ReactNode,
 } from "react";
 
+export interface ModelAnchor {
+  x: number;
+  y: number;
+}
+
 export interface HeroTransitionContextType {
   progressRef: MutableRefObject<number>;
   detailsScrollRef: MutableRefObject<number>;
+  modelAnchorRef: MutableRefObject<ModelAnchor>;
 }
 
 const HeroTransitionContext = createContext<
