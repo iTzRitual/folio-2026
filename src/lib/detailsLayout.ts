@@ -4,6 +4,7 @@ import {
     projectsData,
     educationData,
     skillsData,
+    bioData,
 } from "@/data/content";
 import { calculateHeroSafeZone } from "./heroSafeZone";
 
@@ -41,6 +42,7 @@ export const DETAILS_SECTIONS: readonly DetailsSectionSpec[] = [
     { key: "experience", lineCount: experienceData.length, column: "left" },
     { key: "projects", lineCount: projectsData.length, column: "left" },
     { key: "education", lineCount: educationData.length, column: "left" },
+    { key: "bio", lineCount: bioData.length, column: "left" },
     { key: "skills", lineCount: skillsData.length, column: "right" },
 ];
 

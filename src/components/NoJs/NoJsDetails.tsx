@@ -1,4 +1,9 @@
-import { educationData, experienceData, projectsData } from "@/data/content";
+import {
+    bioData,
+    educationData,
+    experienceData,
+    projectsData,
+} from "@/data/content";
 
 export function NoJsDetails() {
     return (
@@ -44,7 +49,7 @@ export function NoJsDetails() {
                 </ul>
             </div>
 
-            <div className="mb-36">
+            <div className="mb-12">
                 <h3 className="w-full border-b border-[#3C3C3C] pb-2 text-left text-3xl font-black text-white">
                     Education
                 </h3>
@@ -59,6 +64,15 @@ export function NoJsDetails() {
                         </li>
                     ))}
                 </ul>
+            </div>
+
+            <div className="mb-36">
+                <h3 className="w-full border-b border-[#3C3C3C] pb-2 text-left text-3xl font-black text-white">
+                    Bio
+                </h3>
+                <p className="mt-4 max-w-176 text-left text-lg leading-relaxed font-karla text-[#E8E8E8]">
+                    {bioData.join(" ")}
+                </p>
             </div>
         </section>
     );

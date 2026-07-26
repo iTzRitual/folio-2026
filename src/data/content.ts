@@ -46,6 +46,26 @@ export const projectsData = [
         name: "Commercial Portfolio - Github",
         link: "https://github.com/iTzRitual/commercial-portfolio"
     },
+    {
+        name: "Realtime Fluid Simulation - Github",
+        link: "https://github.com/iTzRitual"
+    },
+    {
+        name: "WebGPU Particle System - Github",
+        link: "https://github.com/iTzRitual"
+    },
+    {
+        name: "Procedural Terrain Generator - Github",
+        link: "https://github.com/iTzRitual"
+    },
+    {
+        name: "Shader Playground - Github",
+        link: "https://github.com/iTzRitual"
+    },
+    {
+        name: "Motion Design System - Github",
+        link: "https://github.com/iTzRitual"
+    },
 ] as const;
 export const educationData = [
     {
@@ -59,6 +79,14 @@ export const educationData = [
         field: "Computer Science",
     },
 ] as const;
+export const bioData = [
+    "I'm a frontend engineer who drifted into real-time graphics and never",
+    "came back. I started in ecommerce, building storefronts that had to load",
+    "fast on bad connections, and that constraint still shapes how I work.",
+    "Today I spend most of my time in WebGL, where the same discipline",
+    "applies: every millisecond of frame time is a design decision.",
+] as const;
+
 export const skillsData = [
     "Visual Design",
     "UI/UX Design",

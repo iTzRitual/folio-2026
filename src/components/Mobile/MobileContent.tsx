@@ -2,7 +2,12 @@
 
 import { ReactNode } from "react";
 import { AnimatedRevealText } from "@/components/AnimatedRevealText";
-import { experienceData, projectsData, educationData } from "@/data/content";
+import {
+  experienceData,
+  projectsData,
+  educationData,
+  bioData,
+} from "@/data/content";
 
 interface SectionProps {
   title: string;
@@ -69,6 +74,12 @@ export const MobileContent = () => {
             - {item.degree} in {item.field} from {item.institution}
           </li>
         ))}
+      </Section>
+
+      <Section title="Bio" delay={0.8}>
+        <li className="text-white font-karla text-left w-full text-lg list-none">
+          {bioData.join(" ")}
+        </li>
       </Section>
     </section>
   );
