@@ -11,6 +11,9 @@ export interface HeroLayoutContextType {
   rightX: number;
   row3TopY: number;
   row3BottomY: number;
+  titleFontSize: number;
+  titleY: number;
+  titleSettledBottomY: number;
   viewportMinDimension: number;
   responsiveScale: number;
   grabAreaRadius: number;

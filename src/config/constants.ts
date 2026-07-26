@@ -64,6 +64,16 @@ export const CONFIG = {
         BIO_CONTENT_TOP_MULT: 1.1,
         BIO_COLUMN_GAP_MULT: 0.04,
     },
+    detailsCurl: {
+        FOLD_OFFSET_MULT: 0,
+        RADIUS_MULT: 0.16,
+        MAX_ANGLE: 1.5,
+        FADE_ANGLE_START: 0.15,
+        FADE_ANGLE_END: 1.15,
+        GLYPH_DETAIL: 3,
+        ARROW_SEGMENTS: 4,
+        IMAGE_SEGMENTS: 24,
+    },
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",
         COLOR_DURATION: 0.15,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useControls } from "leva";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { Group } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
@@ -25,12 +26,51 @@ import {
   DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
+import { applyCurlSettings, type CurlSettings } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
+
+const CURL_DEFAULTS: CurlSettings = {
+  foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
+  radiusMult: CONFIG.detailsCurl.RADIUS_MULT,
+  maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
+  fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
+  fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
+};
+
+const CURL_LEVA_SCHEMA = {
+  foldOffsetMult: {
+    value: CURL_DEFAULTS.foldOffsetMult,
+    min: -0.3,
+    max: 0.3,
+    step: 0.005,
+  },
+  radiusMult: {
+    value: CURL_DEFAULTS.radiusMult,
+    min: 0.03,
+    max: 1,
+    step: 0.005,
+  },
+  maxAngle: { value: CURL_DEFAULTS.maxAngle, min: 0.2, max: 3, step: 0.01 },
+  fadeAngleStart: {
+    value: CURL_DEFAULTS.fadeAngleStart,
+    min: 0,
+    max: 2,
+    step: 0.01,
+  },
+  fadeAngleEnd: {
+    value: CURL_DEFAULTS.fadeAngleEnd,
+    min: 0.05,
+    max: 3,
+    step: 0.01,
+  },
+};
 
 export function Details({
   bioVariant = DEFAULT_BIO_VARIANT,
+  isDebug = false,
 }: {
   bioVariant?: BioVariant;
+  isDebug?: boolean;
 }) {
   const {
     size,
@@ -40,7 +80,36 @@ export function Details({
     rightX,
     pxTo3DWidth,
     pxTo3DHeight,
+    titleSettledBottomY,
   } = useHeroLayout();
+
+  const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
+  const curl = isDebug ? levaCurl : CURL_DEFAULTS;
+  const {
+    foldOffsetMult,
+    radiusMult,
+    maxAngle,
+    fadeAngleStart,
+    fadeAngleEnd,
+  } = curl;
+
+  useLayoutEffect(() => {
+    applyCurlSettings(viewport.height, titleSettledBottomY, {
+      foldOffsetMult,
+      radiusMult,
+      maxAngle,
+      fadeAngleStart,
+      fadeAngleEnd,
+    });
+  }, [
+    viewport.height,
+    titleSettledBottomY,
+    foldOffsetMult,
+    radiusMult,
+    maxAngle,
+    fadeAngleStart,
+    fadeAngleEnd,
+  ]);
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
   const fontsReady = useFontsReady();

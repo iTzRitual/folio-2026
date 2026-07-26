@@ -7,6 +7,8 @@ import { AnimatedRevealText } from "../AnimatedRevealText";
 import type { Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
+import { applyCurlShader } from "@/lib/detailsCurl";
+import { useCurlFade } from "./useCurlFade";
 
 interface DetailsLinkProps {
   text: string;
@@ -58,6 +60,15 @@ export function DetailsLink({
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const underlineRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
+    (opacity) => {
+      if (materialRef.current) materialRef.current.opacity = opacity;
+      if (underlineRef.current) underlineRef.current.opacity = opacity;
+      if (arrowRef.current) arrowRef.current.opacity = opacity;
+    },
+  );
+
   const underlineMeshRef = useRef<THREE.Mesh>(null);
   const arrowMeshRef = useRef<THREE.Mesh>(null);
   const hoverProxy = useRef({ t: 0 });
@@ -77,6 +88,7 @@ export function DetailsLink({
       setArrowTex(tex);
     });
   }, []);
+
 
   const xAlignClass = useMemo(() => {
     if (anchorX === "left") return "left-0";
@@ -206,7 +218,7 @@ export function DetailsLink({
   };
 
   return (
-    <group position={position}>
+    <group position={position} ref={groupRef}>
       <Text
         anchorX={anchorX}
         anchorY={anchorY}
@@ -214,6 +226,7 @@ export function DetailsLink({
         font={font}
         lineHeight={lineHeight}
         letterSpacing={letterSpacing}
+        glyphGeometryDetail={CONFIG.detailsCurl.GLYPH_DETAIL}
         onSync={handleSync}
       >
         {text}
@@ -222,6 +235,7 @@ export function DetailsLink({
           transparent
           opacity={0}
           color={color}
+          onBeforeCompile={applyCurlShader}
         />
       </Text>
 
@@ -234,18 +248,27 @@ export function DetailsLink({
               color={color}
               transparent
               opacity={0}
+              onBeforeCompile={applyCurlShader}
             />
           </mesh>
 
           {arrowTex && (
             <mesh ref={arrowMeshRef} position={[arrowX, arrowY, 0]}>
-              <planeGeometry args={[arrowSize, arrowSize]} />
+              <planeGeometry
+                args={[
+                  arrowSize,
+                  arrowSize,
+                  1,
+                  CONFIG.detailsCurl.ARROW_SEGMENTS,
+                ]}
+              />
               <meshBasicMaterial
                 ref={arrowRef}
                 map={arrowTex}
                 color={color}
                 transparent
                 opacity={0}
+                onBeforeCompile={applyCurlShader}
               />
             </mesh>
           )}
@@ -254,6 +277,7 @@ export function DetailsLink({
 
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <a
+          ref={twinRef}
           href={href}
           target="_blank"
           rel="noopener noreferrer"
@@ -272,9 +296,7 @@ export function DetailsLink({
             direction={direction}
             startTrigger={startTrigger}
             onReveal={() => {
-              if (materialRef.current) materialRef.current.opacity = 1;
-              if (underlineRef.current) underlineRef.current.opacity = 1;
-              if (arrowRef.current) arrowRef.current.opacity = 1;
+              revealedRef.current = true;
             }}
           >
             <p

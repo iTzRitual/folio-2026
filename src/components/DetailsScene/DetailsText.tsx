@@ -5,6 +5,9 @@ import { useMemo, useRef } from "react";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import type { Mesh } from "three";
 import * as THREE from "three";
+import { CONFIG } from "@/config/constants";
+import { applyCurlShader } from "@/lib/detailsCurl";
+import { useCurlFade } from "./useCurlFade";
 
 interface DetailsTextProps {
   text: string;
@@ -53,6 +56,10 @@ export function DetailsText({
 }: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
+  const { groupRef, twinRef, revealedRef } = useCurlFade((opacity) => {
+    if (materialRef.current) materialRef.current.opacity = opacity;
+  });
+
   const xAlignClass = useMemo(() => {
     if (anchorX === "left") return "left-0";
     if (anchorX === "right") return "-translate-x-full";
@@ -67,7 +74,7 @@ export function DetailsText({
 
   const revealColor = blockColor ?? color;
   return (
-    <group position={position}>
+    <group position={position} ref={groupRef}>
       <Text
         anchorX={anchorX}
         anchorY={anchorY}
@@ -75,6 +82,7 @@ export function DetailsText({
         font={font}
         lineHeight={lineHeight}
         letterSpacing={letterSpacing}
+        glyphGeometryDetail={CONFIG.detailsCurl.GLYPH_DETAIL}
         onSync={onSync}
       >
         {text}
@@ -83,11 +91,13 @@ export function DetailsText({
           transparent
           opacity={0}
           color={color}
+          onBeforeCompile={applyCurlShader}
         />
       </Text>
 
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <div
+          ref={twinRef}
           className={`whitespace-nowrap m-0 p-0 text-transparent pointer-events-auto font-karla ${fontWeightClass} leading-none`}
           style={{
             fontSize: `${pixelFontSize}px`,
@@ -101,7 +111,7 @@ export function DetailsText({
             direction={direction}
             startTrigger={startTrigger}
             onReveal={() => {
-              if (materialRef.current) materialRef.current.opacity = 1;
+              revealedRef.current = true;
             }}
           >
             <p
