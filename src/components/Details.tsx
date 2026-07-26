@@ -15,6 +15,7 @@ import {
   projectsData,
   educationData,
   skillsData,
+  bioData,
 } from "@/data/content";
 import {
   DETAILS_SECTIONS,
@@ -140,6 +141,11 @@ export function Details() {
     [],
   );
 
+  const bioItems: DetailsSectionItem[] = useMemo(
+    () => bioData.map((line) => ({ text: line })),
+    [],
+  );
+
   const skillItems: DetailsSectionItem[] = useMemo(
     () => skillsData.map((skill) => ({ text: skill })),
     [],
@@ -196,6 +202,21 @@ export function Details() {
         startTrigger={startTrigger && !!revealed.education}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         onHeadingSync={handleHeadingSync("education")}
+        {...shared}
+      />
+
+      <DetailsSection
+        heading="Bio"
+        items={bioItems}
+        headingX={leftX}
+        headingY={sectionY("bio").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("bio").bodyY}
+        bodyAnchorX="left"
+        direction="leftToRight"
+        startTrigger={startTrigger && !!revealed.bio}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        onHeadingSync={handleHeadingSync("bio")}
         {...shared}
       />
 
