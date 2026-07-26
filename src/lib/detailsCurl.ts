@@ -5,6 +5,7 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFoldY: { value: 0 },
     uCurlRadius: { value: 1 },
     uCurlMaxAngle: { value: CONFIG.detailsCurl.MAX_ANGLE },
+    uCurlBend: { value: 1 },
 };
 
 export const curlFadeRange: { start: number; end: number } = {
@@ -18,6 +19,7 @@ export interface CurlSettings {
     maxAngle: number;
     fadeAngleStart: number;
     fadeAngleEnd: number;
+    bend: number;
 }
 
 export function applyCurlSettings(
@@ -32,6 +34,7 @@ export function applyCurlSettings(
         0.0001,
     );
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
+    curlUniforms.uCurlBend.value = settings.bend;
     curlFadeRange.start = settings.fadeAngleStart;
     curlFadeRange.end = settings.fadeAngleEnd;
 }
@@ -40,6 +43,7 @@ const CURL_DEFS = /* glsl */ `
 uniform float uCurlFoldY;
 uniform float uCurlRadius;
 uniform float uCurlMaxAngle;
+uniform float uCurlBend;
 `;
 
 const CURL_BODY = /* glsl */ `
@@ -50,8 +54,8 @@ const CURL_BODY = /* glsl */ `
 
   if (curlRise > 0.0) {
     float curlTheta = min(curlRise / uCurlRadius, uCurlMaxAngle);
-    transformed.y += uCurlFoldY + uCurlRadius * sin(curlTheta) - curlWorld.y;
-    transformed.z -= uCurlRadius * (1.0 - cos(curlTheta));
+    transformed.y += (uCurlFoldY + uCurlRadius * sin(curlTheta) - curlWorld.y) * uCurlBend;
+    transformed.z -= uCurlRadius * (1.0 - cos(curlTheta)) * uCurlBend;
   }
 }
 `;
@@ -60,6 +64,7 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlFoldY = curlUniforms.uCurlFoldY;
     shader.uniforms.uCurlRadius = curlUniforms.uCurlRadius;
     shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
+    shader.uniforms.uCurlBend = curlUniforms.uCurlBend;
 
     shader.vertexShader = CURL_DEFS + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(

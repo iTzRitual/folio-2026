@@ -8,6 +8,7 @@ import { Group } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useFontsReady } from "@/hooks/useFontsReady";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import {
   DetailsSection,
   type DetailsSectionItem,
@@ -35,6 +36,7 @@ const CURL_DEFAULTS: CurlSettings = {
   maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
   fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
+  bend: 1,
 };
 
 const CURL_LEVA_SCHEMA = {
@@ -83,6 +85,7 @@ export function Details({
     titleSettledBottomY,
   } = useHeroLayout();
 
+  const prefersReducedMotion = usePrefersReducedMotion();
   const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
   const curl = isDebug ? levaCurl : CURL_DEFAULTS;
   const {
@@ -100,6 +103,7 @@ export function Details({
       maxAngle,
       fadeAngleStart,
       fadeAngleEnd,
+      bend: prefersReducedMotion ? 0 : 1,
     });
   }, [
     viewport.height,
@@ -109,6 +113,7 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
+    prefersReducedMotion,
   ]);
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
