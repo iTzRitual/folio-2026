@@ -79,7 +79,14 @@ export function wrapParagraphs(
     letterSpacingEm: number,
     fontsReady: boolean,
 ): string[] {
-    return paragraphs.flatMap((paragraph) =>
-        wrapText(paragraph, maxWidth, fontPx, letterSpacingEm, fontsReady),
-    );
+    return paragraphs.flatMap((paragraph, index) => {
+        const lines = wrapText(
+            paragraph,
+            maxWidth,
+            fontPx,
+            letterSpacingEm,
+            fontsReady,
+        );
+        return index === 0 ? lines : ["", ...lines];
+    });
 }

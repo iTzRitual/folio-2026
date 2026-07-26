@@ -70,9 +70,14 @@ export function NoJsDetails() {
                 <h3 className="w-full border-b border-[#3C3C3C] pb-2 text-left text-3xl font-black text-white">
                     Bio
                 </h3>
-                <p className="mt-4 max-w-176 text-left text-lg leading-relaxed font-karla text-[#E8E8E8]">
-                    {bioData.join(" ")}
-                </p>
+                {bioData.map((paragraph, index) => (
+                    <p
+                        key={index}
+                        className="mt-4 max-w-176 text-left text-lg leading-relaxed font-karla text-[#E8E8E8]"
+                    >
+                        {paragraph}
+                    </p>
+                ))}
             </div>
         </section>
     );

@@ -95,31 +95,33 @@ export function BioSection({
                 </mesh>
             </group>
 
-            {lines.map((line, index) => (
-                <DetailsText
-                    key={line}
-                    text={line}
-                    position={[textX, contentY - index * bodyLineHeight, 0]}
-                    anchorX="left"
-                    anchorY="top"
-                    calculatedFontSize={bodyFontSize}
-                    pixelFontSize={bodyFontSize / pxTo3DWidth}
-                    font={FONTS.karlaLight}
-                    fontWeightClass="font-light"
-                    color={THEME.light}
-                    blockColor={THEME.light}
-                    selectionBgColor={THEME.light}
-                    selectionColor={THEME.darkest}
-                    startTrigger={startTrigger}
-                    delay={
-                        CONFIG.detailsTimings.BODY_DELAY +
-                        index * CONFIG.detailsTimings.BODY_STAGGER_STEP
-                    }
-                    direction="leftToRight"
-                    lineHeight={1}
-                    letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
-                />
-            ))}
+            {lines.map((line, index) =>
+                line === "" ? null : (
+                    <DetailsText
+                        key={index}
+                        text={line}
+                        position={[textX, contentY - index * bodyLineHeight, 0]}
+                        anchorX="left"
+                        anchorY="top"
+                        calculatedFontSize={bodyFontSize}
+                        pixelFontSize={bodyFontSize / pxTo3DWidth}
+                        font={FONTS.karlaLight}
+                        fontWeightClass="font-light"
+                        color={THEME.light}
+                        blockColor={THEME.light}
+                        selectionBgColor={THEME.light}
+                        selectionColor={THEME.darkest}
+                        startTrigger={startTrigger}
+                        delay={
+                            CONFIG.detailsTimings.BODY_DELAY +
+                            index * CONFIG.detailsTimings.BODY_STAGGER_STEP
+                        }
+                        direction="leftToRight"
+                        lineHeight={1}
+                        letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
+                    />
+                ),
+            )}
         </>
     );
 }

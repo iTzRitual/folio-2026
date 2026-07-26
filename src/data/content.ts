@@ -81,7 +81,8 @@ export const educationData = [
 ] as const;
 export const bioVariants = {
     narrative: [
-        "I'm a frontend engineer who drifted into real-time graphics and never came back. I started in ecommerce, building storefronts that had to load fast on bad connections, and that constraint still shapes how I work. Today I spend most of my time in WebGL, where the same discipline applies: every millisecond of frame time is a design decision.",
+        "My tech journey started early—entering the e-commerce space at 17, which quickly evolved into a passion for frontend engineering, UI design in Figma, and fullstack architecture. Driven by a long-standing fascination with Awwwards-level interactive design, I shifted my focus toward creative technology, blending performance with rich visual aesthetics.",
+        "My creative eye was originally shaped outside of web dev through video editing—specifically crafting gameplay montages (huge Gears of War fan). When I'm not pushing pixels or shaders, you'll find me skateboarding, hitting the slopes on a snowboard, or gaming.",
     ],
     manifesto: [
         "I build interfaces that behave like objects, not documents.",

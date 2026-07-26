@@ -77,9 +77,14 @@ export const MobileContent = () => {
       </Section>
 
       <Section title="Bio" delay={0.8}>
-        <li className="text-white font-karla text-left w-full text-lg list-none">
-          {bioData.join(" ")}
-        </li>
+        {bioData.map((paragraph, index) => (
+          <li
+            key={index}
+            className="text-white font-karla text-left w-full text-lg list-none mb-4 last:mb-0"
+          >
+            {paragraph}
+          </li>
+        ))}
       </Section>
     </section>
   );
