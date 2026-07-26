@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import type { MeshBasicMaterial } from "three";
 import { DetailsText } from "./DetailsText";
 import { CONFIG, THEME, FONTS } from "@/config/constants";
+import { applyCurlShader } from "@/lib/detailsCurl";
+import { useCurlFade } from "./useCurlFade";
 
 interface BioSectionProps {
     heading: string;
@@ -34,6 +38,18 @@ export function BioSection({
     pxTo3DWidth,
     startTrigger,
 }: BioSectionProps) {
+    const imageMaterialRef = useRef<MeshBasicMaterial>(null);
+
+    const { groupRef: imageGroupRef, revealedRef: imageRevealedRef } =
+        useCurlFade((opacity) => {
+            if (imageMaterialRef.current)
+                imageMaterialRef.current.opacity = opacity;
+        });
+
+    useEffect(() => {
+        imageRevealedRef.current = true;
+    }, [imageRevealedRef]);
+
     return (
         <>
             <DetailsText
@@ -56,16 +72,28 @@ export function BioSection({
                 letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
             />
 
-            <mesh
-                position={[
-                    headingX + imageWidth / 2,
-                    contentY - imageHeight / 2,
-                    0,
-                ]}
+            <group
+                ref={imageGroupRef}
+                position={[headingX + imageWidth / 2, contentY, 0]}
             >
-                <planeGeometry args={[imageWidth, imageHeight]} />
-                <meshBasicMaterial color={THEME.stacked} />
-            </mesh>
+                <mesh position={[0, -imageHeight / 2, 0]}>
+                    <planeGeometry
+                        args={[
+                            imageWidth,
+                            imageHeight,
+                            1,
+                            CONFIG.detailsCurl.IMAGE_SEGMENTS,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        ref={imageMaterialRef}
+                        color={THEME.stacked}
+                        transparent
+                        opacity={0}
+                        onBeforeCompile={applyCurlShader}
+                    />
+                </mesh>
+            </group>
 
             {lines.map((line, index) => (
                 <DetailsText

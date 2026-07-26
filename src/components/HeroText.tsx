@@ -24,6 +24,8 @@ export function HeroText() {
     rightX,
     row3TopY,
     row3BottomY,
+    titleFontSize,
+    titleY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { progressRef } = useHeroTransition();
@@ -49,12 +51,7 @@ export function HeroText() {
     }
   });
 
-  const titleAvailableWidth = viewport.width - 2 * marginX;
-  const titleFontSize = titleAvailableWidth * CONFIG.heroLayout.TITLE_FONT_SIZE;
   const titlePixelFontSize = titleFontSize / pxTo3DWidth;
-  const fontVisualOffset = titleFontSize * CONFIG.heroLayout.TITLE_FONT_VISUAL_OFFSET;
-
-  const titleY = -viewport.height / 2 + marginY + fontVisualOffset;
 
   const subtitleY = viewport.height / 2 - marginY;
   const subtitleAvailableWidth = viewport.width - 2 * marginX;

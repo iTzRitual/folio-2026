@@ -40,7 +40,7 @@ function SceneContent({
         </Suspense>
 
         {!isMobile && <HeroText />}
-        {!isMobile && <Details bioVariant={bioVariant} />}
+        {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
         {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
             <CustomAberration />

@@ -9,6 +9,7 @@ import {
   AnimationContextType,
 } from "@/context/AnimationContext";
 import { calculateHeroSafeZone } from "@/lib/heroSafeZone";
+import { CONFIG } from "@/config/constants";
 
 interface HeroLayoutProviderProps {
   children: ReactNode;
@@ -47,6 +48,17 @@ export function HeroLayoutProvider({
     const row3TopY = viewport.height / 2 - marginY - frHeight;
     const row3BottomY = -viewport.height / 2 + marginY + frHeight;
 
+    const titleFontSize =
+      (viewport.width - 2 * marginX) * CONFIG.heroLayout.TITLE_FONT_SIZE;
+    const titleY =
+      -viewport.height / 2 +
+      marginY +
+      titleFontSize * CONFIG.heroLayout.TITLE_FONT_VISUAL_OFFSET;
+    const titleSettledBottomY =
+      titleY +
+      viewport.height * CONFIG.heroLayout.TITLE_Y_MULTIPLIER -
+      titleFontSize * CONFIG.title.TARGET_SCALE;
+
     const viewportMinDimension = Math.min(
       viewport.width - extraMarginX * 2,
       viewport.height,
@@ -67,6 +79,9 @@ export function HeroLayoutProvider({
       rightX,
       row3TopY,
       row3BottomY,
+      titleFontSize,
+      titleY,
+      titleSettledBottomY,
       viewportMinDimension,
       responsiveScale,
       grabAreaRadius,
