@@ -11,6 +11,7 @@ import {
   DetailsSection,
   type DetailsSectionItem,
 } from "./DetailsScene/DetailsSection";
+import { BioSection } from "./DetailsScene/BioSection";
 import {
   experienceData,
   projectsData,
@@ -41,7 +42,7 @@ export function Details({
     pxTo3DHeight,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef, detailsScrollRef } = useHeroTransition();
+  const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
   const fontsReady = useFontsReady();
   const rootGroupRef = useRef<Group>(null);
 
@@ -91,6 +92,15 @@ export function Details({
       rootGroupRef.current.position.y = groupY;
     }
 
+    const projects = layout.sections.projects;
+    const projectsCenter =
+      projects.bodyY + (projectsData.length * layout.bodyLineHeight) / 2;
+
+    modelAnchorRef.current.x =
+      viewport.width * CONFIG.model.DETAILS_POPUP_X_FACTOR;
+    modelAnchorRef.current.y =
+      groupY + sectionTop - projectsCenter * pxTo3DHeight;
+
     const revealEdge =
       -viewport.height / 2 +
       viewport.height * CONFIG.detailsLayout.REVEAL_MARGIN_MULT;
@@ -130,11 +140,6 @@ export function Details({
         text: `${edu.field} (${edu.degree}) @ ${edu.institution}`,
       })),
     [],
-  );
-
-  const bioItems: DetailsSectionItem[] = useMemo(
-    () => layout.bioLines.map((line) => ({ text: line })),
-    [layout.bioLines],
   );
 
   const skillItems: DetailsSectionItem[] = useMemo(
@@ -193,18 +198,20 @@ export function Details({
         {...shared}
       />
 
-      <DetailsSection
+      <BioSection
         heading={SECTION_HEADINGS.bio}
-        items={bioItems}
+        lines={layout.bioLines}
         headingX={leftX}
         headingY={sectionY("bio").headingY}
-        bodyX={bodyColumnX}
-        bodyY={sectionY("bio").bodyY}
-        bodyAnchorX="left"
-        direction="leftToRight"
+        contentY={sectionY("bio").bodyY}
+        imageWidth={layout.bioImageWidth * pxTo3DWidth}
+        imageHeight={layout.bioImageHeight * pxTo3DHeight}
+        textX={leftX + layout.bioTextOffset * pxTo3DWidth}
+        headingFontSize={headingSize}
+        bodyFontSize={bodySize}
+        bodyLineHeight={bodyLineHeight}
+        pxTo3DWidth={pxTo3DWidth}
         startTrigger={startTrigger && !!revealed.bio}
-        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
-        {...shared}
       />
 
       <DetailsSection

@@ -38,7 +38,6 @@ export const CONFIG = {
         DETAILS_POPUP_END: 1.0,
         DETAILS_POPUP_SCALE: 0.6,
         DETAILS_POPUP_X_FACTOR: 0.13,
-        DETAILS_POPUP_Y_SECTION_OFFSET: 1.1,
         IDLE_ROTATION_SPEED_Z: 1.2,
         IDLE_ROTATION_SPEED_X_MAG: 0.2,
         IDLE_ROTATION_SPEED_Y_MAG: 0.1,
@@ -59,6 +58,10 @@ export const CONFIG = {
         BODY_LINE_HEIGHT_MULT: 1.5,
         LETTER_SPACING: -0.03,
         REVEAL_MARGIN_MULT: 0.04,
+        BIO_IMAGE_WIDTH_MULT: 0.26,
+        BIO_IMAGE_ASPECT: 1.25,
+        BIO_CONTENT_TOP_MULT: 1.1,
+        BIO_COLUMN_GAP_MULT: 0.04,
     },
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",
