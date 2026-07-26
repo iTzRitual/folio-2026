@@ -6,8 +6,8 @@ import {
 } from "react";
 
 export interface ModelAnchor {
-  x: number;
-  y: number;
+  xFraction: number;
+  yFraction: number;
 }
 
 export interface HeroTransitionContextType {

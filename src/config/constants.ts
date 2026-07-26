@@ -42,6 +42,7 @@ export const CONFIG = {
         IDLE_ROTATION_SPEED_X_MAG: 0.2,
         IDLE_ROTATION_SPEED_Y_MAG: 0.1,
         IDLE_ROTATION_SPEED: 2,
+        DEPTH_Z: 2,
     },
     detailsLayout: {
         HEADING_SIZE_MULT: 0.03,

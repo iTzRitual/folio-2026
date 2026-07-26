@@ -41,6 +41,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
   const isHoveringModel = useRef(false);
 
   const lastInteractionTime = useRef(0);
+  const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
 
   const { viewport } = useThree();
 
@@ -193,8 +194,14 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           scrollProgress *
             viewport.height *
             CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
-        const detailsTargetY = modelAnchorRef.current.y;
-        const detailsTargetX = modelAnchorRef.current.x;
+        const modelViewport = state.viewport.getCurrentViewport(
+          state.camera,
+          modelDepth.current,
+        );
+        const detailsTargetY =
+          modelAnchorRef.current.yFraction * modelViewport.height;
+        const detailsTargetX =
+          modelAnchorRef.current.xFraction * modelViewport.width;
 
         const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
         const targetY =
@@ -361,7 +368,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
 
   return (
     <group>
-      <group position={[0, 0.1, 2]} ref={animGroupRef}>
+      <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <mesh
           position={[0, 0, 0]}
           onPointerEnter={() => {
