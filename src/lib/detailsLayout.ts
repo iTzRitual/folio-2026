@@ -49,6 +49,8 @@ export const SECTION_HEADINGS = {
 
 const LEFT_COLUMN = ["experience", "projects", "education", "bio"] as const;
 
+export const DETAILS_SECTION_KEYS = [...LEFT_COLUMN, "skills"] as const;
+
 export function calculateDetailsLayout({
     viewportWidth,
     viewportHeight,

@@ -33,6 +33,13 @@ const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
 const LENIS_OPTIONS = { autoRaf: false } as const;
 
+const BIO_LEVA_SCHEMA = {
+    variant: {
+        value: DEFAULT_BIO_VARIANT,
+        options: Object.keys(bioVariants) as BioVariant[],
+    },
+};
+
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
@@ -45,12 +52,7 @@ export default function Home() {
     const [overflowViewports, setOverflowViewports] = useState(0);
     const fontsReady = useFontsReady();
 
-    const levaBio = useControls("Bio", {
-        variant: {
-            value: DEFAULT_BIO_VARIANT,
-            options: Object.keys(bioVariants) as BioVariant[],
-        },
-    });
+    const levaBio = useControls("Bio", BIO_LEVA_SCHEMA);
     const bioVariant: BioVariant = isDebug
         ? levaBio.variant
         : DEFAULT_BIO_VARIANT;

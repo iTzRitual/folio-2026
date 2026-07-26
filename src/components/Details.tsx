@@ -21,6 +21,7 @@ import {
 } from "@/data/content";
 import {
   SECTION_HEADINGS,
+  DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
 import { CONFIG } from "../config/constants";
@@ -95,7 +96,7 @@ export function Details({
       viewport.height * CONFIG.detailsLayout.REVEAL_MARGIN_MULT;
 
     let changed = false;
-    for (const key of Object.keys(layout.sections)) {
+    for (const key of DETAILS_SECTION_KEYS) {
       if (revealedRef.current[key]) continue;
 
       const worldY =
