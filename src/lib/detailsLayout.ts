@@ -134,28 +134,31 @@ export function calculateDetailsLayout({
     };
 
     for (const key of STACKED_SECTIONS) place(key, "left");
-
-    const bioHeadingY = cursors.left;
-    const bioContentY = bioHeadingY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
-    offsets.bio = { headingY: bioHeadingY, bodyY: bioContentY };
-
-    const bioBodyHeight = Math.max(
-        bioImageHeight,
-        bioLines.length * bodyLineHeight,
-    );
-    cursors.left = bioContentY + bioBodyHeight + sectionGap;
-
     place("skills", "right");
-
-    const contentHeight = Math.max(
-        0,
-        Math.max(cursors.left, cursors.right) - sectionGap,
-    );
 
     const topInset =
         viewportHeight * -L.TARGET_BASE_Y_MULT + marginY * L.SECTION_TOP_OFF_MULT;
     const bottomInset = marginY * L.SECTION_TOP_OFF_MULT;
     const usableHeight = Math.max(0, viewportHeight - topInset - bottomInset);
+
+    const detailsHeight = Math.max(
+        0,
+        Math.max(cursors.left, cursors.right) - sectionGap,
+    );
+    const detailsOverflow = Math.max(0, detailsHeight - usableHeight);
+
+    const bioHeadingY = detailsOverflow + viewportHeight;
+    const bioContentY = bioHeadingY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
+    offsets.bio = { headingY: bioHeadingY, bodyY: bioContentY };
+
+    const bioHeight =
+        bioContentY -
+        bioHeadingY +
+        Math.max(bioImageHeight, bioLines.length * bodyLineHeight);
+    const bioOverflow = Math.max(0, bioHeight - usableHeight);
+
+    const contentHeight = bioHeadingY + bioHeight;
+    const overflow = bioHeadingY + bioOverflow;
 
     return {
         headingFontSize,
@@ -172,7 +175,7 @@ export function calculateDetailsLayout({
         sections: offsets,
         contentHeight,
         usableHeight,
-        overflow: Math.max(0, contentHeight - usableHeight),
+        overflow,
     };
 }
 
