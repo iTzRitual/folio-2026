@@ -100,7 +100,8 @@ export const CONFIG = {
         // Gap between the glass plate's front face and the image, so the
         // screenshot never z-fights the refraction.
         IMAGE_GAP: 0.06,
-        SIZE_MULT: 1.15,
+        // 1 puts the screenshot exactly on the flattened plate's footprint.
+        SIZE_MULT: 1,
         CORNER_RADIUS_MULT: 0.05,
         MORPH_IN_DURATION: 0.7,
         MORPH_OUT_DURATION: 0.45,
