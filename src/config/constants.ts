@@ -129,7 +129,7 @@ export const CONFIG = {
         VEL_MULT: 0.016666,
         SCROLL_TAPS: 8,
         SCROLL_BLUR: 0.022,
-        SCROLL_SPLIT: 0.004,
+        SCROLL_SPLIT: 0.04,
         SCROLL_VEL_SCALE: 20.0,
         SCROLL_VEL_CLAMP: 1.0,
         SCROLL_ATTACK_MULT: 30.0,
