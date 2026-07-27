@@ -147,18 +147,18 @@ export function calculateDetailsLayout({
     );
     const detailsOverflow = Math.max(0, detailsHeight - usableHeight);
 
-    const bioHeadingY = detailsOverflow + viewportHeight;
-    const bioContentY = bioHeadingY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
-    offsets.bio = { headingY: bioHeadingY, bodyY: bioContentY };
+    const bioTopY = detailsOverflow + viewportHeight;
+    const bioTextY = bioTopY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
+    offsets.bio = { headingY: bioTopY, bodyY: bioTextY };
 
-    const bioHeight =
-        bioContentY -
-        bioHeadingY +
-        Math.max(bioImageHeight, bioLines.length * bodyLineHeight);
+    const bioHeight = Math.max(
+        bioImageHeight,
+        bioTextY - bioTopY + bioLines.length * bodyLineHeight,
+    );
     const bioOverflow = Math.max(0, bioHeight - usableHeight);
 
-    const contentHeight = bioHeadingY + bioHeight;
-    const overflow = bioHeadingY + bioOverflow;
+    const contentHeight = bioTopY + bioHeight;
+    const overflow = bioTopY + bioOverflow;
 
     return {
         headingFontSize,
