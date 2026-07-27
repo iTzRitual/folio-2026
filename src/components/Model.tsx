@@ -118,6 +118,11 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const shouldLockInteraction =
       scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
+    const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
+
+    const stage = inDetails ? 1 + modelAnchorRef.current.stage : 0;
+    const teleported = !isMobile && stage !== previousAnchorStage.current;
+    previousAnchorStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
@@ -179,18 +184,6 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           dt,
         );
       } else {
-        const popupProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
-            (CONFIG.model.DETAILS_POPUP_END - CONFIG.model.DETAILS_POPUP_START),
-          0,
-          1,
-        );
-
-        const heroYAtPopupStart =
-          CONFIG.model.BASE_MODEL_Y +
-          CONFIG.model.DETAILS_POPUP_START *
-            viewport.height *
-            CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
         const heroYCurrent =
           CONFIG.model.BASE_MODEL_Y +
           scrollProgress *
@@ -205,21 +198,10 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
         const detailsTargetX =
           modelAnchorRef.current.xFraction * modelViewport.width;
 
-        const targetX = THREE.MathUtils.lerp(0, detailsTargetX, popupProgress);
-        const targetY =
-          scrollProgress < CONFIG.model.DETAILS_POPUP_START
-            ? heroYCurrent
-            : THREE.MathUtils.lerp(
-                heroYAtPopupStart,
-                detailsTargetY,
-                popupProgress,
-              );
+        const targetX = inDetails ? detailsTargetX : 0;
+        const targetY = inDetails ? detailsTargetY : heroYCurrent;
 
-        const teleport =
-          modelAnchorRef.current.stage !== previousAnchorStage.current;
-        previousAnchorStage.current = modelAnchorRef.current.stage;
-
-        animGroupRef.current.position.x = teleport
+        animGroupRef.current.position.x = teleported
           ? targetX
           : THREE.MathUtils.damp(
               animGroupRef.current.position.x,
@@ -227,7 +209,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
               10,
               dt,
             );
-        animGroupRef.current.position.y = teleport
+        animGroupRef.current.position.y = teleported
           ? targetY
           : THREE.MathUtils.damp(
               animGroupRef.current.position.y,
@@ -262,21 +244,13 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           0,
           1,
         );
-        const popupProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
-            (CONFIG.model.DETAILS_POPUP_END - CONFIG.model.DETAILS_POPUP_START),
-          0,
-          1,
-        );
+        const targetScale = inDetails
+          ? modelAnchorRef.current.scale
+          : 1 - scaleOutProgress;
 
-        const scaleOutValue = 1 - scaleOutProgress;
-        const targetScale = THREE.MathUtils.lerp(
-          scaleOutValue,
-          modelAnchorRef.current.scale,
-          popupProgress,
-        );
-
-        const currentScale = transitionScaleGroupRef.current.scale.x;
+        const currentScale = teleported
+          ? 0
+          : transitionScaleGroupRef.current.scale.x;
         const smoothScale = THREE.MathUtils.damp(
           currentScale,
           targetScale,

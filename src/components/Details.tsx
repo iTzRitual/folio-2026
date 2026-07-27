@@ -178,12 +178,13 @@ export function Details({
     const gapY =
       (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
 
+    const fadeEnd =
+      titleSettledBottomY / viewport.height -
+      CONFIG.model.FOLD_FADE_CLEARANCE_MULT;
     const foldFade =
       1 -
       MathUtils.clamp(
-        (gapY - CONFIG.model.FOLD_FADE_START_FRACTION) /
-          (CONFIG.model.FOLD_FADE_END_FRACTION -
-            CONFIG.model.FOLD_FADE_START_FRACTION),
+        (gapY - fadeEnd) / CONFIG.model.FOLD_FADE_SPAN_MULT + 1,
         0,
         1,
       );
