@@ -88,11 +88,16 @@ export function CurlRevealBlock({
             playedRef.current = true;
 
             if (prefersReducedMotion) {
+                let fired = false;
                 const call = gsap.delayedCall(delay, () => {
+                    fired = true;
                     onHalfwayRef.current();
                 });
 
-                return () => call.kill();
+                return () => {
+                    call.kill();
+                    if (!fired) playedRef.current = false;
+                };
             }
 
             const tl = gsap.timeline({ delay });
@@ -112,8 +117,14 @@ export function CurlRevealBlock({
             });
 
             return () => {
+                const progress = tl.progress();
                 tl.kill();
-                onHalfwayRef.current();
+
+                if (progress === 0) {
+                    playedRef.current = false;
+                } else if (progress < 1) {
+                    onHalfwayRef.current();
+                }
             };
         },
         {
