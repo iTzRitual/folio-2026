@@ -21,6 +21,8 @@ const MODEL_LOOK_DEFAULTS = {
   baseX: CONFIG.model.LOOK_BASE_X,
   baseY: CONFIG.model.LOOK_BASE_Y,
   baseZ: CONFIG.model.LOOK_BASE_Z,
+  aboutYaw: CONFIG.model.LOOK_ABOUT_YAW,
+  aboutPitch: CONFIG.model.LOOK_ABOUT_PITCH,
   rangeX: CONFIG.model.LOOK_RANGE_X,
   rangeY: CONFIG.model.LOOK_RANGE_Y,
 };
@@ -46,6 +48,18 @@ const MODEL_LOOK_LEVA_SCHEMA = {
   },
   baseZ: {
     value: MODEL_LOOK_DEFAULTS.baseZ,
+    min: -Math.PI,
+    max: Math.PI,
+    step: 0.05,
+  },
+  aboutYaw: {
+    value: MODEL_LOOK_DEFAULTS.aboutYaw,
+    min: -Math.PI,
+    max: Math.PI,
+    step: 0.05,
+  },
+  aboutPitch: {
+    value: MODEL_LOOK_DEFAULTS.aboutPitch,
     min: -Math.PI,
     max: Math.PI,
     step: 0.05,
@@ -400,15 +414,27 @@ export default function Model({
       const t = state.clock.getElapsedTime();
       const look = modelAnchorRef.current.lookWeight;
 
+      const lookTargetX = THREE.MathUtils.clamp(
+        (cursorX - (animGroupRef.current?.position.x ?? 0)) /
+          (currentViewport.width / 2),
+        -1,
+        1,
+      );
+      const lookTargetY = THREE.MathUtils.clamp(
+        cursorY / (currentViewport.height / 2),
+        -1,
+        1,
+      );
+
       lookPointer.current.x = THREE.MathUtils.damp(
         lookPointer.current.x,
-        state.pointer.x,
+        lookTargetX,
         CONFIG.model.LOOK_POINTER_SMOOTHNESS,
         dt,
       );
       lookPointer.current.y = THREE.MathUtils.damp(
         lookPointer.current.y,
-        state.pointer.y,
+        lookTargetY,
         CONFIG.model.LOOK_POINTER_SMOOTHNESS,
         dt,
       );
@@ -435,9 +461,11 @@ export default function Model({
 
       if (lookGroupRef.current) {
         lookGroupRef.current.rotation.x =
-          -lookPointer.current.y * modelLook.rangeX * look;
+          (modelLook.aboutPitch - lookPointer.current.y * modelLook.rangeX) *
+          look;
         lookGroupRef.current.rotation.y =
-          lookPointer.current.x * modelLook.rangeY * look;
+          (modelLook.aboutYaw + lookPointer.current.x * modelLook.rangeY) *
+          look;
       }
 
       if (!prefersReducedMotion) {

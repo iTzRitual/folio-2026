@@ -47,6 +47,8 @@ export const CONFIG = {
         LOOK_BASE_X: 0,
         LOOK_BASE_Y: 0,
         LOOK_BASE_Z: Math.PI,
+        LOOK_ABOUT_YAW: 0,
+        LOOK_ABOUT_PITCH: 0,
         LOOK_RANGE_X: 0.45,
         LOOK_RANGE_Y: 0.6,
         LOOK_POINTER_SMOOTHNESS: 6,
