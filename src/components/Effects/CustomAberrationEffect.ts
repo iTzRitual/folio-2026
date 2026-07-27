@@ -1,5 +1,5 @@
 import { Effect } from "postprocessing";
-import { Uniform, Vector2 } from "three";
+import { Uniform, Vector2, Vector4 } from "three";
 import { CONFIG } from "../../config/constants";
 
 const {
@@ -12,9 +12,7 @@ const {
   SCROLL_VIGNETTE_OUTER,
 } = CONFIG.customAberration;
 
-const glslFloat = (value: number) => value.toFixed(6);
-
-const fragmentShader = `
+const buildFragmentShader = (taps: number) => `
 precision mediump float;
 uniform vec2 u_mouse;
 uniform float u_aberrationIntensity;
@@ -22,8 +20,11 @@ uniform vec2 u_gridSize;
 uniform vec2 u_aspect;
 uniform vec2 u_mouseVelocity;
 uniform float u_scrollVelocity;
+uniform float u_scrollBlur;
+uniform float u_scrollSplit;
+uniform vec4 u_scrollVignette;
 
-#define SCROLL_TAPS ${Math.round(SCROLL_TAPS)}
+#define SCROLL_TAPS ${Math.max(2, Math.round(taps))}
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     if (u_aberrationIntensity < 0.001 && abs(u_scrollVelocity) < 0.001) {
@@ -42,18 +43,14 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec2 newUv = uv - uvOffset;
     vec2 rgbOffset = u_mouseVelocity * strength * u_aberrationIntensity * 1.5;
 
-    vec2 fromCenter = (uv - 0.5) * vec2(${glslFloat(SCROLL_VIGNETTE_X_WEIGHT)}, 1.0);
+    vec2 fromCenter = (uv - 0.5) * vec2(u_scrollVignette.x, 1.0);
     float edge = mix(
-        ${glslFloat(SCROLL_VIGNETTE_FLOOR)},
+        u_scrollVignette.w,
         1.0,
-        smoothstep(
-            ${glslFloat(SCROLL_VIGNETTE_INNER)},
-            ${glslFloat(SCROLL_VIGNETTE_OUTER)},
-            length(fromCenter)
-        )
+        smoothstep(u_scrollVignette.y, u_scrollVignette.z, length(fromCenter))
     );
-    float blurAmount = abs(u_scrollVelocity) * ${glslFloat(SCROLL_BLUR)} * edge;
-    vec2 scrollSplit = vec2(0.0, u_scrollVelocity * ${glslFloat(SCROLL_SPLIT)} * edge);
+    float blurAmount = abs(u_scrollVelocity) * u_scrollBlur * edge;
+    vec2 scrollSplit = vec2(0.0, u_scrollVelocity * u_scrollSplit * edge);
 
     vec3 accum = vec3(0.0);
 
@@ -71,15 +68,28 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class CustomAberrationEffect extends Effect {
-  constructor() {
-    super("CustomAberrationEffect", fragmentShader, {
-      uniforms: new Map<string, Uniform<Vector2 | number>>([
+  constructor(taps: number = SCROLL_TAPS) {
+    super("CustomAberrationEffect", buildFragmentShader(taps), {
+      uniforms: new Map<string, Uniform<Vector2 | Vector4 | number>>([
         ["u_mouse", new Uniform(new Vector2(0.5, 0.5))],
         ["u_aberrationIntensity", new Uniform(0.0)],
         ["u_gridSize", new Uniform(new Vector2(80.0, 80.0))],
         ["u_aspect", new Uniform(new Vector2(1.0, 1.0))],
         ["u_mouseVelocity", new Uniform(new Vector2(0.0, 0.0))],
         ["u_scrollVelocity", new Uniform(0.0)],
+        ["u_scrollBlur", new Uniform(SCROLL_BLUR)],
+        ["u_scrollSplit", new Uniform(SCROLL_SPLIT)],
+        [
+          "u_scrollVignette",
+          new Uniform(
+            new Vector4(
+              SCROLL_VIGNETTE_X_WEIGHT,
+              SCROLL_VIGNETTE_INNER,
+              SCROLL_VIGNETTE_OUTER,
+              SCROLL_VIGNETTE_FLOOR,
+            ),
+          ),
+        ],
       ]),
     });
   }

@@ -43,7 +43,7 @@ function SceneContent({
         {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
         {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
-            <CustomAberration />
+            <CustomAberration isDebug={isDebug} />
           </EffectComposer>
         )}
       </HeroTransitionProvider>
