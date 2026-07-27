@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2A2A2A"/>
+      <stop offset="1" stop-color="#141414"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#g)"/>
+  <g fill="none" stroke="#3A3A3A" stroke-width="1">
+    <line x1="0" y1="62.5" x2="1600" y2="62.5"/><line x1="0" y1="125" x2="1600" y2="125"/><line x1="0" y1="187.5" x2="1600" y2="187.5"/><line x1="0" y1="250" x2="1600" y2="250"/><line x1="0" y1="312.5" x2="1600" y2="312.5"/><line x1="0" y1="375" x2="1600" y2="375"/><line x1="0" y1="437.5" x2="1600" y2="437.5"/><line x1="0" y1="500" x2="1600" y2="500"/><line x1="0" y1="562.5" x2="1600" y2="562.5"/><line x1="0" y1="625" x2="1600" y2="625"/><line x1="0" y1="687.5" x2="1600" y2="687.5"/><line x1="0" y1="750" x2="1600" y2="750"/><line x1="0" y1="812.5" x2="1600" y2="812.5"/><line x1="0" y1="875" x2="1600" y2="875"/><line x1="0" y1="937.5" x2="1600" y2="937.5"/>
+    <line x1="64" y1="0" x2="64" y2="1000"/><line x1="128" y1="0" x2="128" y2="1000"/><line x1="192" y1="0" x2="192" y2="1000"/><line x1="256" y1="0" x2="256" y2="1000"/><line x1="320" y1="0" x2="320" y2="1000"/><line x1="384" y1="0" x2="384" y2="1000"/><line x1="448" y1="0" x2="448" y2="1000"/><line x1="512" y1="0" x2="512" y2="1000"/><line x1="576" y1="0" x2="576" y2="1000"/><line x1="640" y1="0" x2="640" y2="1000"/><line x1="704" y1="0" x2="704" y2="1000"/><line x1="768" y1="0" x2="768" y2="1000"/><line x1="832" y1="0" x2="832" y2="1000"/><line x1="896" y1="0" x2="896" y2="1000"/><line x1="960" y1="0" x2="960" y2="1000"/><line x1="1024" y1="0" x2="1024" y2="1000"/><line x1="1088" y1="0" x2="1088" y2="1000"/><line x1="1152" y1="0" x2="1152" y2="1000"/><line x1="1216" y1="0" x2="1216" y2="1000"/><line x1="1280" y1="0" x2="1280" y2="1000"/><line x1="1344" y1="0" x2="1344" y2="1000"/><line x1="1408" y1="0" x2="1408" y2="1000"/><line x1="1472" y1="0" x2="1472" y2="1000"/><line x1="1536" y1="0" x2="1536" y2="1000"/>
+  </g>
+  <rect x="40" y="40" width="1520" height="920" fill="none" stroke="#5A5A5A" stroke-width="3"/>
+  <text x="100" y="470" font-family="Helvetica, Arial, sans-serif" font-size="92" font-weight="700" fill="#F2F2F2">WebGPU Particle System</text>
+  <text x="104" y="560" font-family="Helvetica, Arial, sans-serif" font-size="42" font-weight="300" fill="#9A9A9A">Compute shaders · 1M particles</text>
+  <text x="104" y="900" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="300" fill="#6A6A6A">PLACEHOLDER — replace with a real screenshot</text>
+</svg>

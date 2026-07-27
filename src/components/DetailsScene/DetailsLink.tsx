@@ -14,10 +14,12 @@ import {
 } from "@/lib/textBounds";
 import { CurlRevealBlock } from "./CurlRevealBlock";
 import { useCurlFade } from "./useCurlFade";
+import { useProjectHover } from "@/context/ProjectHoverContext";
 
 interface DetailsLinkProps {
   text: string;
   href: string;
+  previewImage?: string;
   position: [number, number, number];
   anchorX: "left" | "center" | "right";
   anchorY: "top" | "middle" | "bottom";
@@ -41,6 +43,7 @@ interface DetailsLinkProps {
 export function DetailsLink({
   text,
   href,
+  previewImage,
   position,
   anchorX,
   anchorY,
@@ -66,12 +69,22 @@ export function DetailsLink({
 
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
+  const { setHoveredPreview, clearHoveredPreview } = useProjectHover();
+  // Twins stay in the DOM past the bottom fold, so a link can be hoverable
+  // while it is curled away and faded out — don't preview those.
+  const visibleRef = useRef(false);
+
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
     (opacity, curlFade) => {
       if (materialRef.current) materialRef.current.opacity = opacity;
       if (underlineRef.current) underlineRef.current.opacity = opacity;
       if (arrowRef.current) arrowRef.current.opacity = opacity;
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
+
+      const visible = opacity > CONFIG.detailsLink.PREVIEW_MIN_OPACITY;
+      if (visible === visibleRef.current) return;
+      visibleRef.current = visible;
+      if (!visible && previewImage) clearHoveredPreview(previewImage);
     },
   );
 
@@ -164,6 +177,7 @@ export function DetailsLink({
 
   const handleEnter = () => {
     if (!finePointer()) return;
+    if (previewImage && visibleRef.current) setHoveredPreview(previewImage);
     gsap.to(hoverProxy.current, {
       t: 1,
       duration: CONFIG.detailsLink.COLOR_DURATION,
@@ -216,6 +230,7 @@ export function DetailsLink({
 
   const handleLeave = () => {
     if (!finePointer()) return;
+    if (previewImage) clearHoveredPreview(previewImage);
     gsap.to(hoverProxy.current, {
       t: 0,
       duration: CONFIG.detailsLink.COLOR_DURATION,

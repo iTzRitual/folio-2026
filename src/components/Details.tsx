@@ -253,6 +253,7 @@ export function Details({
       projectsData.map((project) => ({
         text: project.name,
         href: project.link,
+        previewImage: project.preview,
       })),
     [],
   );

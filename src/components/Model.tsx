@@ -5,7 +5,7 @@ import {
   Center,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { gsap } from "gsap";
@@ -13,8 +13,22 @@ import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useProjectHover } from "@/context/ProjectHoverContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { attachFlatMorphTarget, buildFlatMorphTarget } from "@/lib/skullMorph";
+import {
+  ProjectPreviewPlane,
+  useProjectPreviewTextures,
+} from "./DetailsScene/ProjectPreviewPlane";
 import { CONFIG } from "../config/constants";
+
+// The GLB is Blender-oriented, so the flattened plate lies in the mesh's local
+// XZ plane. Facing it at the camera means mapping local +Z to world up, which
+// is exactly the -90° X rotation the glTF node carries.
+const PLATE_FACING = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(-Math.PI / 2, 0, 0),
+);
+const IDENTITY_QUATERNION = new THREE.Quaternion();
 
 export default function Model({
   isMobile,
@@ -51,6 +65,143 @@ export default function Model({
   const previousStage = useRef(0);
 
   const { viewport } = useThree();
+
+  const morphOrientRef = useRef<THREE.Group>(null);
+  const skullRotationGroupRef = useRef<THREE.Group>(null);
+  const previewGroupRef = useRef<THREE.Group>(null);
+  const previewMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const skullMeshRef = useRef<THREE.Mesh | null>(null);
+
+  const previewTextures = useProjectPreviewTextures();
+  const { hoveredPreview } = useProjectHover();
+  // Keep the last hovered preview around so the plate can animate back out
+  // with the right screenshot still on it.
+  const [shownPreview, setShownPreview] = useState<string | null>(null);
+  if (hoveredPreview && hoveredPreview !== shownPreview) {
+    setShownPreview(hoveredPreview);
+  }
+
+  const levaPreview = useControls("Project preview", {
+    mode: {
+      value: CONFIG.projectPreview.MODE,
+      options: ["morph", "scale"] as const,
+    },
+    sizeMult: {
+      value: CONFIG.projectPreview.SIZE_MULT,
+      min: 0.5,
+      max: 2.5,
+      step: 0.05,
+    },
+  });
+  const previewMode = isDebug ? levaPreview.mode : CONFIG.projectPreview.MODE;
+  const previewSizeMult = isDebug
+    ? levaPreview.sizeMult
+    : CONFIG.projectPreview.SIZE_MULT;
+
+  const flatTarget = useMemo(
+    () =>
+      buildFlatMorphTarget(
+        (nodes.Sphere as THREE.Mesh).geometry,
+        CONFIG.projectPreview.ASPECT,
+        CONFIG.projectPreview.SLAB_THICKNESS,
+      ),
+    [nodes.Sphere],
+  );
+
+  useLayoutEffect(() => {
+    attachFlatMorphTarget((nodes.Sphere as THREE.Mesh).geometry, flatTarget);
+
+    mesh.current?.traverse((child) => {
+      if (skullMeshRef.current || !(child as THREE.Mesh).isMesh) return;
+      const found = child as THREE.Mesh;
+      skullMeshRef.current = found;
+      found.updateMorphTargets();
+      (found.material as THREE.Material).needsUpdate = true;
+    });
+  }, [nodes.Sphere, flatTarget]);
+
+  // 0 = skull, 1 = fully revealed preview. `skull` only moves in "scale" mode.
+  const previewProxy = useRef({ morph: 0, plate: 0, skull: 1 });
+  const orientTemp = useRef({
+    parent: new THREE.Quaternion(),
+    orient: new THREE.Quaternion(),
+    mesh: new THREE.Quaternion(),
+    local: new THREE.Quaternion(),
+    target: new THREE.Quaternion(),
+  });
+
+  useGSAP(
+    () => {
+      const proxy = previewProxy.current;
+      const active = hoveredPreview !== null;
+      const cfg = CONFIG.projectPreview;
+
+      gsap.killTweensOf(proxy);
+
+      if (prefersReducedMotion) {
+        proxy.morph = active && previewMode === "morph" ? 1 : 0;
+        proxy.plate = active ? 1 : 0;
+        proxy.skull = active && previewMode === "scale" ? 0 : 1;
+        return;
+      }
+
+      if (previewMode === "morph") {
+        proxy.skull = 1;
+        const duration = active ? cfg.MORPH_IN_DURATION : cfg.MORPH_OUT_DURATION;
+
+        gsap.to(proxy, {
+          morph: active ? 1 : 0,
+          duration,
+          ease: active ? "power3.inOut" : "power2.inOut",
+        });
+        // The screenshot only resolves once the plate has mostly formed.
+        gsap.to(proxy, {
+          plate: active ? 1 : 0,
+          duration: duration * (1 - cfg.MORPH_IMAGE_FADE_START),
+          delay: active ? duration * cfg.MORPH_IMAGE_FADE_START : 0,
+          ease: "power2.out",
+        });
+        return;
+      }
+
+      proxy.morph = 0;
+      const timeline = gsap.timeline();
+      if (active) {
+        timeline
+          .to(proxy, {
+            skull: 0,
+            duration: cfg.SCALE_SKULL_OUT_DURATION,
+            ease: "power2.in",
+          })
+          .to(
+            proxy,
+            {
+              plate: 1,
+              duration: cfg.SCALE_PLANE_IN_DURATION,
+              ease: "back.out(1.7)",
+            },
+            cfg.SCALE_PLANE_IN_DELAY,
+          );
+      } else {
+        timeline
+          .to(proxy, {
+            plate: 0,
+            duration: cfg.SCALE_PLANE_OUT_DURATION,
+            ease: "power2.in",
+          })
+          .to(
+            proxy,
+            {
+              skull: 1,
+              duration: cfg.SCALE_SKULL_IN_DURATION,
+              ease: "back.out(1.6)",
+            },
+            cfg.SCALE_SKULL_IN_DELAY,
+          );
+      }
+    },
+    { dependencies: [hoveredPreview, previewMode, prefersReducedMotion] },
+  );
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -108,6 +259,10 @@ export default function Model({
   const responsiveScale = baseResponsiveScale * materialProps.scale;
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
   const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
+
+  const previewWidth = flatTarget.rectWidth * responsiveScale * previewSizeMult;
+  const previewHeight =
+    flatTarget.rectHeight * responsiveScale * previewSizeMult;
 
   const levaSkullRotation = useControls("Skull Rotation", {
     x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
@@ -363,6 +518,58 @@ export default function Model({
         Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
         CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
+
+    const preview = previewProxy.current;
+    const skullMesh = skullMeshRef.current;
+
+    if (skullMesh?.morphTargetInfluences) {
+      skullMesh.morphTargetInfluences[0] = preview.morph;
+    }
+
+    const orient = morphOrientRef.current;
+    if (orient) {
+      // Cancel out everything the skull is rotated by so the flattened plate
+      // ends up square to the camera, blended in by the morph itself. The
+      // chain is re-measured each frame, so the idle spin unwinds with it.
+      if (preview.morph > 1e-4 && skullMesh) {
+        const temp = orientTemp.current;
+        skullMesh.getWorldQuaternion(temp.mesh);
+        orient.getWorldQuaternion(temp.orient);
+        temp.local.copy(temp.orient).invert().multiply(temp.mesh);
+        orient.parent?.getWorldQuaternion(temp.parent);
+
+        temp.target
+          .copy(temp.parent)
+          .invert()
+          .multiply(PLATE_FACING)
+          .multiply(temp.local.invert());
+
+        orient.quaternion.slerpQuaternions(
+          IDENTITY_QUATERNION,
+          temp.target,
+          preview.morph,
+        );
+      } else {
+        orient.quaternion.identity();
+      }
+
+      orient.scale.setScalar(Math.max(preview.skull, 1e-4));
+    }
+
+    const previewGroup = previewGroupRef.current;
+    if (previewGroup) {
+      previewGroup.visible = preview.plate > 1e-3;
+      previewGroup.scale.setScalar(
+        previewMode === "scale" ? Math.max(preview.plate, 1e-4) : 1,
+      );
+    }
+    if (previewMaterialRef.current) {
+      previewMaterialRef.current.opacity = THREE.MathUtils.clamp(
+        preview.plate,
+        0,
+        1,
+      );
+    }
   });
 
   return (
@@ -426,18 +633,46 @@ export default function Model({
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
 
+            <group ref={morphOrientRef}>
+              <group
+                ref={skullRotationGroupRef}
+                rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+              >
+                <Center>
+                  <Clone
+                    ref={mesh}
+                    object={nodes.Sphere}
+                    scale={responsiveScale}
+                  >
+                    <MeshTransmissionMaterial
+                      {...materialProps}
+                      resolution={256}
+                      samples={4}
+                    />
+                  </Clone>
+                </Center>
+              </group>
+            </group>
+
             <group
-              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+              ref={previewGroupRef}
+              visible={false}
+              position={[
+                0,
+                0,
+                (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
+                  CONFIG.projectPreview.IMAGE_GAP) *
+                  responsiveScale,
+              ]}
             >
-              <Center>
-                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                  <MeshTransmissionMaterial
-                    {...materialProps}
-                    resolution={256}
-                    samples={4}
-                  />
-                </Clone>
-              </Center>
+              <ProjectPreviewPlane
+                texture={
+                  shownPreview ? (previewTextures[shownPreview] ?? null) : null
+                }
+                width={previewWidth}
+                height={previewHeight}
+                materialRef={previewMaterialRef}
+              />
             </group>
           </group>
         </group>

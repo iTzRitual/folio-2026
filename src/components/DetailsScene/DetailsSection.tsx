@@ -7,6 +7,7 @@ import { CONFIG, THEME, FONTS } from "@/config/constants";
 export interface DetailsSectionItem {
     text: string;
     href?: string;
+    previewImage?: string;
 }
 
 interface DetailsSectionProps {
@@ -90,7 +91,12 @@ export function DetailsSection({
                 };
 
                 return item.href ? (
-                    <DetailsLink key={item.text} href={item.href} {...shared} />
+                    <DetailsLink
+                        key={item.text}
+                        href={item.href}
+                        previewImage={item.previewImage}
+                        {...shared}
+                    />
                 ) : (
                     <DetailsText key={item.text} {...shared} />
                 );

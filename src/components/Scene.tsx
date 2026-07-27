@@ -10,6 +10,7 @@ import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
+import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { Suspense } from "react";
 import { THEME } from "../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -31,6 +32,7 @@ function SceneContent({
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
+        <ProjectHoverProvider>
         <color attach="background" args={[THEME.darkest]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
@@ -46,6 +48,7 @@ function SceneContent({
             <CustomAberration isDebug={isDebug} />
           </EffectComposer>
         )}
+        </ProjectHoverProvider>
       </HeroTransitionProvider>
     </HeroLayoutProvider>
   );

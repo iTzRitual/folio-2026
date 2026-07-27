@@ -33,40 +33,55 @@ export const experienceData = [
         duration: "2018 - 2020",
     },
 ] as const;
+// `preview` is the image the skull morphs into on hover. The files in
+// /images/projects are placeholders — drop real screenshots in with the same
+// names (any format three's TextureLoader accepts) to replace them.
 export const projectsData = [
     {
         name: "Folio 2026 - Github",
-        link: "https://github.com/iTzRitual/folio-2026"
+        link: "https://github.com/iTzRitual/folio-2026",
+        preview: "/images/projects/folio-2026.svg",
     },
     {
         name: "Controller Configurator - Github",
-        link: "https://github.com/iTzRitual/r3f-controller-configurator-2025"
+        link: "https://github.com/iTzRitual/r3f-controller-configurator-2025",
+        preview: "/images/projects/controller-configurator.svg",
     },
     {
         name: "Commercial Portfolio - Github",
-        link: "https://github.com/iTzRitual/commercial-portfolio"
+        link: "https://github.com/iTzRitual/commercial-portfolio",
+        preview: "/images/projects/commercial-portfolio.svg",
     },
     {
         name: "Realtime Fluid Simulation - Github",
-        link: "https://github.com/iTzRitual"
+        link: "https://github.com/iTzRitual",
+        preview: "/images/projects/fluid-simulation.svg",
     },
     {
         name: "WebGPU Particle System - Github",
-        link: "https://github.com/iTzRitual"
+        link: "https://github.com/iTzRitual",
+        preview: "/images/projects/webgpu-particles.svg",
     },
     {
         name: "Procedural Terrain Generator - Github",
-        link: "https://github.com/iTzRitual"
+        link: "https://github.com/iTzRitual",
+        preview: "/images/projects/procedural-terrain.svg",
     },
     {
         name: "Shader Playground - Github",
-        link: "https://github.com/iTzRitual"
+        link: "https://github.com/iTzRitual",
+        preview: "/images/projects/shader-playground.svg",
     },
     {
         name: "Motion Design System - Github",
-        link: "https://github.com/iTzRitual"
+        link: "https://github.com/iTzRitual",
+        preview: "/images/projects/motion-design-system.svg",
     },
 ] as const;
+
+export const PROJECT_PREVIEW_SOURCES = projectsData.map(
+    (project) => project.preview,
+);
 export const educationData = [
     {
         institution: "DSW University of Lower Silesia",

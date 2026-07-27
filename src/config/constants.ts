@@ -90,6 +90,28 @@ export const CONFIG = {
         ARROW_SEGMENTS: 4,
         IMAGE_SEGMENTS: 24,
     },
+    projectPreview: {
+        // "morph": the skull flattens into the screenshot plate.
+        // "scale": the skull scales out while the plate scales in.
+        MODE: "morph" as "morph" | "scale",
+        ASPECT: 1.6,
+        // Thickness the flattened glass plate keeps, in geometry-local units.
+        SLAB_THICKNESS: 0.05,
+        // Gap between the glass plate's front face and the image, so the
+        // screenshot never z-fights the refraction.
+        IMAGE_GAP: 0.06,
+        SIZE_MULT: 1.15,
+        CORNER_RADIUS_MULT: 0.05,
+        MORPH_IN_DURATION: 0.7,
+        MORPH_OUT_DURATION: 0.45,
+        MORPH_IMAGE_FADE_START: 0.5,
+        SCALE_SKULL_OUT_DURATION: 0.22,
+        SCALE_PLANE_IN_DURATION: 0.3,
+        SCALE_PLANE_IN_DELAY: 0.11,
+        SCALE_PLANE_OUT_DURATION: 0.18,
+        SCALE_SKULL_IN_DURATION: 0.3,
+        SCALE_SKULL_IN_DELAY: 0.09,
+    },
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",
         COLOR_DURATION: 0.15,
@@ -98,6 +120,7 @@ export const CONFIG = {
         ARROW_NUDGE_FACTOR: 0.25,
         ARROW_DURATION: 0.2,
         UNDERLINE_PHASE_DURATION: 0.25,
+        PREVIEW_MIN_OPACITY: 0.6,
     },
     detailsTimings: {
         HEADING_DELAY: 0.1,
