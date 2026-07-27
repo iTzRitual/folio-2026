@@ -4,6 +4,7 @@ import { CONFIG } from "@/config/constants";
 export const curlUniforms: Record<string, { value: number }> = {
     uCurlFoldY: { value: 0 },
     uCurlBottomY: { value: -1e6 },
+    uCurlSheetZ: { value: CONFIG.scene.DETAILS_GROUP_Z },
     uCurlRadius: { value: 1 },
     uCurlMaxAngle: { value: CONFIG.detailsCurl.MAX_ANGLE },
     uCurlBend: { value: 1 },
@@ -50,6 +51,7 @@ export function applyCurlSettings(
 const CURL_DEFS = /* glsl */ `
 uniform float uCurlFoldY;
 uniform float uCurlBottomY;
+uniform float uCurlSheetZ;
 uniform float uCurlRadius;
 uniform float uCurlMaxAngle;
 uniform float uCurlBend;
@@ -61,15 +63,18 @@ const CURL_BODY = /* glsl */ `
   vec4 curlWorld = modelMatrix * vec4(transformed, 1.0);
   float curlRise = curlWorld.y - uCurlFoldY;
   float curlDrop = uCurlBottomY - curlWorld.y;
+  float curlLift = curlWorld.z - uCurlSheetZ;
 
   if (curlRise > 0.0) {
     float curlTheta = min(curlRise / uCurlRadius, uCurlMaxAngle);
-    transformed.y += (uCurlFoldY + uCurlRadius * sin(curlTheta) - curlWorld.y) * uCurlBend;
-    transformed.z -= uCurlRadius * (1.0 - cos(curlTheta)) * uCurlBend;
+    float curlArm = uCurlRadius + curlLift;
+    transformed.y += (uCurlFoldY + curlArm * sin(curlTheta) - curlWorld.y) * uCurlBend;
+    transformed.z += (curlArm * cos(curlTheta) - uCurlRadius - curlLift) * uCurlBend;
   } else if (curlDrop > 0.0) {
     float curlTheta = min(curlDrop / uCurlRadius, uCurlMaxAngle);
-    transformed.y += (uCurlBottomY - uCurlRadius * sin(curlTheta) - curlWorld.y) * uCurlBend;
-    transformed.z += uCurlRadius * (1.0 - cos(curlTheta)) * uCurlBend;
+    float curlArm = uCurlRadius - curlLift;
+    transformed.y += (uCurlBottomY - curlArm * sin(curlTheta) - curlWorld.y) * uCurlBend;
+    transformed.z += (uCurlRadius - curlArm * cos(curlTheta) - curlLift) * uCurlBend;
   }
 }
 `;
@@ -77,6 +82,7 @@ const CURL_BODY = /* glsl */ `
 export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlFoldY = curlUniforms.uCurlFoldY;
     shader.uniforms.uCurlBottomY = curlUniforms.uCurlBottomY;
+    shader.uniforms.uCurlSheetZ = curlUniforms.uCurlSheetZ;
     shader.uniforms.uCurlRadius = curlUniforms.uCurlRadius;
     shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
     shader.uniforms.uCurlBend = curlUniforms.uCurlBend;

@@ -68,7 +68,7 @@ export const CONFIG = {
         BIO_CONTENT_TOP_MULT: 1.75,
         BIO_COLUMN_GAP_MULT: 0.04,
         BIO_REVEAL_LINES: 9,
-        BIO_REVEAL_BLOCK_Z: 0.002,
+        BIO_REVEAL_BLOCK_Z: 0.02,
         BIO_REVEAL_BLOCK_OVERHANG: 1.1,
         BIO_REVEAL_BLOCK_RADIUS_PX: 8,
     },
