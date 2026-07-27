@@ -1,12 +1,14 @@
 "use client";
 
 import { ReactNode } from "react";
+import Image from "next/image";
 import { AnimatedRevealText } from "@/components/AnimatedRevealText";
 import {
   experienceData,
   projectsData,
   educationData,
   bioData,
+  bioImage,
 } from "@/data/content";
 
 interface SectionProps {
@@ -80,12 +82,20 @@ export const MobileContent = () => {
         {bioData.map((paragraph, index) => (
           <li
             key={index}
-            className="text-white font-karla text-left w-full text-lg list-none mb-4 last:mb-0"
+            className="text-white font-karla text-left w-full text-lg list-none"
           >
             {paragraph}
           </li>
         ))}
       </Section>
+
+      <Image
+        src={bioImage.src}
+        alt={bioImage.alt}
+        width={1500}
+        height={2000}
+        className="h-auto w-3/5 max-w-64"
+      />
     </section>
   );
 };

@@ -60,7 +60,7 @@ export const CONFIG = {
         LETTER_SPACING: -0.03,
         REVEAL_MARGIN_MULT: 0.04,
         BIO_IMAGE_WIDTH_MULT: 0.26,
-        BIO_IMAGE_ASPECT: 1.25,
+        BIO_IMAGE_ASPECT: 2000 / 1500,
         BIO_CONTENT_TOP_MULT: 1.1,
         BIO_COLUMN_GAP_MULT: 0.04,
     },

@@ -1,11 +1,40 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { MeshBasicMaterial } from "three";
+import { Suspense, useEffect, useRef, type RefObject } from "react";
+import { SRGBColorSpace, type MeshBasicMaterial } from "three";
+import { useTexture } from "@react-three/drei";
 import { DetailsText } from "./DetailsText";
 import { CONFIG, THEME, FONTS } from "@/config/constants";
+import { bioImage } from "@/data/content";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { useCurlFade } from "./useCurlFade";
+
+interface BioImageProps {
+    materialRef: RefObject<MeshBasicMaterial | null>;
+    width: number;
+    height: number;
+}
+
+function BioImage({ materialRef, width, height }: BioImageProps) {
+    const texture = useTexture(bioImage.src);
+
+    return (
+        <mesh position={[0, -height / 2, 0]}>
+            <planeGeometry
+                args={[width, height, 1, CONFIG.detailsCurl.IMAGE_SEGMENTS]}
+            />
+            <meshBasicMaterial
+                ref={materialRef}
+                map={texture}
+                map-colorSpace={SRGBColorSpace}
+                toneMapped={false}
+                transparent
+                opacity={0}
+                onBeforeCompile={applyCurlShader}
+            />
+        </mesh>
+    );
+}
 
 interface BioSectionProps {
     heading: string;
@@ -76,23 +105,13 @@ export function BioSection({
                 ref={imageGroupRef}
                 position={[headingX + imageWidth / 2, contentY, 0]}
             >
-                <mesh position={[0, -imageHeight / 2, 0]}>
-                    <planeGeometry
-                        args={[
-                            imageWidth,
-                            imageHeight,
-                            1,
-                            CONFIG.detailsCurl.IMAGE_SEGMENTS,
-                        ]}
+                <Suspense fallback={null}>
+                    <BioImage
+                        materialRef={imageMaterialRef}
+                        width={imageWidth}
+                        height={imageHeight}
                     />
-                    <meshBasicMaterial
-                        ref={imageMaterialRef}
-                        color={THEME.stacked}
-                        transparent
-                        opacity={0}
-                        onBeforeCompile={applyCurlShader}
-                    />
-                </mesh>
+                </Suspense>
             </group>
 
             {lines.map((line, index) =>

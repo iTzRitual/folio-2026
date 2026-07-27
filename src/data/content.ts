@@ -99,6 +99,11 @@ export const bioVariants = {
     ],
 } as const;
 
+export const bioImage = {
+    src: "/images/natan_bio.JPG",
+    alt: "Natan Mokrzycki standing on a beach at night, city lights behind him",
+} as const;
+
 export type BioVariant = keyof typeof bioVariants;
 
 export const DEFAULT_BIO_VARIANT: BioVariant = "narrative";

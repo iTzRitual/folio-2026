@@ -1,5 +1,7 @@
+import Image from "next/image";
 import {
     bioData,
+    bioImage,
     educationData,
     experienceData,
     projectsData,
@@ -78,6 +80,13 @@ export function NoJsDetails() {
                         {paragraph}
                     </p>
                 ))}
+                <Image
+                    src={bioImage.src}
+                    alt={bioImage.alt}
+                    width={1500}
+                    height={2000}
+                    className="mt-6 h-auto w-full max-w-64"
+                />
             </div>
         </section>
     );
