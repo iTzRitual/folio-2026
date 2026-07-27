@@ -88,6 +88,7 @@ export default function Model({
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
   const previousAnchorStage = useRef(0);
   const lookPointer = useRef(new THREE.Vector2(0, 0));
+  const lookGroupRef = useRef<THREE.Group>(null);
 
   const { viewport } = useThree();
 
@@ -423,14 +424,21 @@ export default function Model({
 
       mesh.current.rotation.x = THREE.MathUtils.lerp(
         idleX,
-        modelLook.baseX - lookPointer.current.y * modelLook.rangeX,
+        modelLook.baseX,
         look,
       );
       mesh.current.rotation.y = THREE.MathUtils.lerp(
         idleY,
-        modelLook.baseY + lookPointer.current.x * modelLook.rangeY,
+        modelLook.baseY,
         look,
       );
+
+      if (lookGroupRef.current) {
+        lookGroupRef.current.rotation.x =
+          -lookPointer.current.y * modelLook.rangeX * look;
+        lookGroupRef.current.rotation.y =
+          lookPointer.current.x * modelLook.rangeY * look;
+      }
 
       if (!prefersReducedMotion) {
         const spun =
@@ -511,18 +519,24 @@ export default function Model({
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
 
-            <group
-              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
-            >
-              <Center>
-                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                  <MeshTransmissionMaterial
-                    {...materialProps}
-                    resolution={256}
-                    samples={4}
-                  />
-                </Clone>
-              </Center>
+            <group ref={lookGroupRef}>
+              <group
+                rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+              >
+                <Center>
+                  <Clone
+                    ref={mesh}
+                    object={nodes.Sphere}
+                    scale={responsiveScale}
+                  >
+                    <MeshTransmissionMaterial
+                      {...materialProps}
+                      resolution={256}
+                      samples={4}
+                    />
+                  </Clone>
+                </Center>
+              </group>
             </group>
           </group>
         </group>
