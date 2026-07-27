@@ -16,58 +16,6 @@ import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
 
-const MODEL_LOOK_DEFAULTS = {
-  popupRamp: CONFIG.model.POPUP_RAMP_SPAN,
-  baseX: CONFIG.model.LOOK_BASE_X,
-  baseY: CONFIG.model.LOOK_BASE_Y,
-  baseZ: CONFIG.model.LOOK_BASE_Z,
-  aboutYaw: CONFIG.model.LOOK_ABOUT_YAW,
-  aboutPitch: CONFIG.model.LOOK_ABOUT_PITCH,
-  rangeX: CONFIG.model.LOOK_RANGE_X,
-  rangeY: CONFIG.model.LOOK_RANGE_Y,
-};
-
-const MODEL_LOOK_LEVA_SCHEMA = {
-  popupRamp: {
-    value: MODEL_LOOK_DEFAULTS.popupRamp,
-    min: 0.01,
-    max: 0.1,
-    step: 0.005,
-  },
-  baseX: {
-    value: MODEL_LOOK_DEFAULTS.baseX,
-    min: -Math.PI,
-    max: Math.PI,
-    step: 0.05,
-  },
-  baseY: {
-    value: MODEL_LOOK_DEFAULTS.baseY,
-    min: -Math.PI,
-    max: Math.PI,
-    step: 0.05,
-  },
-  baseZ: {
-    value: MODEL_LOOK_DEFAULTS.baseZ,
-    min: -Math.PI,
-    max: Math.PI,
-    step: 0.05,
-  },
-  aboutYaw: {
-    value: MODEL_LOOK_DEFAULTS.aboutYaw,
-    min: -Math.PI,
-    max: Math.PI,
-    step: 0.05,
-  },
-  aboutPitch: {
-    value: MODEL_LOOK_DEFAULTS.aboutPitch,
-    min: -Math.PI,
-    max: Math.PI,
-    step: 0.05,
-  },
-  rangeX: { value: MODEL_LOOK_DEFAULTS.rangeX, min: 0, max: 1.5, step: 0.05 },
-  rangeY: { value: MODEL_LOOK_DEFAULTS.rangeY, min: 0, max: 1.5, step: 0.05 },
-};
-
 export default function Model({
   isMobile,
   isDebug = false,
@@ -100,9 +48,7 @@ export default function Model({
 
   const lastInteractionTime = useRef(0);
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
-  const previousAnchorStage = useRef(0);
-  const lookPointer = useRef(new THREE.Vector2(0, 0));
-  const lookGroupRef = useRef<THREE.Group>(null);
+  const previousStage = useRef(0);
 
   const { viewport } = useThree();
 
@@ -177,18 +123,15 @@ export default function Model({
         z: 0.85,
       };
 
-  const levaLook = useControls("Model look", MODEL_LOOK_LEVA_SCHEMA);
-  const modelLook = isDebug ? levaLook : MODEL_LOOK_DEFAULTS;
-
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const shouldLockInteraction =
       scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
     const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
 
-    const stage = inDetails ? 1 + modelAnchorRef.current.stage : 0;
-    const teleported = !isMobile && stage !== previousAnchorStage.current;
-    previousAnchorStage.current = stage;
+    const stage = inDetails ? 1 : 0;
+    const teleported = !isMobile && stage !== previousStage.current;
+    previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
@@ -312,7 +255,7 @@ export default function Model({
         );
         const entryRamp = THREE.MathUtils.clamp(
           (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
-            modelLook.popupRamp,
+            CONFIG.model.POPUP_RAMP_SPAN,
           0,
           1,
         );
@@ -410,79 +353,15 @@ export default function Model({
       interactiveGroupRef.current.position.copy(pos.current);
     }
 
-    if (mesh.current) {
+    if (mesh.current && !prefersReducedMotion) {
       const t = state.clock.getElapsedTime();
-      const look = modelAnchorRef.current.lookWeight;
-
-      const lookTargetX = THREE.MathUtils.clamp(
-        (cursorX - (animGroupRef.current?.position.x ?? 0)) /
-          (currentViewport.width / 2),
-        -1,
-        1,
-      );
-      const lookTargetY = THREE.MathUtils.clamp(
-        cursorY / (currentViewport.height / 2),
-        -1,
-        1,
-      );
-
-      lookPointer.current.x = THREE.MathUtils.damp(
-        lookPointer.current.x,
-        lookTargetX,
-        CONFIG.model.LOOK_POINTER_SMOOTHNESS,
-        dt,
-      );
-      lookPointer.current.y = THREE.MathUtils.damp(
-        lookPointer.current.y,
-        lookTargetY,
-        CONFIG.model.LOOK_POINTER_SMOOTHNESS,
-        dt,
-      );
-
-      const idleX = prefersReducedMotion
-        ? 0
-        : Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-          CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
-      const idleY = prefersReducedMotion
-        ? 0
-        : Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-          CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
-
-      mesh.current.rotation.x = THREE.MathUtils.lerp(
-        idleX,
-        modelLook.baseX,
-        look,
-      );
-      mesh.current.rotation.y = THREE.MathUtils.lerp(
-        idleY,
-        modelLook.baseY,
-        look,
-      );
-
-      if (lookGroupRef.current) {
-        lookGroupRef.current.rotation.x =
-          (modelLook.aboutPitch - lookPointer.current.y * modelLook.rangeX) *
-          look;
-        lookGroupRef.current.rotation.y =
-          (modelLook.aboutYaw + lookPointer.current.x * modelLook.rangeY) *
-          look;
-      }
-
-      if (!prefersReducedMotion) {
-        const spun =
-          mesh.current.rotation.z +
-          dt * CONFIG.model.IDLE_ROTATION_SPEED_Z * (1 - look);
-        const turn = Math.PI * 2;
-        mesh.current.rotation.z =
-          ((((spun + Math.PI) % turn) + turn) % turn) - Math.PI;
-      }
-
-      mesh.current.rotation.z = THREE.MathUtils.damp(
-        mesh.current.rotation.z,
-        modelLook.baseZ,
-        CONFIG.model.LOOK_SETTLE_SMOOTHNESS * look,
-        dt,
-      );
+      mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
+      mesh.current.rotation.x =
+        Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+        CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
+      mesh.current.rotation.y =
+        Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+        CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
   });
 
@@ -547,24 +426,18 @@ export default function Model({
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
 
-            <group ref={lookGroupRef}>
-              <group
-                rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
-              >
-                <Center>
-                  <Clone
-                    ref={mesh}
-                    object={nodes.Sphere}
-                    scale={responsiveScale}
-                  >
-                    <MeshTransmissionMaterial
-                      {...materialProps}
-                      resolution={256}
-                      samples={4}
-                    />
-                  </Clone>
-                </Center>
-              </group>
+            <group
+              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+            >
+              <Center>
+                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
+                  <MeshTransmissionMaterial
+                    {...materialProps}
+                    resolution={256}
+                    samples={4}
+                  />
+                </Clone>
+              </Center>
             </group>
           </group>
         </group>

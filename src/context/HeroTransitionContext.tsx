@@ -9,8 +9,6 @@ export interface ModelAnchor {
   xFraction: number;
   yFraction: number;
   scale: number;
-  lookWeight: number;
-  stage: number;
 }
 
 export interface HeroTransitionContextType {

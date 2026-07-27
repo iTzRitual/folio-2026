@@ -70,10 +70,6 @@ const CURL_LEVA_SCHEMA = {
 const ANCHOR_DEFAULTS = {
   foldFadeClearance: CONFIG.model.FOLD_FADE_CLEARANCE_MULT,
   foldFadeSpan: CONFIG.model.FOLD_FADE_SPAN_MULT,
-  bioFaceScale: CONFIG.model.BIO_FACE_SCALE,
-  bioHandoffSpan: CONFIG.model.BIO_HANDOFF_SPAN_MULT,
-  bioFaceX: CONFIG.detailsLayout.BIO_FACE_X_MULT,
-  bioFaceY: CONFIG.detailsLayout.BIO_FACE_Y_MULT,
 };
 
 const ANCHOR_LEVA_SCHEMA = {
@@ -89,20 +85,6 @@ const ANCHOR_LEVA_SCHEMA = {
     max: 1.2,
     step: 0.01,
   },
-  bioFaceScale: {
-    value: ANCHOR_DEFAULTS.bioFaceScale,
-    min: 0.02,
-    max: 0.6,
-    step: 0.005,
-  },
-  bioHandoffSpan: {
-    value: ANCHOR_DEFAULTS.bioHandoffSpan,
-    min: 0.1,
-    max: 1.5,
-    step: 0.05,
-  },
-  bioFaceX: { value: ANCHOR_DEFAULTS.bioFaceX, min: 0, max: 1, step: 0.005 },
-  bioFaceY: { value: ANCHOR_DEFAULTS.bioFaceY, min: 0, max: 1, step: 0.005 },
 };
 
 export function Details({
@@ -219,33 +201,9 @@ export function Details({
       1 - MathUtils.clamp((gapY - fadeEnd) / anchorCfg.foldFadeSpan + 1, 0, 1);
 
     const anchor = modelAnchorRef.current;
-
-    if (foldFade > 0) {
-      anchor.stage = 0;
-      anchor.xFraction = gapX;
-      anchor.yFraction = gapY;
-      anchor.scale = CONFIG.model.DETAILS_POPUP_SCALE * foldFade;
-      anchor.lookWeight = 0;
-    } else {
-      const bioTopY =
-        groupY + sectionTop - layout.sections.bio.headingY * pxTo3DHeight;
-      const bioProgress = MathUtils.clamp(
-        (bioTopY + viewport.height / 2) /
-          (viewport.height * anchorCfg.bioHandoffSpan),
-        0,
-        1,
-      );
-
-      anchor.stage = 1;
-      anchor.xFraction =
-        (leftX + layout.bioImageWidth * pxTo3DWidth * anchorCfg.bioFaceX) /
-        viewport.width;
-      anchor.yFraction =
-        (bioTopY - layout.bioImageHeight * pxTo3DHeight * anchorCfg.bioFaceY) /
-        viewport.height;
-      anchor.scale = anchorCfg.bioFaceScale * bioProgress;
-      anchor.lookWeight = bioProgress;
-    }
+    anchor.xFraction = gapX;
+    anchor.yFraction = gapY;
+    anchor.scale = CONFIG.model.DETAILS_POPUP_SCALE * foldFade;
 
     const revealEdge =
       -viewport.height / 2 +
