@@ -21,8 +21,9 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
         group.getWorldPosition(worldPosition.current);
         const angle = curlAngle(worldPosition.current.y);
         const bottomAngle = curlBottomAngle(worldPosition.current.y);
-        const fade = Math.min(curlOpacity(angle), curlOpacity(bottomAngle));
-        applyOpacity(revealedRef.current ? fade : 0, fade);
+        const topFade = curlOpacity(angle);
+        const fade = Math.min(topFade, curlOpacity(bottomAngle));
+        applyOpacity(revealedRef.current ? fade : 0, topFade);
 
         const hidden = angle > 0;
         if (hidden !== twinHiddenRef.current) {

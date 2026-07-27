@@ -68,11 +68,11 @@ export function AnimatedRevealImage({
         [blockRadiusUv],
     );
 
-    const { groupRef, revealedRef } = useCurlFade((opacity) => {
+    const { groupRef, revealedRef } = useCurlFade((opacity, curlFade) => {
         if (imageMaterialRef.current) imageMaterialRef.current.opacity = opacity;
 
         for (const material of blockMaterialRefs.current) {
-            if (material) material.opacity = opacity;
+            if (material) material.opacity = curlFade;
         }
     });
 
