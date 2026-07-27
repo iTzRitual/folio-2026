@@ -16,7 +16,51 @@ import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
 
-export default function Model({ isMobile, isDebug = false }: { isMobile?: boolean, isDebug?: boolean }) {
+const MODEL_LOOK_DEFAULTS = {
+  popupRamp: CONFIG.model.POPUP_RAMP_SPAN,
+  baseX: CONFIG.model.LOOK_BASE_X,
+  baseY: CONFIG.model.LOOK_BASE_Y,
+  baseZ: CONFIG.model.LOOK_BASE_Z,
+  rangeX: CONFIG.model.LOOK_RANGE_X,
+  rangeY: CONFIG.model.LOOK_RANGE_Y,
+};
+
+const MODEL_LOOK_LEVA_SCHEMA = {
+  popupRamp: {
+    value: MODEL_LOOK_DEFAULTS.popupRamp,
+    min: 0.01,
+    max: 0.1,
+    step: 0.005,
+  },
+  baseX: {
+    value: MODEL_LOOK_DEFAULTS.baseX,
+    min: -Math.PI,
+    max: Math.PI,
+    step: 0.05,
+  },
+  baseY: {
+    value: MODEL_LOOK_DEFAULTS.baseY,
+    min: -Math.PI,
+    max: Math.PI,
+    step: 0.05,
+  },
+  baseZ: {
+    value: MODEL_LOOK_DEFAULTS.baseZ,
+    min: -Math.PI,
+    max: Math.PI,
+    step: 0.05,
+  },
+  rangeX: { value: MODEL_LOOK_DEFAULTS.rangeX, min: 0, max: 1.5, step: 0.05 },
+  rangeY: { value: MODEL_LOOK_DEFAULTS.rangeY, min: 0, max: 1.5, step: 0.05 },
+};
+
+export default function Model({
+  isMobile,
+  isDebug = false,
+}: {
+  isMobile?: boolean;
+  isDebug?: boolean;
+}) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -88,15 +132,17 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
     scale: { value: 0.8, min: 0, max: 3, step: 0.05 },
   });
 
-  const materialProps = isDebug ? levaMaterialProps : {
-    thickness: 0.65,
-    roughness: 0.2,
-    transmission: 0.97,
-    ior: 0.9,
-    chromaticAberration: 1.0,
-    backside: false,
-    scale: 0.8,
-  };
+  const materialProps = isDebug
+    ? levaMaterialProps
+    : {
+        thickness: 0.65,
+        roughness: 0.2,
+        transmission: 0.97,
+        ior: 0.9,
+        chromaticAberration: 1.0,
+        backside: false,
+        scale: 0.8,
+      };
 
   const responsiveScale = baseResponsiveScale * materialProps.scale;
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
@@ -108,11 +154,16 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
     z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
   });
 
-  const skullRotation = isDebug ? levaSkullRotation : {
-    x: -1.3,
-    y: -3.13,
-    z: 0.85,
-  };
+  const skullRotation = isDebug
+    ? levaSkullRotation
+    : {
+        x: -1.3,
+        y: -3.13,
+        z: 0.85,
+      };
+
+  const levaLook = useControls("Model look", MODEL_LOOK_LEVA_SCHEMA);
+  const modelLook = isDebug ? levaLook : MODEL_LOOK_DEFAULTS;
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
@@ -244,8 +295,14 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           0,
           1,
         );
+        const entryRamp = THREE.MathUtils.clamp(
+          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
+            modelLook.popupRamp,
+          0,
+          1,
+        );
         const targetScale = inDetails
-          ? modelAnchorRef.current.scale
+          ? modelAnchorRef.current.scale * entryRamp
           : 1 - scaleOutProgress;
 
         const currentScale = teleported
@@ -366,12 +423,12 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
 
       mesh.current.rotation.x = THREE.MathUtils.lerp(
         idleX,
-        -lookPointer.current.y * CONFIG.model.LOOK_RANGE_X,
+        modelLook.baseX - lookPointer.current.y * modelLook.rangeX,
         look,
       );
       mesh.current.rotation.y = THREE.MathUtils.lerp(
         idleY,
-        lookPointer.current.x * CONFIG.model.LOOK_RANGE_Y,
+        modelLook.baseY + lookPointer.current.x * modelLook.rangeY,
         look,
       );
 
@@ -381,12 +438,12 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
           dt * CONFIG.model.IDLE_ROTATION_SPEED_Z * (1 - look);
         const turn = Math.PI * 2;
         mesh.current.rotation.z =
-          (((spun + Math.PI) % turn) + turn) % turn - Math.PI;
+          ((((spun + Math.PI) % turn) + turn) % turn) - Math.PI;
       }
 
       mesh.current.rotation.z = THREE.MathUtils.damp(
         mesh.current.rotation.z,
-        0,
+        modelLook.baseZ,
         CONFIG.model.LOOK_SETTLE_SMOOTHNESS * look,
         dt,
       );

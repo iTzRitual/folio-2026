@@ -67,6 +67,44 @@ const CURL_LEVA_SCHEMA = {
   },
 };
 
+const ANCHOR_DEFAULTS = {
+  foldFadeClearance: CONFIG.model.FOLD_FADE_CLEARANCE_MULT,
+  foldFadeSpan: CONFIG.model.FOLD_FADE_SPAN_MULT,
+  bioFaceScale: CONFIG.model.BIO_FACE_SCALE,
+  bioHandoffSpan: CONFIG.model.BIO_HANDOFF_SPAN_MULT,
+  bioFaceX: CONFIG.detailsLayout.BIO_FACE_X_MULT,
+  bioFaceY: CONFIG.detailsLayout.BIO_FACE_Y_MULT,
+};
+
+const ANCHOR_LEVA_SCHEMA = {
+  foldFadeClearance: {
+    value: ANCHOR_DEFAULTS.foldFadeClearance,
+    min: 0,
+    max: 0.6,
+    step: 0.01,
+  },
+  foldFadeSpan: {
+    value: ANCHOR_DEFAULTS.foldFadeSpan,
+    min: 0.05,
+    max: 1.2,
+    step: 0.01,
+  },
+  bioFaceScale: {
+    value: ANCHOR_DEFAULTS.bioFaceScale,
+    min: 0.02,
+    max: 0.6,
+    step: 0.005,
+  },
+  bioHandoffSpan: {
+    value: ANCHOR_DEFAULTS.bioHandoffSpan,
+    min: 0.1,
+    max: 1.5,
+    step: 0.05,
+  },
+  bioFaceX: { value: ANCHOR_DEFAULTS.bioFaceX, min: 0, max: 1, step: 0.005 },
+  bioFaceY: { value: ANCHOR_DEFAULTS.bioFaceY, min: 0, max: 1, step: 0.005 },
+};
+
 export function Details({
   bioVariant = DEFAULT_BIO_VARIANT,
   isDebug = false,
@@ -88,13 +126,10 @@ export function Details({
   const prefersReducedMotion = usePrefersReducedMotion();
   const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
   const curl = isDebug ? levaCurl : CURL_DEFAULTS;
-  const {
-    foldOffsetMult,
-    radiusMult,
-    maxAngle,
-    fadeAngleStart,
-    fadeAngleEnd,
-  } = curl;
+  const levaAnchor = useControls("Model anchor", ANCHOR_LEVA_SCHEMA);
+  const anchorCfg = isDebug ? levaAnchor : ANCHOR_DEFAULTS;
+  const { foldOffsetMult, radiusMult, maxAngle, fadeAngleStart, fadeAngleEnd } =
+    curl;
 
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
@@ -179,15 +214,9 @@ export function Details({
       (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
 
     const fadeEnd =
-      titleSettledBottomY / viewport.height -
-      CONFIG.model.FOLD_FADE_CLEARANCE_MULT;
+      titleSettledBottomY / viewport.height - anchorCfg.foldFadeClearance;
     const foldFade =
-      1 -
-      MathUtils.clamp(
-        (gapY - fadeEnd) / CONFIG.model.FOLD_FADE_SPAN_MULT + 1,
-        0,
-        1,
-      );
+      1 - MathUtils.clamp((gapY - fadeEnd) / anchorCfg.foldFadeSpan + 1, 0, 1);
 
     const anchor = modelAnchorRef.current;
 
@@ -202,25 +231,19 @@ export function Details({
         groupY + sectionTop - layout.sections.bio.headingY * pxTo3DHeight;
       const bioProgress = MathUtils.clamp(
         (bioTopY + viewport.height / 2) /
-          (viewport.height * CONFIG.model.BIO_HANDOFF_SPAN_MULT),
+          (viewport.height * anchorCfg.bioHandoffSpan),
         0,
         1,
       );
 
       anchor.stage = 1;
       anchor.xFraction =
-        (leftX +
-          layout.bioImageWidth *
-            pxTo3DWidth *
-            CONFIG.detailsLayout.BIO_FACE_X_MULT) /
+        (leftX + layout.bioImageWidth * pxTo3DWidth * anchorCfg.bioFaceX) /
         viewport.width;
       anchor.yFraction =
-        (bioTopY -
-          layout.bioImageHeight *
-            pxTo3DHeight *
-            CONFIG.detailsLayout.BIO_FACE_Y_MULT) /
+        (bioTopY - layout.bioImageHeight * pxTo3DHeight * anchorCfg.bioFaceY) /
         viewport.height;
-      anchor.scale = CONFIG.model.BIO_FACE_SCALE * bioProgress;
+      anchor.scale = anchorCfg.bioFaceScale * bioProgress;
       anchor.lookWeight = bioProgress;
     }
 
@@ -253,7 +276,11 @@ export function Details({
   );
 
   const projectItems: DetailsSectionItem[] = useMemo(
-    () => projectsData.map((project) => ({ text: project.name, href: project.link })),
+    () =>
+      projectsData.map((project) => ({
+        text: project.name,
+        href: project.link,
+      })),
     [],
   );
 
