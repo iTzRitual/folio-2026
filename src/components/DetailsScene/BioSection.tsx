@@ -1,45 +1,15 @@
 "use client";
 
-import { Suspense, useEffect, useRef, type RefObject } from "react";
-import { SRGBColorSpace, type MeshBasicMaterial } from "three";
-import { useTexture } from "@react-three/drei";
+import { Suspense } from "react";
 import { DetailsText } from "./DetailsText";
+import { AnimatedRevealImage } from "./AnimatedRevealImage";
 import { CONFIG, THEME, FONTS } from "@/config/constants";
 import { bioImage } from "@/data/content";
-import { applyCurlShader } from "@/lib/detailsCurl";
-import { useCurlFade } from "./useCurlFade";
-
-interface BioImageProps {
-    materialRef: RefObject<MeshBasicMaterial | null>;
-    width: number;
-    height: number;
-}
-
-function BioImage({ materialRef, width, height }: BioImageProps) {
-    const texture = useTexture(bioImage.src);
-
-    return (
-        <mesh position={[0, -height / 2, 0]}>
-            <planeGeometry
-                args={[width, height, 1, CONFIG.detailsCurl.IMAGE_SEGMENTS]}
-            />
-            <meshBasicMaterial
-                ref={materialRef}
-                map={texture}
-                map-colorSpace={SRGBColorSpace}
-                toneMapped={false}
-                transparent
-                opacity={0}
-                onBeforeCompile={applyCurlShader}
-            />
-        </mesh>
-    );
-}
 
 interface BioSectionProps {
     heading: string;
     lines: readonly string[];
-    headingX: number;
+    imageX: number;
     headingY: number;
     contentY: number;
     imageWidth: number;
@@ -55,7 +25,7 @@ interface BioSectionProps {
 export function BioSection({
     heading,
     lines,
-    headingX,
+    imageX,
     headingY,
     contentY,
     imageWidth,
@@ -67,23 +37,11 @@ export function BioSection({
     pxTo3DWidth,
     startTrigger,
 }: BioSectionProps) {
-    const imageMaterialRef = useRef<MeshBasicMaterial>(null);
-
-    const { groupRef: imageGroupRef, revealedRef: imageRevealedRef } =
-        useCurlFade((opacity) => {
-            if (imageMaterialRef.current)
-                imageMaterialRef.current.opacity = opacity;
-        });
-
-    useEffect(() => {
-        imageRevealedRef.current = true;
-    }, [imageRevealedRef]);
-
     return (
         <>
             <DetailsText
                 text={heading}
-                position={[headingX, headingY, 0]}
+                position={[textX, headingY, 0]}
                 anchorX="left"
                 anchorY="top"
                 calculatedFontSize={headingFontSize}
@@ -101,18 +59,17 @@ export function BioSection({
                 letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
             />
 
-            <group
-                ref={imageGroupRef}
-                position={[headingX + imageWidth / 2, contentY, 0]}
-            >
-                <Suspense fallback={null}>
-                    <BioImage
-                        materialRef={imageMaterialRef}
-                        width={imageWidth}
-                        height={imageHeight}
-                    />
-                </Suspense>
-            </group>
+            <Suspense fallback={null}>
+                <AnimatedRevealImage
+                    src={bioImage.src}
+                    width={imageWidth}
+                    height={imageHeight}
+                    position={[imageX, contentY, 0]}
+                    delay={CONFIG.detailsTimings.BODY_DELAY}
+                    stagger={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+                    startTrigger={startTrigger}
+                />
+            </Suspense>
 
             {lines.map((line, index) =>
                 line === "" ? null : (

@@ -278,7 +278,7 @@ export function Details({
       <BioSection
         heading={SECTION_HEADINGS.bio}
         lines={layout.bioLines}
-        headingX={leftX}
+        imageX={leftX}
         headingY={sectionY("bio").headingY}
         contentY={sectionY("bio").bodyY}
         imageWidth={layout.bioImageWidth * pxTo3DWidth}

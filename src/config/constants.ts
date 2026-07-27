@@ -63,6 +63,8 @@ export const CONFIG = {
         BIO_IMAGE_ASPECT: 2000 / 1500,
         BIO_CONTENT_TOP_MULT: 1.1,
         BIO_COLUMN_GAP_MULT: 0.04,
+        BIO_REVEAL_LINES: 9,
+        BIO_REVEAL_BLOCK_Z: 0.002,
     },
     detailsCurl: {
         FOLD_OFFSET_MULT: 0,

@@ -78,7 +78,7 @@ export const MobileContent = () => {
         ))}
       </Section>
 
-      <Section title="Bio" delay={0.8}>
+      <Section title="About me" delay={0.8}>
         {bioData.map((paragraph, index) => (
           <li
             key={index}

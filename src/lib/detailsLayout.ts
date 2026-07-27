@@ -47,7 +47,7 @@ export const SECTION_HEADINGS = {
     experience: "Experience",
     projects: "Featured Projects",
     education: "Education",
-    bio: "Bio",
+    bio: "About me",
     skills: "Skills",
 } as const;
 
