@@ -233,7 +233,10 @@ export function Details({
   };
 
   return (
-    <group position={[0, -sectionTravel, -0.05]} ref={rootGroupRef}>
+    <group
+      position={[0, -sectionTravel, CONFIG.scene.DETAILS_GROUP_Z]}
+      ref={rootGroupRef}
+    >
       <DetailsSection
         heading={SECTION_HEADINGS.experience}
         items={experienceItems}

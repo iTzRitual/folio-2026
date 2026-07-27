@@ -5,7 +5,7 @@ import {
   Center,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
+import { useLayoutEffect, useRef, type ComponentRef } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { gsap } from "gsap";
@@ -14,6 +14,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { applyModelCurlShader } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
 
 export default function Model({ isMobile, isDebug = false }: { isMobile?: boolean, isDebug?: boolean }) {
@@ -44,6 +45,22 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
 
   const { viewport } = useThree();
+  const materialRef = useRef<ComponentRef<typeof MeshTransmissionMaterial>>(null);
+
+  useLayoutEffect(() => {
+    const material = materialRef.current as
+      | (THREE.MeshPhysicalMaterial & { __curlPatched?: boolean })
+      | null;
+    if (!material || isMobile || material.__curlPatched) return;
+
+    const base = material.onBeforeCompile;
+    material.onBeforeCompile = (shader, renderer) => {
+      base.call(material, shader, renderer);
+      applyModelCurlShader(shader);
+    };
+    material.__curlPatched = true;
+    material.needsUpdate = true;
+  }, [isMobile]);
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -433,6 +450,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
               <Center>
                 <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
                   <MeshTransmissionMaterial
+                    ref={materialRef}
                     {...materialProps}
                     resolution={256}
                     samples={4}
