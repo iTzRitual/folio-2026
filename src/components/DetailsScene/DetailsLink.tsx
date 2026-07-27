@@ -140,8 +140,8 @@ export function DetailsLink({
     ? textDimensions.minY - calculatedFontSize * 0.1
     : -calculatedFontSize * 1.1;
 
-  const arrowSize = calculatedFontSize * 0.4;
-  const arrowGap = calculatedFontSize * 0.3;
+  const arrowSize = calculatedFontSize * CONFIG.detailsLink.ARROW_SIZE_MULT;
+  const arrowGap = calculatedFontSize * CONFIG.detailsLink.ARROW_GAP_MULT;
   const arrowX = textDimensions.width + arrowGap + arrowSize / 2;
   const arrowY =
     -calculatedFontSize * 0.15 - 1.5 * (calculatedFontSize / pixelFontSize);

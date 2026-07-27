@@ -37,7 +37,6 @@ export const CONFIG = {
         DETAILS_POPUP_START: 0.9,
         DETAILS_POPUP_END: 1.0,
         DETAILS_POPUP_SCALE: 0.6,
-        DETAILS_POPUP_X_FACTOR: 0.13,
         IDLE_ROTATION_SPEED_Z: 1.2,
         IDLE_ROTATION_SPEED_X_MAG: 0.2,
         IDLE_ROTATION_SPEED_Y_MAG: 0.1,
@@ -88,6 +87,8 @@ export const CONFIG = {
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",
         COLOR_DURATION: 0.15,
+        ARROW_SIZE_MULT: 0.4,
+        ARROW_GAP_MULT: 0.3,
         ARROW_NUDGE_FACTOR: 0.25,
         ARROW_DURATION: 0.2,
         UNDERLINE_PHASE_DURATION: 0.25,

@@ -30,6 +30,7 @@ export interface DetailsLayout {
     bioImageHeight: number;
     bioTextOffset: number;
     bioTextMaxWidth: number;
+    modelGapCenterPx: number;
     sections: Record<string, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
@@ -112,6 +113,36 @@ export function calculateDetailsLayout({
         fontsReady,
     );
 
+    const widestProject = projectsData.reduce(
+        (max, project) =>
+            Math.max(
+                max,
+                measureTextWidth(
+                    project.name,
+                    bodyFontSize,
+                    L.LETTER_SPACING,
+                    fontsReady,
+                ),
+            ),
+        0,
+    );
+
+    const widestSkill = skillsData.reduce(
+        (max, skill) =>
+            Math.max(
+                max,
+                measureTextWidth(skill, bodyFontSize, L.LETTER_SPACING, fontsReady),
+            ),
+        0,
+    );
+
+    const linkArrowWidth =
+        bodyFontSize * (CONFIG.detailsLink.ARROW_GAP_MULT + CONFIG.detailsLink.ARROW_SIZE_MULT);
+    const projectsRightEdge =
+        marginX + bodyColumnOffset + widestProject + linkArrowWidth;
+    const skillsLeftEdge = viewportWidth - marginX - widestSkill;
+    const modelGapCenterPx = (projectsRightEdge + skillsLeftEdge) / 2;
+
     const lineCounts: Record<string, number> = {
         experience: experienceData.length,
         projects: projectsData.length,
@@ -172,6 +203,7 @@ export function calculateDetailsLayout({
         bioImageHeight,
         bioTextOffset,
         bioTextMaxWidth,
+        modelGapCenterPx,
         sections: offsets,
         contentHeight,
         usableHeight,

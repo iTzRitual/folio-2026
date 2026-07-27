@@ -174,7 +174,8 @@ export function Details({
     const projectsCenter =
       projects.bodyY + (projectsData.length * layout.bodyLineHeight) / 2;
 
-    modelAnchorRef.current.xFraction = CONFIG.model.DETAILS_POPUP_X_FACTOR;
+    modelAnchorRef.current.xFraction =
+      layout.modelGapCenterPx / size.width - 0.5;
     modelAnchorRef.current.yFraction =
       (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
 
