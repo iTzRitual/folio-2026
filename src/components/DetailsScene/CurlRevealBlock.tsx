@@ -83,6 +83,7 @@ export function CurlRevealBlock({
             };
 
             apply(growFromLeft);
+            mesh.visible = false;
 
             if (!startTrigger || playedRef.current) return;
             playedRef.current = true;
@@ -100,7 +101,15 @@ export function CurlRevealBlock({
                 };
             }
 
-            const tl = gsap.timeline({ delay });
+            const tl = gsap.timeline({
+                delay,
+                onStart: () => {
+                    mesh.visible = true;
+                },
+                onComplete: () => {
+                    mesh.visible = false;
+                },
+            });
 
             tl.to(proxy, {
                 s: 1,
@@ -119,6 +128,7 @@ export function CurlRevealBlock({
             return () => {
                 const progress = tl.progress();
                 tl.kill();
+                mesh.visible = false;
 
                 if (progress === 0) {
                     playedRef.current = false;
@@ -145,6 +155,7 @@ export function CurlRevealBlock({
             ref={meshRef}
             position={[leftEdge, centerY, CONFIG.detailsReveal.BLOCK_Z]}
             scale-x={0.0001}
+            visible={false}
         >
             <planeGeometry
                 args={[width, height, 1, CONFIG.detailsReveal.BLOCK_SEGMENTS]}
