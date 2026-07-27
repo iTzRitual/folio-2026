@@ -95,6 +95,7 @@ export function DetailsSection({
                         key={item.text}
                         href={item.href}
                         previewImage={item.previewImage}
+                        rowPitchEm={bodyLineHeight / bodyFontSize}
                         {...shared}
                     />
                 ) : (

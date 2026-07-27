@@ -34,6 +34,8 @@ interface DetailsLinkProps {
   lineHeight?: number;
   letterSpacing?: number;
   htmlLetterSpacingOffset?: number;
+  /** Row-to-row spacing in em, used to close the dead space between links. */
+  rowPitchEm?: number;
   blockColor?: string;
   selectionColor?: string;
   selectionBgColor?: string;
@@ -58,6 +60,7 @@ export function DetailsLink({
   lineHeight = 1,
   letterSpacing = -0.03,
   htmlLetterSpacingOffset = -0.004,
+  rowPitchEm,
   blockColor,
   selectionBgColor = "#BCBCBC",
   selectionColor = "#1D1D1D",
@@ -145,6 +148,14 @@ export function DetailsLink({
   };
 
   const revealColor = blockColor ?? color;
+
+  // The twin is only as tall as its own line, so consecutive rows leave a
+  // strip of nothing between them — enough to drop the hover and bounce the
+  // model back mid-way to the next project. Half the leftover pitch above and
+  // below makes the rows tile exactly, without touching the layout.
+  const hitPadEm = rowPitchEm
+    ? Math.max((rowPitchEm - lineHeight) / 2, 0)
+    : 0;
 
   const underlineWidth = textDimensions.width;
   const underlineThickness = calculatedFontSize * 0.04;
@@ -336,12 +347,19 @@ export function DetailsLink({
           rel="noopener noreferrer"
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
-          className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block no-underline outline-none`}
+          className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`}
           style={{
             fontSize: `${pixelFontSize}px`,
             letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
           }}
         >
+          {hitPadEm > 0 && (
+            <span
+              aria-hidden
+              className="absolute inset-x-0 block"
+              style={{ top: `${-hitPadEm}em`, bottom: `${-hitPadEm}em` }}
+            />
+          )}
           <p
             className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
             style={
