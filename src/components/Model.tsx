@@ -165,7 +165,7 @@ export default function Model({
       );
       vel.current.multiplyScalar(velocityDamping);
 
-      if (pos.current.lengthSq() < 0.0025) {
+      if (pos.current.lengthSq() < CONFIG.model.RETURN_SNAP_EPSILON) {
         pos.current.set(0, 0, 0);
         vel.current.set(0, 0, 0);
       }
