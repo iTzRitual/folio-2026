@@ -16,7 +16,11 @@ export function HeroTransitionProvider({
 }: HeroTransitionProviderProps) {
   const progressRef = useRef(0);
   const detailsScrollRef = useRef(0);
-  const modelAnchorRef = useRef({ xFraction: 0, yFraction: 0 });
+  const modelAnchorRef = useRef({
+    xFraction: 0,
+    yFraction: 0,
+    scale: CONFIG.model.DETAILS_POPUP_SCALE,
+  });
 
   useGSAP(() => {
     const scrollState = { progress: 0 };

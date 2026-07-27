@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useControls } from "leva";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
-import { Group } from "three";
+import { Group, MathUtils } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useFontsReady } from "@/hooks/useFontsReady";
@@ -174,10 +174,39 @@ export function Details({
     const projectsCenter =
       projects.bodyY + (projectsData.length * layout.bodyLineHeight) / 2;
 
-    modelAnchorRef.current.xFraction =
-      layout.modelGapCenterPx / size.width - 0.5;
-    modelAnchorRef.current.yFraction =
+    const gapX = layout.modelGapCenterPx / size.width - 0.5;
+    const gapY =
       (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
+
+    const bioTopY =
+      groupY + sectionTop - layout.sections.bio.headingY * pxTo3DHeight;
+    const bioProgress = MathUtils.clamp(
+      (bioTopY + viewport.height / 2) /
+        (viewport.height * CONFIG.model.BIO_HANDOFF_SPAN_MULT),
+      0,
+      1,
+    );
+
+    const faceX =
+      (leftX +
+        layout.bioImageWidth *
+          pxTo3DWidth *
+          CONFIG.detailsLayout.BIO_FACE_X_MULT) /
+      viewport.width;
+    const faceY =
+      (bioTopY -
+        layout.bioImageHeight *
+          pxTo3DHeight *
+          CONFIG.detailsLayout.BIO_FACE_Y_MULT) /
+      viewport.height;
+
+    modelAnchorRef.current.xFraction = MathUtils.lerp(gapX, faceX, bioProgress);
+    modelAnchorRef.current.yFraction = MathUtils.lerp(gapY, faceY, bioProgress);
+    modelAnchorRef.current.scale = MathUtils.lerp(
+      CONFIG.model.DETAILS_POPUP_SCALE,
+      CONFIG.model.BIO_FACE_SCALE,
+      bioProgress,
+    );
 
     const revealEdge =
       -viewport.height / 2 +

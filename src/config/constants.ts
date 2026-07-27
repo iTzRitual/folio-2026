@@ -41,6 +41,8 @@ export const CONFIG = {
         DETAILS_POPUP_START: 0.9,
         DETAILS_POPUP_END: 1.0,
         DETAILS_POPUP_SCALE: 0.6,
+        BIO_FACE_SCALE: 0.16,
+        BIO_HANDOFF_SPAN_MULT: 0.6,
         IDLE_ROTATION_SPEED_Z: 1.2,
         IDLE_ROTATION_SPEED_X_MAG: 0.2,
         IDLE_ROTATION_SPEED_Y_MAG: 0.1,
@@ -70,6 +72,8 @@ export const CONFIG = {
         BIO_REVEAL_BLOCK_Z: 0.002,
         BIO_REVEAL_BLOCK_OVERHANG: 1.1,
         BIO_REVEAL_BLOCK_RADIUS_PX: 8,
+        BIO_FACE_X_MULT: 0.55,
+        BIO_FACE_Y_MULT: 0.405,
     },
     detailsReveal: {
         BLOCK_WIDTH_MULT: 1.01,

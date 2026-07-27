@@ -8,6 +8,7 @@ import {
 export interface ModelAnchor {
   xFraction: number;
   yFraction: number;
+  scale: number;
 }
 
 export interface HeroTransitionContextType {

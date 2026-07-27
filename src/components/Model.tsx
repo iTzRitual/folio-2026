@@ -279,7 +279,7 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
         const scaleOutValue = 1 - scaleOutProgress;
         const targetScale = THREE.MathUtils.lerp(
           scaleOutValue,
-          CONFIG.model.DETAILS_POPUP_SCALE,
+          modelAnchorRef.current.scale,
           popupProgress,
         );
 
