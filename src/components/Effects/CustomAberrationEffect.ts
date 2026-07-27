@@ -7,6 +7,7 @@ const {
   SCROLL_BLUR,
   SCROLL_SPLIT,
   SCROLL_VIGNETTE_X_WEIGHT,
+  SCROLL_VIGNETTE_FLOOR,
   SCROLL_VIGNETTE_INNER,
   SCROLL_VIGNETTE_OUTER,
 } = CONFIG.customAberration;
@@ -42,10 +43,14 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec2 rgbOffset = u_mouseVelocity * strength * u_aberrationIntensity * 1.5;
 
     vec2 fromCenter = (uv - 0.5) * vec2(${glslFloat(SCROLL_VIGNETTE_X_WEIGHT)}, 1.0);
-    float edge = smoothstep(
-        ${glslFloat(SCROLL_VIGNETTE_INNER)},
-        ${glslFloat(SCROLL_VIGNETTE_OUTER)},
-        length(fromCenter)
+    float edge = mix(
+        ${glslFloat(SCROLL_VIGNETTE_FLOOR)},
+        1.0,
+        smoothstep(
+            ${glslFloat(SCROLL_VIGNETTE_INNER)},
+            ${glslFloat(SCROLL_VIGNETTE_OUTER)},
+            length(fromCenter)
+        )
     );
     float blurAmount = abs(u_scrollVelocity) * ${glslFloat(SCROLL_BLUR)} * edge;
     vec2 scrollSplit = vec2(0.0, u_scrollVelocity * ${glslFloat(SCROLL_SPLIT)} * edge);
