@@ -15,7 +15,7 @@ const BLOCK_ALPHA = /* glsl */ `
   vec2 blockCorner =
     max(abs(vBlockUv - 0.5) - (0.5 - uBlockRadiusUv), 0.0) / uBlockRadiusUv;
   float blockDist = length(blockCorner) - 1.0;
-  float blockEdge = max(fwidth(blockDist), 1e-5);
+  float blockEdge = clamp(fwidth(blockDist), 1e-5, 0.5);
   diffuseColor.a *= 1.0 - smoothstep(-blockEdge, blockEdge, blockDist);
 }
 #include <opaque_fragment>
