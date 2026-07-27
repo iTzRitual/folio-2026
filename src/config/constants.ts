@@ -18,7 +18,6 @@ const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 
 export const CONFIG = {
     scene: {
-        CAMERA_Z: 5,
         DETAILS_GROUP_Z: -0.05,
     },
     scrollTimeline: {
