@@ -178,35 +178,50 @@ export function Details({
     const gapY =
       (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
 
-    const bioTopY =
-      groupY + sectionTop - layout.sections.bio.headingY * pxTo3DHeight;
-    const bioProgress = MathUtils.clamp(
-      (bioTopY + viewport.height / 2) /
-        (viewport.height * CONFIG.model.BIO_HANDOFF_SPAN_MULT),
-      0,
-      1,
-    );
+    const foldFade =
+      1 -
+      MathUtils.clamp(
+        (gapY - CONFIG.model.FOLD_FADE_START_FRACTION) /
+          (CONFIG.model.FOLD_FADE_END_FRACTION -
+            CONFIG.model.FOLD_FADE_START_FRACTION),
+        0,
+        1,
+      );
 
-    const faceX =
-      (leftX +
-        layout.bioImageWidth *
-          pxTo3DWidth *
-          CONFIG.detailsLayout.BIO_FACE_X_MULT) /
-      viewport.width;
-    const faceY =
-      (bioTopY -
-        layout.bioImageHeight *
-          pxTo3DHeight *
-          CONFIG.detailsLayout.BIO_FACE_Y_MULT) /
-      viewport.height;
+    const anchor = modelAnchorRef.current;
 
-    modelAnchorRef.current.xFraction = MathUtils.lerp(gapX, faceX, bioProgress);
-    modelAnchorRef.current.yFraction = MathUtils.lerp(gapY, faceY, bioProgress);
-    modelAnchorRef.current.scale = MathUtils.lerp(
-      CONFIG.model.DETAILS_POPUP_SCALE,
-      CONFIG.model.BIO_FACE_SCALE,
-      bioProgress,
-    );
+    if (foldFade > 0) {
+      anchor.stage = 0;
+      anchor.xFraction = gapX;
+      anchor.yFraction = gapY;
+      anchor.scale = CONFIG.model.DETAILS_POPUP_SCALE * foldFade;
+      anchor.lookWeight = 0;
+    } else {
+      const bioTopY =
+        groupY + sectionTop - layout.sections.bio.headingY * pxTo3DHeight;
+      const bioProgress = MathUtils.clamp(
+        (bioTopY + viewport.height / 2) /
+          (viewport.height * CONFIG.model.BIO_HANDOFF_SPAN_MULT),
+        0,
+        1,
+      );
+
+      anchor.stage = 1;
+      anchor.xFraction =
+        (leftX +
+          layout.bioImageWidth *
+            pxTo3DWidth *
+            CONFIG.detailsLayout.BIO_FACE_X_MULT) /
+        viewport.width;
+      anchor.yFraction =
+        (bioTopY -
+          layout.bioImageHeight *
+            pxTo3DHeight *
+            CONFIG.detailsLayout.BIO_FACE_Y_MULT) /
+        viewport.height;
+      anchor.scale = CONFIG.model.BIO_FACE_SCALE * bioProgress;
+      anchor.lookWeight = bioProgress;
+    }
 
     const revealEdge =
       -viewport.height / 2 +

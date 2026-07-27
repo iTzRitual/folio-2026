@@ -42,6 +42,8 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
 
   const lastInteractionTime = useRef(0);
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
+  const previousAnchorStage = useRef(0);
+  const lookPointer = useRef(new THREE.Vector2(0, 0));
 
   const { viewport } = useThree();
 
@@ -213,18 +215,26 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
                 popupProgress,
               );
 
-        animGroupRef.current.position.x = THREE.MathUtils.damp(
-          animGroupRef.current.position.x,
-          targetX,
-          10,
-          dt,
-        );
-        animGroupRef.current.position.y = THREE.MathUtils.damp(
-          animGroupRef.current.position.y,
-          targetY,
-          10,
-          dt,
-        );
+        const teleport =
+          modelAnchorRef.current.stage !== previousAnchorStage.current;
+        previousAnchorStage.current = modelAnchorRef.current.stage;
+
+        animGroupRef.current.position.x = teleport
+          ? targetX
+          : THREE.MathUtils.damp(
+              animGroupRef.current.position.x,
+              targetX,
+              10,
+              dt,
+            );
+        animGroupRef.current.position.y = teleport
+          ? targetY
+          : THREE.MathUtils.damp(
+              animGroupRef.current.position.y,
+              targetY,
+              10,
+              dt,
+            );
       }
     }
 
@@ -354,15 +364,58 @@ export default function Model({ isMobile, isDebug = false }: { isMobile?: boolea
       interactiveGroupRef.current.position.copy(pos.current);
     }
 
-    if (mesh.current && !prefersReducedMotion) {
+    if (mesh.current) {
       const t = state.clock.getElapsedTime();
-      mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
-      mesh.current.rotation.x =
-        Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
-      mesh.current.rotation.y =
-        Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
+      const look = modelAnchorRef.current.lookWeight;
+
+      lookPointer.current.x = THREE.MathUtils.damp(
+        lookPointer.current.x,
+        state.pointer.x,
+        CONFIG.model.LOOK_POINTER_SMOOTHNESS,
+        dt,
+      );
+      lookPointer.current.y = THREE.MathUtils.damp(
+        lookPointer.current.y,
+        state.pointer.y,
+        CONFIG.model.LOOK_POINTER_SMOOTHNESS,
+        dt,
+      );
+
+      const idleX = prefersReducedMotion
+        ? 0
+        : Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+          CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
+      const idleY = prefersReducedMotion
+        ? 0
+        : Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
+          CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
+
+      mesh.current.rotation.x = THREE.MathUtils.lerp(
+        idleX,
+        -lookPointer.current.y * CONFIG.model.LOOK_RANGE_X,
+        look,
+      );
+      mesh.current.rotation.y = THREE.MathUtils.lerp(
+        idleY,
+        lookPointer.current.x * CONFIG.model.LOOK_RANGE_Y,
+        look,
+      );
+
+      if (!prefersReducedMotion) {
+        const spun =
+          mesh.current.rotation.z +
+          dt * CONFIG.model.IDLE_ROTATION_SPEED_Z * (1 - look);
+        const turn = Math.PI * 2;
+        mesh.current.rotation.z =
+          (((spun + Math.PI) % turn) + turn) % turn - Math.PI;
+      }
+
+      mesh.current.rotation.z = THREE.MathUtils.damp(
+        mesh.current.rotation.z,
+        0,
+        CONFIG.model.LOOK_SETTLE_SMOOTHNESS * look,
+        dt,
+      );
     }
   });
 

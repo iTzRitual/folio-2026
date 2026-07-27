@@ -20,6 +20,8 @@ export function HeroTransitionProvider({
     xFraction: 0,
     yFraction: 0,
     scale: CONFIG.model.DETAILS_POPUP_SCALE,
+    lookWeight: 0,
+    stage: 0,
   });
 
   useGSAP(() => {
