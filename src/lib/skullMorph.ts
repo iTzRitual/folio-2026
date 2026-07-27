@@ -30,6 +30,7 @@ export interface FlatMorphTarget {
     rectHeight: number;
     /** Plate centre in geometry-local units. */
     centerX: number;
+    centerY: number;
     centerZ: number;
 }
 
@@ -130,7 +131,7 @@ export function buildFlatMorphTarget(
         positions[i * 3 + 2] = centerZ + z * stretch;
     }
 
-    return { positions, rectWidth, rectHeight, centerX, centerZ };
+    return { positions, rectWidth, rectHeight, centerX, centerY, centerZ };
 }
 
 /** Installs the target as morph target 0. No-op once it is already there. */

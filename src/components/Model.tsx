@@ -72,7 +72,8 @@ export default function Model({
   const previewMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const skullMeshRef = useRef<THREE.Mesh | null>(null);
 
-  const previewTextures = useProjectPreviewTextures();
+  // Details — and with it the project hover — is desktop only.
+  const previewTextures = useProjectPreviewTextures(!isMobile);
   const { hoveredPreview } = useProjectHover();
   // Keep the last hovered preview around so the plate can animate back out
   // with the right screenshot still on it.
@@ -128,6 +129,7 @@ export default function Model({
     mesh: new THREE.Quaternion(),
     local: new THREE.Quaternion(),
     target: new THREE.Quaternion(),
+    plateCenter: new THREE.Vector3(),
   });
 
   useGSAP(
@@ -562,6 +564,20 @@ export default function Model({
       previewGroup.scale.setScalar(
         previewMode === "scale" ? Math.max(preview.plate, 1e-4) : 1,
       );
+
+      // Track where the plate actually lands rather than assuming the model
+      // sits centred on the group's origin.
+      if (previewGroup.visible && skullMesh && previewGroup.parent) {
+        const center = orientTemp.current.plateCenter;
+        center.set(flatTarget.centerX, flatTarget.centerY, flatTarget.centerZ);
+        skullMesh.localToWorld(center);
+        previewGroup.parent.worldToLocal(center);
+        center.z +=
+          (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
+            CONFIG.projectPreview.IMAGE_GAP) *
+          responsiveScale;
+        previewGroup.position.copy(center);
+      }
     }
     if (previewMaterialRef.current) {
       previewMaterialRef.current.opacity = THREE.MathUtils.clamp(
@@ -654,26 +670,18 @@ export default function Model({
               </group>
             </group>
 
-            <group
-              ref={previewGroupRef}
-              visible={false}
-              position={[
-                0,
-                0,
-                (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
-                  CONFIG.projectPreview.IMAGE_GAP) *
-                  responsiveScale,
-              ]}
-            >
-              <ProjectPreviewPlane
-                texture={
-                  shownPreview ? (previewTextures[shownPreview] ?? null) : null
-                }
-                width={previewWidth}
-                height={previewHeight}
-                materialRef={previewMaterialRef}
-              />
-            </group>
+            {!isMobile && (
+              <group ref={previewGroupRef} visible={false}>
+                <ProjectPreviewPlane
+                  texture={
+                    shownPreview ? (previewTextures[shownPreview] ?? null) : null
+                  }
+                  width={previewWidth}
+                  height={previewHeight}
+                  materialRef={previewMaterialRef}
+                />
+              </group>
+            )}
           </group>
         </group>
       </group>

@@ -47,10 +47,12 @@ function roundedShader(radiusUv: { value: THREE.Vector2 }) {
  * Loads every project preview up front. The skull lives inside a Suspense
  * boundary, so suspending on a hover-time texture fetch would blank it out.
  */
-export function useProjectPreviewTextures() {
+export function useProjectPreviewTextures(enabled: boolean) {
     const [textures, setTextures] = useState<Record<string, THREE.Texture>>({});
 
     useEffect(() => {
+        if (!enabled) return;
+
         const loader = new THREE.TextureLoader();
         const loaded: Record<string, THREE.Texture> = {};
         let cancelled = false;
@@ -71,7 +73,7 @@ export function useProjectPreviewTextures() {
             cancelled = true;
             for (const texture of Object.values(loaded)) texture.dispose();
         };
-    }, []);
+    }, [enabled]);
 
     return textures;
 }
