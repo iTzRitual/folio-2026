@@ -32,6 +32,7 @@ import { CONFIG } from "../config/constants";
 
 const CURL_DEFAULTS: CurlSettings = {
   foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
+  bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,
   radiusMult: CONFIG.detailsCurl.RADIUS_MULT,
   maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
@@ -44,6 +45,12 @@ const CURL_LEVA_SCHEMA = {
     value: CURL_DEFAULTS.foldOffsetMult,
     min: -0.3,
     max: 0.3,
+    step: 0.005,
+  },
+  bottomOffsetMult: {
+    value: CURL_DEFAULTS.bottomOffsetMult,
+    min: 0,
+    max: 0.5,
     step: 0.005,
   },
   radiusMult: {
@@ -110,8 +117,14 @@ export function Details({
   const curl = isDebug ? levaCurl : CURL_DEFAULTS;
   const levaAnchor = useControls("Model anchor", ANCHOR_LEVA_SCHEMA);
   const anchorCfg = isDebug ? levaAnchor : ANCHOR_DEFAULTS;
-  const { foldOffsetMult, radiusMult, maxAngle, fadeAngleStart, fadeAngleEnd } =
-    curl;
+  const {
+    foldOffsetMult,
+    bottomOffsetMult,
+    radiusMult,
+    maxAngle,
+    fadeAngleStart,
+    fadeAngleEnd,
+  } = curl;
 
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
@@ -155,6 +168,7 @@ export function Details({
   useLayoutEffect(() => {
     applyCurlSettings(viewport.height, titleSettledBottomY, contentRestY, {
       foldOffsetMult,
+      bottomOffsetMult,
       radiusMult,
       maxAngle,
       fadeAngleStart,
@@ -166,6 +180,7 @@ export function Details({
     titleSettledBottomY,
     contentRestY,
     foldOffsetMult,
+    bottomOffsetMult,
     radiusMult,
     maxAngle,
     fadeAngleStart,

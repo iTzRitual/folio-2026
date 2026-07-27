@@ -3,6 +3,7 @@ import { CONFIG } from "@/config/constants";
 
 export const curlUniforms: Record<string, { value: number }> = {
     uCurlFoldY: { value: 0 },
+    uCurlBottomY: { value: -1e6 },
     uCurlRadius: { value: 1 },
     uCurlMaxAngle: { value: CONFIG.detailsCurl.MAX_ANGLE },
     uCurlBend: { value: 1 },
@@ -15,6 +16,7 @@ export const curlFadeRange: { start: number; end: number } = {
 
 export interface CurlSettings {
     foldOffsetMult: number;
+    bottomOffsetMult: number;
     radiusMult: number;
     maxAngle: number;
     fadeAngleStart: number;
@@ -37,6 +39,8 @@ export function applyCurlSettings(
             titleSettledBottomY - settings.fadeAngleEnd * radius,
         ) +
         viewportHeight * settings.foldOffsetMult;
+    curlUniforms.uCurlBottomY.value =
+        -viewportHeight / 2 + viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
     curlFadeRange.start = settings.fadeAngleStart;
@@ -45,6 +49,7 @@ export function applyCurlSettings(
 
 const CURL_DEFS = /* glsl */ `
 uniform float uCurlFoldY;
+uniform float uCurlBottomY;
 uniform float uCurlRadius;
 uniform float uCurlMaxAngle;
 uniform float uCurlBend;
@@ -55,17 +60,23 @@ const CURL_BODY = /* glsl */ `
 {
   vec4 curlWorld = modelMatrix * vec4(transformed, 1.0);
   float curlRise = curlWorld.y - uCurlFoldY;
+  float curlDrop = uCurlBottomY - curlWorld.y;
 
   if (curlRise > 0.0) {
     float curlTheta = min(curlRise / uCurlRadius, uCurlMaxAngle);
     transformed.y += (uCurlFoldY + uCurlRadius * sin(curlTheta) - curlWorld.y) * uCurlBend;
     transformed.z -= uCurlRadius * (1.0 - cos(curlTheta)) * uCurlBend;
+  } else if (curlDrop > 0.0) {
+    float curlTheta = min(curlDrop / uCurlRadius, uCurlMaxAngle);
+    transformed.y += (uCurlBottomY - uCurlRadius * sin(curlTheta) - curlWorld.y) * uCurlBend;
+    transformed.z += uCurlRadius * (1.0 - cos(curlTheta)) * uCurlBend;
   }
 }
 `;
 
 export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlFoldY = curlUniforms.uCurlFoldY;
+    shader.uniforms.uCurlBottomY = curlUniforms.uCurlBottomY;
     shader.uniforms.uCurlRadius = curlUniforms.uCurlRadius;
     shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
     shader.uniforms.uCurlBend = curlUniforms.uCurlBend;
@@ -82,6 +93,15 @@ export function curlAngle(worldY: number) {
     if (rise <= 0) return 0;
     return Math.min(
         rise / curlUniforms.uCurlRadius.value,
+        curlUniforms.uCurlMaxAngle.value,
+    );
+}
+
+export function curlBottomAngle(worldY: number) {
+    const drop = curlUniforms.uCurlBottomY.value - worldY;
+    if (drop <= 0) return 0;
+    return Math.min(
+        drop / curlUniforms.uCurlRadius.value,
         curlUniforms.uCurlMaxAngle.value,
     );
 }
