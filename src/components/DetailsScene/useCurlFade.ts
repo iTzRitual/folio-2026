@@ -24,7 +24,7 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
         const fade = Math.min(curlOpacity(angle), curlOpacity(bottomAngle));
         applyOpacity(revealedRef.current ? fade : 0, fade);
 
-        const hidden = angle > 0 || bottomAngle > 0;
+        const hidden = angle > 0;
         if (hidden !== twinHiddenRef.current) {
             twinHiddenRef.current = hidden;
             const twin = twinRef.current;
