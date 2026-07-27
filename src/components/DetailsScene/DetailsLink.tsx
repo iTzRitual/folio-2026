@@ -1,13 +1,14 @@
 "use client";
 
 import { Html, Text } from "@react-three/drei";
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import gsap from "gsap";
-import { AnimatedRevealText } from "../AnimatedRevealText";
 import type { Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
 import { applyCurlShader } from "@/lib/detailsCurl";
+import { readTextBounds, type TextBounds } from "@/lib/textBounds";
+import { CurlRevealBlock } from "./CurlRevealBlock";
 import { useCurlFade } from "./useCurlFade";
 
 interface DetailsLinkProps {
@@ -23,7 +24,6 @@ interface DetailsLinkProps {
   color: string;
   startTrigger: boolean;
   delay?: number;
-  animateOnScroll?: boolean;
   direction?: "leftToRight" | "rightToLeft";
   lineHeight?: number;
   letterSpacing?: number;
@@ -47,7 +47,6 @@ export function DetailsLink({
   color,
   startTrigger,
   delay = 0,
-  animateOnScroll = true,
   direction = "leftToRight",
   lineHeight = 1,
   letterSpacing = -0.03,
@@ -61,11 +60,14 @@ export function DetailsLink({
   const underlineRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
 
+  const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
-    (opacity) => {
+    (opacity, curlFade) => {
       if (materialRef.current) materialRef.current.opacity = opacity;
       if (underlineRef.current) underlineRef.current.opacity = opacity;
       if (arrowRef.current) arrowRef.current.opacity = opacity;
+      if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
     },
   );
 
@@ -81,6 +83,11 @@ export function DetailsLink({
     maxY: 0,
   });
   const [arrowTex, setArrowTex] = useState<THREE.Texture | null>(null);
+  const [revealBounds, setRevealBounds] = useState<TextBounds | null>(null);
+
+  const handleHalfway = useCallback(() => {
+    revealedRef.current = true;
+  }, [revealedRef]);
 
   useEffect(() => {
     new THREE.TextureLoader().load("/link_arrow.svg", (tex) => {
@@ -103,6 +110,9 @@ export function DetailsLink({
   }, [anchorY]);
 
   const handleSync = (mesh: Mesh) => {
+    const measured = readTextBounds(mesh);
+    if (measured) setRevealBounds((current) => (current ? current : measured));
+
     if (mesh?.geometry) {
       mesh.geometry.computeBoundingBox();
       if (mesh.geometry.boundingBox) {
@@ -275,6 +285,26 @@ export function DetailsLink({
         </>
       )}
 
+      {revealBounds && (
+        <CurlRevealBlock
+          bounds={{
+            ...revealBounds,
+            maxX: revealBounds.maxX + arrowGap + arrowSize,
+          }}
+          color={revealColor}
+          cornerRadius={
+            (CONFIG.detailsReveal.BLOCK_RADIUS_PX * calculatedFontSize) /
+            pixelFontSize
+          }
+          direction={direction}
+          delay={delay}
+          duration={CONFIG.copy.DURATION}
+          startTrigger={startTrigger}
+          materialRef={blockMaterialRef}
+          onHalfway={handleHalfway}
+        />
+      )}
+
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <a
           ref={twinRef}
@@ -289,37 +319,26 @@ export function DetailsLink({
             letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
           }}
         >
-          <AnimatedRevealText
-            animateOnScroll={animateOnScroll}
-            delay={delay}
-            blockColor={revealColor}
-            direction={direction}
-            startTrigger={startTrigger}
-            onReveal={() => {
-              revealedRef.current = true;
-            }}
+          <p
+            className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
+            style={
+              {
+                color: "transparent",
+                "--selection-bg": selectionBgColor,
+                "--selection-color": selectionColor,
+              } as React.CSSProperties
+            }
           >
-            <p
-              className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
-              style={
-                {
-                  color: "transparent",
-                  "--selection-bg": selectionBgColor,
-                  "--selection-color": selectionColor,
-                } as React.CSSProperties
-              }
+            {text}
+            <span
+              className="inline-block"
+              style={{
+                width: `${(arrowGap + arrowSize) / calculatedFontSize + 0.2}em`,
+              }}
             >
-              {text}
-              <span
-                className="inline-block"
-                style={{
-                  width: `${(arrowGap + arrowSize) / calculatedFontSize + 0.2}em`,
-                }}
-              >
-                &#8203;
-              </span>
-            </p>
-          </AnimatedRevealText>
+              &#8203;
+            </span>
+          </p>
         </a>
       </Html>
     </group>

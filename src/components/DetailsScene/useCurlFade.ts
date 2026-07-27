@@ -6,7 +6,7 @@ import { Group, Vector3 } from "three";
 import { curlAngle, curlOpacity } from "@/lib/detailsCurl";
 
 export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
-    applyOpacity: (opacity: number) => void,
+    applyOpacity: (opacity: number, curlFade: number) => void,
 ) {
     const groupRef = useRef<Group>(null);
     const twinRef = useRef<T>(null);
@@ -20,7 +20,8 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
 
         group.getWorldPosition(worldPosition.current);
         const angle = curlAngle(worldPosition.current.y);
-        applyOpacity(revealedRef.current ? curlOpacity(angle) : 0);
+        const fade = curlOpacity(angle);
+        applyOpacity(revealedRef.current ? fade : 0, fade);
 
         const hidden = angle > 0;
         if (hidden !== twinHiddenRef.current) {

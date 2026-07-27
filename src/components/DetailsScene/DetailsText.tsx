@@ -1,12 +1,13 @@
 "use client";
 
 import { Html, Text } from "@react-three/drei";
-import { useMemo, useRef } from "react";
-import { AnimatedRevealText } from "../AnimatedRevealText";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { applyCurlShader } from "@/lib/detailsCurl";
+import { readTextBounds, type TextBounds } from "@/lib/textBounds";
+import { CurlRevealBlock } from "./CurlRevealBlock";
 import { useCurlFade } from "./useCurlFade";
 
 interface DetailsTextProps {
@@ -21,7 +22,6 @@ interface DetailsTextProps {
   color: string;
   startTrigger: boolean;
   delay?: number;
-  animateOnScroll?: boolean;
   direction?: "leftToRight" | "rightToLeft";
   lineHeight?: number;
   letterSpacing?: number;
@@ -44,7 +44,6 @@ export function DetailsText({
   color,
   startTrigger,
   delay = 0,
-  animateOnScroll = true,
   direction = "leftToRight",
   lineHeight = 1,
   letterSpacing = -0.03,
@@ -55,10 +54,23 @@ export function DetailsText({
   onSync,
 }: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const [bounds, setBounds] = useState<TextBounds | null>(null);
 
-  const { groupRef, twinRef, revealedRef } = useCurlFade((opacity) => {
+  const { groupRef, twinRef, revealedRef } = useCurlFade((opacity, curlFade) => {
     if (materialRef.current) materialRef.current.opacity = opacity;
+    if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
   });
+
+  const handleSync = (mesh: Mesh) => {
+    const measured = readTextBounds(mesh);
+    if (measured) setBounds((current) => (current ? current : measured));
+    onSync?.(mesh);
+  };
+
+  const handleHalfway = useCallback(() => {
+    revealedRef.current = true;
+  }, [revealedRef]);
 
   const xAlignClass = useMemo(() => {
     if (anchorX === "left") return "left-0";
@@ -83,7 +95,7 @@ export function DetailsText({
         lineHeight={lineHeight}
         letterSpacing={letterSpacing}
         glyphGeometryDetail={CONFIG.detailsCurl.GLYPH_DETAIL}
-        onSync={onSync}
+        onSync={handleSync}
       >
         {text}
         <meshBasicMaterial
@@ -95,6 +107,23 @@ export function DetailsText({
         />
       </Text>
 
+      {bounds && (
+        <CurlRevealBlock
+          bounds={bounds}
+          color={revealColor}
+          cornerRadius={
+            (CONFIG.detailsReveal.BLOCK_RADIUS_PX * calculatedFontSize) /
+            pixelFontSize
+          }
+          direction={direction}
+          delay={delay}
+          duration={CONFIG.copy.DURATION}
+          startTrigger={startTrigger}
+          materialRef={blockMaterialRef}
+          onHalfway={handleHalfway}
+        />
+      )}
+
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <div
           ref={twinRef}
@@ -104,27 +133,16 @@ export function DetailsText({
             letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
           }}
         >
-          <AnimatedRevealText
-            animateOnScroll={animateOnScroll}
-            delay={delay}
-            blockColor={revealColor}
-            direction={direction}
-            startTrigger={startTrigger}
-            onReveal={() => {
-              revealedRef.current = true;
-            }}
+          <p
+            className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
+            style={{
+              color: "transparent",
+              "--selection-bg": selectionBgColor,
+              "--selection-color": selectionColor,
+            } as React.CSSProperties}
           >
-            <p
-              className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
-              style={{
-                color: "transparent",
-                "--selection-bg": selectionBgColor,
-                "--selection-color": selectionColor,
-              } as React.CSSProperties}
-            >
-              {text}
-            </p>
-          </AnimatedRevealText>
+            {text}
+          </p>
         </div>
       </Html>
     </group>

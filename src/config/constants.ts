@@ -68,6 +68,13 @@ export const CONFIG = {
         BIO_REVEAL_BLOCK_OVERHANG: 1.1,
         BIO_REVEAL_BLOCK_RADIUS_PX: 8,
     },
+    detailsReveal: {
+        BLOCK_WIDTH_MULT: 1.01,
+        BLOCK_HEIGHT_MULT: 1.1,
+        BLOCK_RADIUS_PX: 8,
+        BLOCK_SEGMENTS: 6,
+        BLOCK_Z: 0.002,
+    },
     detailsCurl: {
         FOLD_OFFSET_MULT: 0,
         RADIUS_MULT: 0.085,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useTexture } from "@react-three/drei";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -9,32 +9,12 @@ import {
     Vector2,
     type Group,
     type MeshBasicMaterial,
-    type WebGLProgramParametersWithUniforms,
 } from "three";
 import { CONFIG, THEME } from "@/config/constants";
 import { applyCurlShader } from "@/lib/detailsCurl";
+import { roundedCurlShader } from "@/lib/revealBlockShader";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useCurlFade } from "./useCurlFade";
-
-const BLOCK_VARYING = /* glsl */ `
-varying vec2 vBlockUv;
-`;
-
-const BLOCK_DEFS = /* glsl */ `
-uniform vec2 uBlockRadiusUv;
-varying vec2 vBlockUv;
-`;
-
-const BLOCK_ALPHA = /* glsl */ `
-{
-  vec2 blockCorner =
-    max(abs(vBlockUv - 0.5) - (0.5 - uBlockRadiusUv), 0.0) / uBlockRadiusUv;
-  float blockDist = length(blockCorner) - 1.0;
-  float blockEdge = max(fwidth(blockDist), 1e-5);
-  diffuseColor.a *= 1.0 - smoothstep(-blockEdge, blockEdge, blockDist);
-}
-#include <opaque_fragment>
-`;
 
 interface AnimatedRevealImageProps {
     src: string;
@@ -69,7 +49,7 @@ export function AnimatedRevealImage({
     const imageMaterialRef = useRef<MeshBasicMaterial>(null);
     const blockGroupRefs = useRef<(Group | null)[]>([]);
     const blockMaterialRefs = useRef<(MeshBasicMaterial | null)[]>([]);
-    const blockRadiusUv = useRef({ value: new Vector2(1, 1) });
+    const blockRadiusUv = useMemo(() => ({ value: new Vector2(1, 1) }), []);
 
     const lineHeight = height / lines;
     const blockHeight = lineHeight * CONFIG.detailsLayout.BIO_REVEAL_BLOCK_OVERHANG;
@@ -77,31 +57,15 @@ export function AnimatedRevealImage({
     const blockWidth = width + radius * 2;
 
     useLayoutEffect(() => {
-        blockRadiusUv.current.value.set(
+        blockRadiusUv.value.set(
             Math.max(radius / blockWidth, 1e-4),
             Math.max(radius / blockHeight, 1e-4),
         );
-    }, [radius, blockWidth, blockHeight]);
+    }, [blockRadiusUv, radius, blockWidth, blockHeight]);
 
-    const applyBlockShader = useCallback(
-        (shader: WebGLProgramParametersWithUniforms) => {
-            applyCurlShader(shader);
-
-            shader.uniforms.uBlockRadiusUv = blockRadiusUv.current;
-
-            shader.vertexShader = BLOCK_VARYING + shader.vertexShader;
-            shader.vertexShader = shader.vertexShader.replace(
-                "void main() {",
-                "void main() {\n  vBlockUv = uv;",
-            );
-
-            shader.fragmentShader = BLOCK_DEFS + shader.fragmentShader;
-            shader.fragmentShader = shader.fragmentShader.replace(
-                "#include <opaque_fragment>",
-                BLOCK_ALPHA,
-            );
-        },
-        [],
+    const applyBlockShader = useMemo(
+        () => roundedCurlShader(blockRadiusUv),
+        [blockRadiusUv],
     );
 
     const { groupRef, revealedRef } = useCurlFade((opacity) => {
