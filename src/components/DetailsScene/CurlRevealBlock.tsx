@@ -111,7 +111,10 @@ export function CurlRevealBlock({
                 onUpdate: () => apply(!growFromLeft),
             });
 
-            return () => tl.kill();
+            return () => {
+                tl.kill();
+                onHalfwayRef.current();
+            };
         },
         {
             dependencies: [

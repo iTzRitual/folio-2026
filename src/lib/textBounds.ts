@@ -20,3 +20,13 @@ export function readTextBounds(mesh: Mesh): TextBounds | null {
 
     return { minX, minY, maxX, maxY };
 }
+
+export function sameTextBounds(a: TextBounds | null, b: TextBounds) {
+    return (
+        a !== null &&
+        a.minX === b.minX &&
+        a.minY === b.minY &&
+        a.maxX === b.maxX &&
+        a.maxY === b.maxY
+    );
+}

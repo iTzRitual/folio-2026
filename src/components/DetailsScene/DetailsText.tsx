@@ -6,7 +6,7 @@ import type { Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { applyCurlShader } from "@/lib/detailsCurl";
-import { readTextBounds, type TextBounds } from "@/lib/textBounds";
+import { readTextBounds, sameTextBounds, type TextBounds } from "@/lib/textBounds";
 import { CurlRevealBlock } from "./CurlRevealBlock";
 import { useCurlFade } from "./useCurlFade";
 
@@ -64,7 +64,11 @@ export function DetailsText({
 
   const handleSync = (mesh: Mesh) => {
     const measured = readTextBounds(mesh);
-    if (measured) setBounds((current) => (current ? current : measured));
+    if (measured) {
+      setBounds((current) =>
+        sameTextBounds(current, measured) ? current : measured,
+      );
+    }
     onSync?.(mesh);
   };
 
