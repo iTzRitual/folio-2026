@@ -87,8 +87,12 @@ export function DetailsLink({
 
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
     (opacity, curlFade) => {
-      if (materialRef.current) materialRef.current.opacity = opacity;
-      if (arrowRef.current) arrowRef.current.opacity = opacity;
+      const inkFade = Math.pow(
+        opacity,
+        CONFIG.detailsLink.BUTTON_TEXT_FADE_POWER,
+      );
+      if (materialRef.current) materialRef.current.opacity = inkFade;
+      if (arrowRef.current) arrowRef.current.opacity = inkFade;
       if (plateRef.current) plateRef.current.opacity = opacity > 0 ? 1 : 0;
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
 

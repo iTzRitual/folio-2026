@@ -153,6 +153,7 @@ export const CONFIG = {
         ARROW_DURATION: 0.2,
         PREVIEW_MIN_OPACITY: 0.6,
         INTERACT_MIN_OPACITY: 0.05,
+        BUTTON_TEXT_FADE_POWER: 0.5,
         BUTTON_PAD_X_EM: 0.8,
         BUTTON_PAD_Y_EM: 0.78,
     },
