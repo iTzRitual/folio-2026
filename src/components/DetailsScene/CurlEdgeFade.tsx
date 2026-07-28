@@ -85,7 +85,10 @@ export function CurlEdgeFade({
   });
 
   return (
-    <mesh renderOrder={20} frustumCulled={false}>
+    <mesh
+      renderOrder={CONFIG.detailsCurl.EDGE_FADE_RENDER_ORDER}
+      frustumCulled={false}
+    >
       <planeGeometry args={[viewport.width, viewport.height]} />
       <shaderMaterial
         ref={materialRef}

@@ -298,6 +298,7 @@ export function Title({
     <group position={[0, y, 0]} ref={groupRef}>
       <group ref={textGroupRef}>
         <Text
+          renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
           anchorX="center"
           anchorY="top"
           fontSize={calculatedFontSize}
@@ -358,6 +359,7 @@ export function Title({
         ]}
       >
         <Text
+          renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
           anchorX="right"
           anchorY="middle"
           fontSize={calculatedFontSize * 0.15}
@@ -376,6 +378,7 @@ export function Title({
 
         <group ref={stackedGroupRef} position={[viewportWidth * 0.08, 0, 0]}>
           <Text
+            renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
             anchorX="right"
             anchorY="bottom"
             fontSize={stackedFontSize}
@@ -395,6 +398,7 @@ export function Title({
           </Text>
 
           <Text
+            renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
             anchorX="right"
             anchorY="top"
             fontSize={stackedFontSize}
