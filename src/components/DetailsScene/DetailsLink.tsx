@@ -1,6 +1,7 @@
 "use client";
 
 import { Html, Text } from "@react-three/drei";
+import gsap from "gsap";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
@@ -66,6 +67,7 @@ export function DetailsLink({
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
   const plateRef = useRef<THREE.MeshBasicMaterial>(null);
+  const arrowMeshRef = useRef<THREE.Mesh>(null);
 
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
@@ -190,6 +192,8 @@ export function DetailsLink({
 
   const finePointer = () =>
     window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const reducedMotion = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
     if (!finePointer()) return;
@@ -206,11 +210,32 @@ export function DetailsLink({
   const handleEnter = () => {
     document.body.style.cursor = "pointer";
     if (previewImage && visibleRef.current) setHoveredPreview(previewImage);
+    if (reducedMotion()) return;
+
+    if (arrowMeshRef.current) {
+      const nudge = arrowSize * CONFIG.detailsLink.ARROW_NUDGE_FACTOR;
+      gsap.to(arrowMeshRef.current.position, {
+        x: arrowX + nudge,
+        y: arrowY + nudge,
+        duration: CONFIG.detailsLink.ARROW_DURATION,
+        ease: "power2.out",
+        overwrite: true,
+      });
+    }
   };
 
   const handleLeave = () => {
     document.body.style.cursor = "auto";
     if (previewImage) clearHoveredPreview(previewImage);
+    if (arrowMeshRef.current) {
+      gsap.to(arrowMeshRef.current.position, {
+        x: arrowX,
+        y: arrowY,
+        duration: CONFIG.detailsLink.ARROW_DURATION,
+        ease: "power2.out",
+        overwrite: true,
+      });
+    }
   };
 
   useEffect(() => {
@@ -276,7 +301,7 @@ export function DetailsLink({
       </Text>
 
       {textDimensions.width > 0 && arrowTex && (
-        <mesh position={[arrowX, arrowY, 0]}>
+        <mesh ref={arrowMeshRef} position={[arrowX, arrowY, 0]}>
           <planeGeometry
             args={[arrowSize, arrowSize, 1, CONFIG.detailsCurl.ARROW_SEGMENTS]}
           />

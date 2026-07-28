@@ -149,6 +149,8 @@ export const CONFIG = {
     detailsLink: {
         ARROW_SIZE_MULT: 0.4,
         ARROW_GAP_MULT: 0.3,
+        ARROW_NUDGE_FACTOR: 0.25,
+        ARROW_DURATION: 0.2,
         PREVIEW_MIN_OPACITY: 0.6,
         INTERACT_MIN_OPACITY: 0.05,
         BUTTON_PAD_X_EM: 0.8,
