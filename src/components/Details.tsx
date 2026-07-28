@@ -35,23 +35,6 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { CONFIG } from "../config/constants";
 
-const CURL_SHADE_MODES = {
-  "Even — tracks the fade": 0,
-  "Bend — darkens with the fold": 1,
-  "Edge — dips at the very end": 2,
-} as const;
-
-type CurlShadeModeName = keyof typeof CURL_SHADE_MODES;
-
-const CURL_SHADE_MODE_NAMES = Object.keys(
-  CURL_SHADE_MODES,
-) as CurlShadeModeName[];
-
-const DEFAULT_SHADE_MODE_NAME =
-  CURL_SHADE_MODE_NAMES.find(
-    (name) => CURL_SHADE_MODES[name] === CONFIG.detailsCurl.SHADE_MODE,
-  ) ?? CURL_SHADE_MODE_NAMES[0];
-
 const CURL_DEFAULTS: CurlSettings = {
   foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
   bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,
@@ -60,8 +43,7 @@ const CURL_DEFAULTS: CurlSettings = {
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
   fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
   shadeStrength: CONFIG.detailsCurl.SHADE_STRENGTH,
-  shadeSpanMult: CONFIG.detailsCurl.SHADE_SPAN_MULT,
-  shadeMode: CONFIG.detailsCurl.SHADE_MODE,
+  tintBandMult: CONFIG.detailsCurl.TINT_BAND_MULT,
   bend: 1,
 };
 
@@ -103,15 +85,11 @@ const CURL_LEVA_SCHEMA = {
     max: 1,
     step: 0.01,
   },
-  shadeSpanMult: {
-    value: CURL_DEFAULTS.shadeSpanMult,
-    min: 0.1,
-    max: 1,
+  tintBandMult: {
+    value: CURL_DEFAULTS.tintBandMult,
+    min: 0.02,
+    max: 0.6,
     step: 0.01,
-  },
-  shadeMode: {
-    value: DEFAULT_SHADE_MODE_NAME,
-    options: CURL_SHADE_MODE_NAMES,
   },
 };
 
@@ -156,11 +134,7 @@ export function Details({
   const prefersReducedMotion = usePrefersReducedMotion();
   const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
   const curl: CurlSettings = isDebug
-    ? {
-        ...levaCurl,
-        shadeMode: CURL_SHADE_MODES[levaCurl.shadeMode as CurlShadeModeName],
-        bend: 1,
-      }
+    ? { ...levaCurl, bend: 1 }
     : CURL_DEFAULTS;
   const levaAnchor = useControls("Model anchor", ANCHOR_LEVA_SCHEMA);
   const anchorCfg = isDebug ? levaAnchor : ANCHOR_DEFAULTS;
@@ -172,8 +146,7 @@ export function Details({
     fadeAngleStart,
     fadeAngleEnd,
     shadeStrength,
-    shadeSpanMult,
-    shadeMode,
+    tintBandMult,
   } = curl;
 
   const { palette } = useTheme();
@@ -229,8 +202,7 @@ export function Details({
       fadeAngleStart,
       fadeAngleEnd,
       shadeStrength,
-      shadeSpanMult,
-      shadeMode,
+      tintBandMult,
       bend: prefersReducedMotion ? 0 : 1,
     });
   }, [
@@ -244,8 +216,7 @@ export function Details({
     fadeAngleStart,
     fadeAngleEnd,
     shadeStrength,
-    shadeSpanMult,
-    shadeMode,
+    tintBandMult,
     prefersReducedMotion,
   ]);
 
