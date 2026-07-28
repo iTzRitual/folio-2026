@@ -11,6 +11,8 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFadeStart: { value: 0 },
     uCurlFadeEndRise: { value: 1 },
     uCurlFadeEndDrop: { value: 1 },
+    uCurlShadeStrength: { value: CONFIG.detailsCurl.SHADE_STRENGTH },
+    uCurlShadeMode: { value: CONFIG.detailsCurl.SHADE_MODE },
 };
 
 const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1 };
@@ -22,6 +24,8 @@ export interface CurlSettings {
     maxAngle: number;
     fadeAngleStart: number;
     fadeAngleEnd: number;
+    shadeStrength: number;
+    shadeMode: number;
     bend: number;
 }
 
@@ -47,6 +51,8 @@ export function applyCurlSettings(
         viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
+    curlUniforms.uCurlShadeStrength.value = settings.shadeStrength;
+    curlUniforms.uCurlShadeMode.value = settings.shadeMode;
 
     const fadeStart = settings.fadeAngleStart * radius;
     const fadeEndRise = Math.max(settings.fadeAngleEnd * radius, fadeStart + 1e-4);
@@ -67,6 +73,12 @@ uniform float uCurlSheetZ;
 uniform float uCurlRadius;
 uniform float uCurlMaxAngle;
 uniform float uCurlBend;
+uniform float uCurlFadeStart;
+uniform float uCurlFadeEndRise;
+uniform float uCurlFadeEndDrop;
+uniform float uCurlShadeStrength;
+uniform float uCurlShadeMode;
+varying float vCurlShade;
 `;
 
 const CURL_BODY = /* glsl */ `
@@ -88,6 +100,20 @@ const CURL_BODY = /* glsl */ `
     transformed.y += (uCurlBottomY - curlArm * sin(curlTheta) - curlWorld.y) * uCurlBend;
     transformed.z += (uCurlRadius - curlArm * cos(curlTheta) - curlLift) * uCurlBend;
   }
+
+  float curlShadeSpan =
+    curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
+  float curlShadeT = clamp(
+    max(curlRise, curlDrop) / max(curlShadeSpan, 1e-5),
+    0.0,
+    1.0
+  );
+  float curlShadeCurve = uCurlShadeMode < 0.5
+    ? curlShadeT
+    : (uCurlShadeMode < 1.5
+        ? sin(curlShadeT * 1.5707963)
+        : curlShadeT * curlShadeT * curlShadeT);
+  vCurlShade = 1.0 - uCurlShadeStrength * curlShadeCurve;
 }
 `;
 
@@ -98,18 +124,35 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlRadius = curlUniforms.uCurlRadius;
     shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
     shader.uniforms.uCurlBend = curlUniforms.uCurlBend;
+    shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
+    shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
+    shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
+    shader.uniforms.uCurlShadeStrength = curlUniforms.uCurlShadeStrength;
+    shader.uniforms.uCurlShadeMode = curlUniforms.uCurlShadeMode;
 
     shader.vertexShader = CURL_DEFS + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         CURL_BODY,
     );
+
+    shader.fragmentShader = CURL_SHADE_FRAGMENT_DEFS + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        CURL_SHADE_FRAGMENT_BODY,
+    );
 }
 
+const CURL_SHADE_FRAGMENT_DEFS = /* glsl */ `
+varying float vCurlShade;
+`;
+
+const CURL_SHADE_FRAGMENT_BODY = /* glsl */ `
+diffuseColor.rgb *= vCurlShade;
+#include <opaque_fragment>
+`;
+
 const CURL_FADE_VERTEX_DEFS = /* glsl */ `
-uniform float uCurlFadeStart;
-uniform float uCurlFadeEndRise;
-uniform float uCurlFadeEndDrop;
 varying float vCurlFade;
 `;
 
@@ -137,10 +180,6 @@ export function applyCurlFadeShader(
     shader: WebGLProgramParametersWithUniforms,
 ) {
     applyCurlShader(shader);
-
-    shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
-    shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
-    shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
 
     shader.vertexShader = CURL_FADE_VERTEX_DEFS + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(

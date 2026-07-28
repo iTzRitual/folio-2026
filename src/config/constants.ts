@@ -102,6 +102,8 @@ export const CONFIG = {
         MAX_ANGLE: 1.5,
         FADE_ANGLE_START: 0.15,
         FADE_ANGLE_END: 1.25,
+        SHADE_STRENGTH: 0.5,
+        SHADE_MODE: 1,
         GLYPH_DETAIL: 3,
         ARROW_SEGMENTS: 4,
         IMAGE_SEGMENTS: 24,

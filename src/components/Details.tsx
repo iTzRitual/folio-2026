@@ -30,6 +30,23 @@ import {
 import { applyCurlSettings, type CurlSettings } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
 
+const CURL_SHADE_MODES = {
+  "Even — tracks the fade": 0,
+  "Bend — darkens with the fold": 1,
+  "Edge — dips at the very end": 2,
+} as const;
+
+type CurlShadeModeName = keyof typeof CURL_SHADE_MODES;
+
+const CURL_SHADE_MODE_NAMES = Object.keys(
+  CURL_SHADE_MODES,
+) as CurlShadeModeName[];
+
+const DEFAULT_SHADE_MODE_NAME =
+  CURL_SHADE_MODE_NAMES.find(
+    (name) => CURL_SHADE_MODES[name] === CONFIG.detailsCurl.SHADE_MODE,
+  ) ?? CURL_SHADE_MODE_NAMES[0];
+
 const CURL_DEFAULTS: CurlSettings = {
   foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
   bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,
@@ -37,6 +54,8 @@ const CURL_DEFAULTS: CurlSettings = {
   maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
   fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
+  shadeStrength: CONFIG.detailsCurl.SHADE_STRENGTH,
+  shadeMode: CONFIG.detailsCurl.SHADE_MODE,
   bend: 1,
 };
 
@@ -71,6 +90,16 @@ const CURL_LEVA_SCHEMA = {
     min: 0.05,
     max: 3,
     step: 0.01,
+  },
+  shadeStrength: {
+    value: CURL_DEFAULTS.shadeStrength,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  shadeMode: {
+    value: DEFAULT_SHADE_MODE_NAME,
+    options: CURL_SHADE_MODE_NAMES,
   },
 };
 
@@ -114,7 +143,13 @@ export function Details({
 
   const prefersReducedMotion = usePrefersReducedMotion();
   const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
-  const curl = isDebug ? levaCurl : CURL_DEFAULTS;
+  const curl: CurlSettings = isDebug
+    ? {
+        ...levaCurl,
+        shadeMode: CURL_SHADE_MODES[levaCurl.shadeMode as CurlShadeModeName],
+        bend: 1,
+      }
+    : CURL_DEFAULTS;
   const levaAnchor = useControls("Model anchor", ANCHOR_LEVA_SCHEMA);
   const anchorCfg = isDebug ? levaAnchor : ANCHOR_DEFAULTS;
   const {
@@ -124,6 +159,8 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
+    shadeStrength,
+    shadeMode,
   } = curl;
 
   const { startTrigger } = useAnimationContext();
@@ -173,6 +210,8 @@ export function Details({
       maxAngle,
       fadeAngleStart,
       fadeAngleEnd,
+      shadeStrength,
+      shadeMode,
       bend: prefersReducedMotion ? 0 : 1,
     });
   }, [
@@ -185,6 +224,8 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
+    shadeStrength,
+    shadeMode,
     prefersReducedMotion,
   ]);
 
