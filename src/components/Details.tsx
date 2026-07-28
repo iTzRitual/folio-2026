@@ -204,7 +204,7 @@ export function Details({
 
     const projects = layout.sections.projects;
     const projectsCenter =
-      projects.bodyY + (projectsData.length * layout.bodyLineHeight) / 2;
+      projects.bodyY + (projectsData.length * layout.projectLineHeight) / 2;
 
     const gapX = layout.modelGapCenterPx / size.width - 0.5;
     const gapY =
@@ -309,6 +309,7 @@ export function Details({
         startTrigger={startTrigger && !!revealed.projects}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
+        bodyLineHeight={layout.projectLineHeight * pxTo3DHeight}
       />
 
       <DetailsSection

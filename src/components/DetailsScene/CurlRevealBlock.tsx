@@ -9,6 +9,20 @@ import { roundedCurlShader } from "@/lib/revealBlockShader";
 import type { TextBounds } from "@/lib/textBounds";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
+export function curlBlockRect(bounds: TextBounds) {
+    const rawWidth = bounds.maxX - bounds.minX;
+    const rawHeight = bounds.maxY - bounds.minY;
+    const width = rawWidth * CONFIG.detailsReveal.BLOCK_WIDTH_MULT;
+    const height = rawHeight * CONFIG.detailsReveal.BLOCK_HEIGHT_MULT;
+
+    return {
+        width,
+        height,
+        leftEdge: (bounds.minX + bounds.maxX) / 2 - width / 2,
+        centerY: (bounds.minY + bounds.maxY) / 2,
+    };
+}
+
 interface CurlRevealBlockProps {
     bounds: TextBounds;
     color: string;
@@ -19,6 +33,8 @@ interface CurlRevealBlockProps {
     startTrigger: boolean;
     materialRef: RefObject<MeshBasicMaterial | null>;
     onHalfway: () => void;
+    segments?: number;
+    renderOrder?: number;
 }
 
 export function CurlRevealBlock({
@@ -31,6 +47,8 @@ export function CurlRevealBlock({
     startTrigger,
     materialRef,
     onHalfway,
+    segments = CONFIG.detailsReveal.BLOCK_SEGMENTS,
+    renderOrder = 0,
 }: CurlRevealBlockProps) {
     const prefersReducedMotion = usePrefersReducedMotion();
     const meshRef = useRef<Mesh>(null);
@@ -42,19 +60,10 @@ export function CurlRevealBlock({
         onHalfwayRef.current = onHalfway;
     }, [onHalfway]);
 
-    const { width, height, leftEdge, centerY } = useMemo(() => {
-        const rawWidth = bounds.maxX - bounds.minX;
-        const rawHeight = bounds.maxY - bounds.minY;
-        const blockWidth = rawWidth * CONFIG.detailsReveal.BLOCK_WIDTH_MULT;
-        const blockHeight = rawHeight * CONFIG.detailsReveal.BLOCK_HEIGHT_MULT;
-
-        return {
-            width: blockWidth,
-            height: blockHeight,
-            leftEdge: (bounds.minX + bounds.maxX) / 2 - blockWidth / 2,
-            centerY: (bounds.minY + bounds.maxY) / 2,
-        };
-    }, [bounds]);
+    const { width, height, leftEdge, centerY } = useMemo(
+        () => curlBlockRect(bounds),
+        [bounds],
+    );
 
     const radius = Math.min(cornerRadius, width / 2, height / 2);
 
@@ -156,10 +165,9 @@ export function CurlRevealBlock({
             position={[leftEdge, centerY, CONFIG.detailsReveal.BLOCK_Z]}
             scale-x={0.0001}
             visible={false}
+            renderOrder={renderOrder}
         >
-            <planeGeometry
-                args={[width, height, 1, CONFIG.detailsReveal.BLOCK_SEGMENTS]}
-            />
+            <planeGeometry args={[width, height, 1, segments]} />
             <meshBasicMaterial
                 ref={materialRef}
                 color={color}

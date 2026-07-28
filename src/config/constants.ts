@@ -74,6 +74,7 @@ export const CONFIG = {
         GAP_MULT: 0.08,
         BODY_TOP_OFFSET_MULT: 0.38,
         BODY_LINE_HEIGHT_MULT: 1.5,
+        PROJECT_ROW_PITCH_MULT: 2.25,
         LETTER_SPACING: -0.03,
         REVEAL_MARGIN_MULT: 0.04,
         BIO_IMAGE_WIDTH_MULT: 0.26,
@@ -91,6 +92,8 @@ export const CONFIG = {
         BLOCK_RADIUS_PX: 8,
         BLOCK_SEGMENTS: 6,
         BLOCK_Z: 0.002,
+        BUTTON_Z: -0.002,
+        BUTTON_SEGMENTS: 24,
     },
     detailsCurl: {
         FOLD_OFFSET_MULT: 0,
@@ -144,14 +147,12 @@ export const CONFIG = {
         VELOCITY_SMOOTHING: 11,
     },
     detailsLink: {
-        COLOR_DURATION: 0.15,
         ARROW_SIZE_MULT: 0.4,
         ARROW_GAP_MULT: 0.3,
-        ARROW_NUDGE_FACTOR: 0.25,
-        ARROW_DURATION: 0.2,
-        UNDERLINE_PHASE_DURATION: 0.25,
         PREVIEW_MIN_OPACITY: 0.6,
         INTERACT_MIN_OPACITY: 0.05,
+        BUTTON_PAD_X_EM: 0.8,
+        BUTTON_PAD_Y_EM: 0.78,
     },
     detailsTimings: {
         HEADING_DELAY: 0.1,

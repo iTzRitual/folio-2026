@@ -22,6 +22,7 @@ export interface DetailsLayout {
     headingFontSize: number;
     bodyFontSize: number;
     bodyLineHeight: number;
+    projectLineHeight: number;
     bodyTopOffset: number;
     bodyColumnOffset: number;
     bodyMaxWidth: number;
@@ -80,6 +81,7 @@ export function calculateDetailsLayout({
     );
     const bodyFontSize = headingFontSize * L.BODY_SIZE_MULT;
     const bodyLineHeight = bodyFontSize * L.BODY_LINE_HEIGHT_MULT;
+    const projectLineHeight = bodyLineHeight * L.PROJECT_ROW_PITCH_MULT;
     const bodyTopOffset = headingFontSize * L.BODY_TOP_OFFSET_MULT;
     const sectionGap = headingFontSize * L.SECTION_GAP_MULT;
 
@@ -138,8 +140,9 @@ export function calculateDetailsLayout({
 
     const linkArrowWidth =
         bodyFontSize * (CONFIG.detailsLink.ARROW_GAP_MULT + CONFIG.detailsLink.ARROW_SIZE_MULT);
+    const buttonPadWidth = bodyFontSize * CONFIG.detailsLink.BUTTON_PAD_X_EM * 2;
     const projectsRightEdge =
-        marginX + bodyColumnOffset + widestProject + linkArrowWidth;
+        marginX + bodyColumnOffset + widestProject + linkArrowWidth + buttonPadWidth;
     const skillsLeftEdge = viewportWidth - marginX - widestSkill;
     const modelGapCenterPx = (projectsRightEdge + skillsLeftEdge) / 2;
 
@@ -148,6 +151,13 @@ export function calculateDetailsLayout({
         projects: projectsData.length,
         education: educationData.length,
         skills: skillsData.length,
+    };
+
+    const lineHeights: Record<string, number> = {
+        experience: bodyLineHeight,
+        projects: projectLineHeight,
+        education: bodyLineHeight,
+        skills: bodyLineHeight,
     };
 
     const cursors: Record<DetailsColumn, number> = { left: 0, right: 0 };
@@ -159,7 +169,7 @@ export function calculateDetailsLayout({
 
         const height = Math.max(
             headingFontSize,
-            bodyTopOffset + lineCounts[key] * bodyLineHeight,
+            bodyTopOffset + lineCounts[key] * lineHeights[key],
         );
         cursors[column] = top + height + sectionGap;
     };
@@ -195,6 +205,7 @@ export function calculateDetailsLayout({
         headingFontSize,
         bodyFontSize,
         bodyLineHeight,
+        projectLineHeight,
         bodyTopOffset,
         bodyColumnOffset,
         bodyMaxWidth,

@@ -3,7 +3,6 @@
 import { Html, Text } from "@react-three/drei";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import gsap from "gsap";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
@@ -14,8 +13,8 @@ import {
   type TextBounds,
 } from "@/lib/textBounds";
 import { CurlRevealBlock } from "./CurlRevealBlock";
+import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
-import { useTheme } from "@/context/ThemeContext";
 import { useProjectHover } from "@/context/ProjectHoverContext";
 
 interface DetailsLinkProps {
@@ -65,13 +64,12 @@ export function DetailsLink({
   onSync,
 }: DetailsLinkProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const underlineRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
+  const plateRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const { setHoveredPreview, clearHoveredPreview } = useProjectHover();
-  const { palette } = useTheme();
   // A link stays in the scene well past both folds, curled and faded out.
   // Anything still legible stays clickable; the preview is held to a stricter
   // threshold so a barely-there row does not swap the model out.
@@ -88,8 +86,8 @@ export function DetailsLink({
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
     (opacity, curlFade) => {
       if (materialRef.current) materialRef.current.opacity = opacity;
-      if (underlineRef.current) underlineRef.current.opacity = opacity;
       if (arrowRef.current) arrowRef.current.opacity = opacity;
+      if (plateRef.current) plateRef.current.opacity = opacity;
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
 
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
@@ -123,12 +121,6 @@ export function DetailsLink({
     curl.position.z = dz;
     curl.rotation.x = -angle;
   });
-
-  const underlineMeshRef = useRef<THREE.Mesh>(null);
-  const arrowMeshRef = useRef<THREE.Mesh>(null);
-  const hoverProxy = useRef({ t: 0 });
-  const slideProxy = useRef({ s: 1 });
-  const slideTl = useRef<gsap.core.Timeline | null>(null);
 
   const [textDimensions, setTextDimensions] = useState({
     width: 0,
@@ -190,13 +182,6 @@ export function DetailsLink({
     ? Math.max((rowPitchEm - lineHeight) / 2, 0)
     : 0;
 
-  const underlineWidth = textDimensions.width;
-  const underlineThickness = calculatedFontSize * 0.04;
-  const underlineX = underlineWidth / 2;
-  const underlineY = textDimensions.minY
-    ? textDimensions.minY - calculatedFontSize * 0.1
-    : -calculatedFontSize * 1.1;
-
   const arrowSize = calculatedFontSize * CONFIG.detailsLink.ARROW_SIZE_MULT;
   const arrowGap = calculatedFontSize * CONFIG.detailsLink.ARROW_GAP_MULT;
   const arrowX = textDimensions.width + arrowGap + arrowSize / 2;
@@ -205,19 +190,6 @@ export function DetailsLink({
 
   const finePointer = () =>
     window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  const reducedMotion = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const applyHoverColor = () => {
-    const c = new THREE.Color().lerpColors(
-      new THREE.Color(color),
-      new THREE.Color(palette.hover),
-      hoverProxy.current.t,
-    );
-    materialRef.current?.color.copy(c);
-    underlineRef.current?.color.copy(c);
-    arrowRef.current?.color.copy(c);
-  };
 
   const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
     if (!finePointer()) return;
@@ -234,76 +206,11 @@ export function DetailsLink({
   const handleEnter = () => {
     document.body.style.cursor = "pointer";
     if (previewImage && visibleRef.current) setHoveredPreview(previewImage);
-    gsap.to(hoverProxy.current, {
-      t: 1,
-      duration: CONFIG.detailsLink.COLOR_DURATION,
-      ease: "power2.out",
-      overwrite: true,
-      onUpdate: applyHoverColor,
-    });
-    if (reducedMotion()) return;
-
-    if (arrowMeshRef.current) {
-      const nudge = arrowSize * CONFIG.detailsLink.ARROW_NUDGE_FACTOR;
-      gsap.to(arrowMeshRef.current.position, {
-        x: arrowX + nudge,
-        y: arrowY + nudge,
-        duration: CONFIG.detailsLink.ARROW_DURATION,
-        ease: "power2.out",
-        overwrite: true,
-      });
-    }
-
-    if (underlineMeshRef.current && !slideTl.current?.isActive()) {
-      const mesh = underlineMeshRef.current;
-      const w = underlineWidth;
-      const d = CONFIG.detailsLink.UNDERLINE_PHASE_DURATION;
-      slideProxy.current.s = 1;
-      slideTl.current = gsap
-        .timeline()
-        .to(slideProxy.current, {
-          // wipe out, pivot on the right edge
-          s: 0,
-          duration: d,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            mesh.scale.x = Math.max(slideProxy.current.s, 0.0001);
-            mesh.position.x = w - (w * slideProxy.current.s) / 2;
-          },
-        })
-        .to(slideProxy.current, {
-          // wipe back in, pivot on the left edge
-          s: 1,
-          duration: d,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            mesh.scale.x = Math.max(slideProxy.current.s, 0.0001);
-            mesh.position.x = (w * slideProxy.current.s) / 2;
-          },
-        });
-    }
   };
 
   const handleLeave = () => {
     document.body.style.cursor = "auto";
     if (previewImage) clearHoveredPreview(previewImage);
-    gsap.to(hoverProxy.current, {
-      t: 0,
-      duration: CONFIG.detailsLink.COLOR_DURATION,
-      ease: "power2.out",
-      overwrite: true,
-      onUpdate: applyHoverColor,
-    });
-    if (arrowMeshRef.current) {
-      gsap.to(arrowMeshRef.current.position, {
-        x: arrowX,
-        y: arrowY,
-        duration: CONFIG.detailsLink.ARROW_DURATION,
-        ease: "power2.out",
-        overwrite: true,
-      });
-    }
-    // underline slide completes on its own — do not reverse it
   };
 
   useEffect(() => {
@@ -315,14 +222,32 @@ export function DetailsLink({
     };
   });
 
+  const padX = calculatedFontSize * CONFIG.detailsLink.BUTTON_PAD_X_EM;
+  const padY = calculatedFontSize * CONFIG.detailsLink.BUTTON_PAD_Y_EM;
+  const contentMaxX = arrowGap + arrowSize;
+
+  const buttonBounds = useMemo(
+    () =>
+      revealBounds && {
+        minX: revealBounds.minX - padX,
+        maxX: revealBounds.maxX + contentMaxX + padX,
+        minY: revealBounds.minY - padY,
+        maxY: revealBounds.maxY + padY,
+      },
+    [revealBounds, contentMaxX, padX, padY],
+  );
+
+  const buttonRadius =
+    (CONFIG.detailsReveal.BLOCK_RADIUS_PX * calculatedFontSize) / pixelFontSize;
+
   const hitPad = hitPadEm * calculatedFontSize;
-  const hit = revealBounds && {
-    width: revealBounds.maxX + arrowGap + arrowSize - revealBounds.minX,
-    height: revealBounds.maxY - revealBounds.minY + hitPad * 2,
-    centerX:
-      (revealBounds.minX + revealBounds.maxX + arrowGap + arrowSize) / 2,
-    centerY: (revealBounds.minY + revealBounds.maxY) / 2,
-  };
+  const hit = revealBounds &&
+    buttonBounds && {
+      width: buttonBounds.maxX - buttonBounds.minX,
+      height: revealBounds.maxY - revealBounds.minY + hitPad * 2,
+      centerX: (buttonBounds.minX + buttonBounds.maxX) / 2,
+      centerY: (revealBounds.minY + revealBounds.maxY) / 2,
+    };
   const hitCenterY = hit ? hit.centerY : 0;
   useEffect(() => {
     hitCenterYRef.current = hitCenterY;
@@ -350,60 +275,45 @@ export function DetailsLink({
         />
       </Text>
 
-      {textDimensions.width > 0 && (
-        <>
-          <mesh ref={underlineMeshRef} position={[underlineX, underlineY, 0]}>
-            <planeGeometry args={[underlineWidth, underlineThickness]} />
-            <meshBasicMaterial
-              ref={underlineRef}
-              color={color}
-              transparent
-              opacity={0}
-              onBeforeCompile={applyCurlShader}
-            />
-          </mesh>
-
-          {arrowTex && (
-            <mesh ref={arrowMeshRef} position={[arrowX, arrowY, 0]}>
-              <planeGeometry
-                args={[
-                  arrowSize,
-                  arrowSize,
-                  1,
-                  CONFIG.detailsCurl.ARROW_SEGMENTS,
-                ]}
-              />
-              <meshBasicMaterial
-                ref={arrowRef}
-                map={arrowTex}
-                color={color}
-                transparent
-                opacity={0}
-                onBeforeCompile={applyCurlShader}
-              />
-            </mesh>
-          )}
-        </>
+      {textDimensions.width > 0 && arrowTex && (
+        <mesh position={[arrowX, arrowY, 0]}>
+          <planeGeometry
+            args={[arrowSize, arrowSize, 1, CONFIG.detailsCurl.ARROW_SEGMENTS]}
+          />
+          <meshBasicMaterial
+            ref={arrowRef}
+            map={arrowTex}
+            color={color}
+            transparent
+            opacity={0}
+            onBeforeCompile={applyCurlShader}
+          />
+        </mesh>
       )}
 
-      {revealBounds && (
-        <CurlRevealBlock
-          bounds={{
-            ...revealBounds,
-            maxX: revealBounds.maxX + arrowGap + arrowSize,
-          }}
-          color={revealColor}
-          cornerRadius={
-            (CONFIG.detailsReveal.BLOCK_RADIUS_PX * calculatedFontSize) /
-            pixelFontSize
-          }
-          direction={direction}
-          delay={delay}
-          duration={CONFIG.copy.DURATION}
-          startTrigger={startTrigger}
-          materialRef={blockMaterialRef}
-          onHalfway={handleHalfway}
-        />
+      {buttonBounds && (
+        <>
+          <LinkButtonPlate
+            bounds={buttonBounds}
+            color={revealColor}
+            cornerRadius={buttonRadius}
+            materialRef={plateRef}
+          />
+
+          <CurlRevealBlock
+            bounds={buttonBounds}
+            color={revealColor}
+            cornerRadius={buttonRadius}
+            direction={direction}
+            delay={delay}
+            duration={CONFIG.copy.DURATION}
+            startTrigger={startTrigger}
+            materialRef={blockMaterialRef}
+            onHalfway={handleHalfway}
+            segments={CONFIG.detailsReveal.BUTTON_SEGMENTS}
+            renderOrder={1}
+          />
+        </>
       )}
 
       {hit && (
