@@ -3,20 +3,36 @@
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAnimationContext } from "@/context/AnimationContext";
+import { useControls } from "leva";
 import { CONFIG } from "@/config/constants";
 import { headerContent } from "@/data/content";
 import { HeaderItem } from "./HeaderScene/HeaderItem";
 import { Clock } from "./HeaderScene/Clock";
 import { ThemeToggle } from "./HeaderScene/ThemeToggle";
 
-export function Header() {
+const HEADER_DEFAULTS = {
+  fontSize: CONFIG.header.FONT_SIZE,
+};
+
+const HEADER_LEVA_SCHEMA = {
+  fontSize: {
+    value: HEADER_DEFAULTS.fontSize,
+    min: 0.004,
+    max: 0.02,
+    step: 0.0001,
+  },
+};
+
+export function Header({ isDebug = false }: { isDebug?: boolean }) {
+  const levaHeader = useControls("Header", HEADER_LEVA_SCHEMA);
+  const { fontSize } = isDebug ? levaHeader : HEADER_DEFAULTS;
   const { viewport, marginX, pxTo3DWidth, pxTo3DHeight, leftX, rightX } =
     useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { theme, setTheme } = useTheme();
 
   const calculatedFontSize =
-    (viewport.width - 2 * marginX) * CONFIG.header.FONT_SIZE;
+    (viewport.width - 2 * marginX) * fontSize;
   const pixelFontSize = calculatedFontSize / pxTo3DWidth;
   const y =
     viewport.height / 2 - CONFIG.header.MARGIN_Y_PX * pxTo3DHeight;

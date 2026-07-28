@@ -1,4 +1,4 @@
-import { Effect } from "postprocessing";
+import { Effect, EffectAttribute } from "postprocessing";
 import { Uniform, Vector2, Vector4 } from "three";
 import { CONFIG } from "../../config/constants";
 
@@ -70,6 +70,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 export class CustomAberrationEffect extends Effect {
   constructor(taps: number = SCROLL_TAPS) {
     super("CustomAberrationEffect", buildFragmentShader(taps), {
+      attributes: EffectAttribute.CONVOLUTION,
       uniforms: new Map<string, Uniform<Vector2 | Vector4 | number>>([
         ["u_mouse", new Uniform(new Vector2(0.5, 0.5))],
         ["u_aberrationIntensity", new Uniform(0.0)],

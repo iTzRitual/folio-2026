@@ -8,6 +8,7 @@ import { HeroText } from "./HeroText";
 import { Header } from "./Header";
 import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
+import { HeaderExclusion } from "./Effects/HeaderExclusion";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
@@ -48,13 +49,16 @@ function SceneContent({
           <Model isMobile={isMobile} isDebug={isDebug} />
         </Suspense>
 
-        {!isMobile && <Header />}
+        {!isMobile && <Header isDebug={isDebug} />}
         {!isMobile && <HeroText />}
         {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
         {!isMobile && <CurlEdgeFade isDebug={isDebug} />}
-        {!isMobile && !prefersReducedMotion && (
+        {!isMobile && (
           <EffectComposer multisampling={0}>
-            <CustomAberration isDebug={isDebug} />
+            <>
+              <HeaderExclusion isDebug={isDebug} />
+              {!prefersReducedMotion && <CustomAberration isDebug={isDebug} />}
+            </>
           </EffectComposer>
         )}
         </ProjectHoverProvider>

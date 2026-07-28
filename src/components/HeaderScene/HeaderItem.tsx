@@ -8,6 +8,7 @@ import type { Mesh } from "three";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import { CONFIG, FONTS } from "@/config/constants";
 import { useTheme } from "@/context/ThemeContext";
+import { HEADER_LAYER } from "../Effects/HeaderExclusionEffect";
 
 interface HeaderItemProps {
   text: string;
@@ -67,6 +68,7 @@ export function HeaderItem({
   }, [revealMode, startTrigger, delay]);
 
   const handleSync = (mesh: Mesh) => {
+    mesh.layers.set(HEADER_LAYER);
     if (!onMeasure || !mesh.geometry) return;
     mesh.geometry.computeBoundingBox();
     const box = mesh.geometry.boundingBox;
@@ -167,7 +169,11 @@ export function HeaderItem({
         />
       </Text>
 
-      <Html as="div" className="pointer-events-none">
+      <Html
+        as="div"
+        className="pointer-events-none"
+        zIndexRange={[CONFIG.header.HTML_Z_INDEX, CONFIG.header.HTML_Z_INDEX]}
+      >
         {href ? (
           <a
             href={href}

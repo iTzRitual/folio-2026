@@ -169,8 +169,9 @@ export const CONFIG = {
         SKILLS_STAGGER_STEP: 0.06,
     },
     header: {
-        FONT_SIZE: 0.0075,
+        FONT_SIZE: 0.0105,
         MARGIN_Y_PX: 28,
+        HTML_Z_INDEX: 16777271,
         LETTER_SPACING: -0.02,
         HTML_LETTER_SPACING_OFFSET: -0.004,
         SLOT_TS: [0, 0.2, 0.56, 0.75, 1],
