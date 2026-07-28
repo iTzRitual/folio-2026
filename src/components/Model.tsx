@@ -75,7 +75,7 @@ export default function Model({
 
   // Details — and with it the project hover — is desktop only.
   const previewTextures = useProjectPreviewTextures(!isMobile);
-  const { hoveredPreview } = useProjectHover();
+  const { hoveredPreview, resetHoveredPreview } = useProjectHover();
   // Keep the last hovered preview around so the plate can animate back out
   // with the right screenshot still on it.
   const [shownPreview, setShownPreview] = useState<string | null>(null);
@@ -95,11 +95,48 @@ export default function Model({
       max: 2.5,
       step: 0.05,
     },
+    bendMult: {
+      value: CONFIG.projectPreview.BEND_MULT,
+      min: 0,
+      max: 0.6,
+      step: 0.005,
+    },
+    aberrationMult: {
+      value: CONFIG.projectPreview.ABERRATION_MULT,
+      min: 0,
+      max: 0.06,
+      step: 0.001,
+    },
+    velocityFullScale: {
+      value: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
+      min: 0.2,
+      max: 8,
+      step: 0.1,
+    },
+    velocitySmoothing: {
+      value: CONFIG.projectPreview.VELOCITY_SMOOTHING,
+      min: 1,
+      max: 30,
+      step: 0.5,
+    },
   });
   const previewMode = isDebug ? levaPreview.mode : CONFIG.projectPreview.MODE;
   const previewSizeMult = isDebug
     ? levaPreview.sizeMult
     : CONFIG.projectPreview.SIZE_MULT;
+  const previewTuning = isDebug
+    ? {
+        bend: levaPreview.bendMult,
+        aberration: levaPreview.aberrationMult,
+        fullScale: levaPreview.velocityFullScale,
+        smoothing: levaPreview.velocitySmoothing,
+      }
+    : {
+        bend: CONFIG.projectPreview.BEND_MULT,
+        aberration: CONFIG.projectPreview.ABERRATION_MULT,
+        fullScale: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
+        smoothing: CONFIG.projectPreview.VELOCITY_SMOOTHING,
+      };
 
   const flatTarget = useMemo(
     () =>
@@ -527,6 +564,12 @@ export default function Model({
         CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
 
+    // The twins are positioned by transform, and a transform sliding out from
+    // under a stationary cursor never fires a leave. Scroll past the list fast
+    // enough and the hover sticks, stranding the plate in the hero. Nothing
+    // outside Details may hold it.
+    if (previewActive && !inDetails) resetHoveredPreview();
+
     const preview = previewProxy.current;
     const skullMesh = skullMeshRef.current;
 
@@ -594,7 +637,6 @@ export default function Model({
     }
 
     const pointer = pointerTracking.current;
-    const cfg = CONFIG.projectPreview;
 
     if (!pointer.seeded) {
       pointer.lastY = state.pointer.y;
@@ -608,23 +650,22 @@ export default function Model({
     pointer.velocity = THREE.MathUtils.damp(
       pointer.velocity,
       rawVelocity,
-      cfg.VELOCITY_SMOOTHING,
+      previewTuning.smoothing,
       dt,
     );
 
     const travel = prefersReducedMotion
       ? 0
       : THREE.MathUtils.clamp(
-          pointer.velocity / cfg.VELOCITY_FULL_SCALE,
+          pointer.velocity / previewTuning.fullScale,
           -1,
           1,
         ) * preview.plate;
 
     // Negated: the centre lags behind, so it trails the pointer's direction.
     previewUniforms.uPreviewBend.value =
-      -travel * cfg.BEND_MULT * previewHeight;
-    previewUniforms.uPreviewSplit.value =
-      travel * cfg.ABERRATION_MULT;
+      -travel * previewTuning.bend * previewHeight;
+    previewUniforms.uPreviewSplit.value = travel * previewTuning.aberration;
   });
 
   return (

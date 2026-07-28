@@ -17,6 +17,8 @@ interface ProjectHoverValue {
   hoveredPreview: string | null;
   setHoveredPreview: (src: string) => void;
   clearHoveredPreview: (src: string) => void;
+  /** Drops the hover outright, whichever link is holding it. */
+  resetHoveredPreview: () => void;
 }
 
 const ProjectHoverContext = createContext<ProjectHoverValue | null>(null);
@@ -47,11 +49,26 @@ export function ProjectHoverProvider({ children }: { children: ReactNode }) {
     }, CONFIG.projectPreview.HOVER_GRACE_MS);
   }, []);
 
+  const resetHoveredPreview = useCallback(() => {
+    cancelPendingClear();
+    setPreview(null);
+  }, []);
+
   useEffect(() => cancelPendingClear, []);
 
   const value = useMemo(
-    () => ({ hoveredPreview, setHoveredPreview, clearHoveredPreview }),
-    [hoveredPreview, setHoveredPreview, clearHoveredPreview],
+    () => ({
+      hoveredPreview,
+      setHoveredPreview,
+      clearHoveredPreview,
+      resetHoveredPreview,
+    }),
+    [
+      hoveredPreview,
+      setHoveredPreview,
+      clearHoveredPreview,
+      resetHoveredPreview,
+    ],
   );
 
   return (
