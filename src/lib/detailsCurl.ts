@@ -112,6 +112,30 @@ export function curlBottomAngle(worldY: number) {
     );
 }
 
+export function curlRowTransform(worldY: number) {
+    const radius = curlUniforms.uCurlRadius.value;
+    const topAngle = curlAngle(worldY);
+    if (topAngle > 0) {
+        return {
+            dy: curlUniforms.uCurlFoldY.value + radius * Math.sin(topAngle) - worldY,
+            dz: radius * Math.cos(topAngle) - radius,
+            angle: topAngle,
+        };
+    }
+    const bottomAngle = curlBottomAngle(worldY);
+    if (bottomAngle > 0) {
+        return {
+            dy:
+                curlUniforms.uCurlBottomY.value -
+                radius * Math.sin(bottomAngle) -
+                worldY,
+            dz: radius - radius * Math.cos(bottomAngle),
+            angle: bottomAngle,
+        };
+    }
+    return { dy: 0, dz: 0, angle: 0 };
+}
+
 export function curlOpacity(angle: number) {
     const { start, end } = curlFadeRange;
     if (angle <= start) return 1;

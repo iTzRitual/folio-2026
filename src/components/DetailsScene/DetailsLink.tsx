@@ -2,11 +2,12 @@
 
 import { Html, Text } from "@react-three/drei";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import gsap from "gsap";
-import type { Mesh } from "three";
+import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
-import { applyCurlShader } from "@/lib/detailsCurl";
+import { applyCurlShader, curlRowTransform } from "@/lib/detailsCurl";
 import {
   readTextBounds,
   sameTextBounds,
@@ -73,9 +74,18 @@ export function DetailsLink({
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const { setHoveredPreview, clearHoveredPreview } = useProjectHover();
-  // Twins stay in the DOM past the bottom fold, so a link can be hoverable
-  // while it is curled away and faded out — don't preview those.
+  // A link stays in the scene well past both folds, curled and faded out.
+  // Anything still legible stays clickable; the preview is held to a stricter
+  // threshold so a barely-there row does not swap the model out.
   const visibleRef = useRef(false);
+  const interactiveRef = useRef(false);
+  const hitCurlRef = useRef<Group>(null);
+  const hitMeshRef = useRef<Mesh>(null);
+  const hitCenterYRef = useRef(0);
+  const curlWorld = useRef(new THREE.Vector3());
+  const forceLeaveRef = useRef<() => void>(() => {});
+  const hoverSources = useRef({ twin: false, mesh: false });
+  const hoveredRef = useRef(false);
 
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
     (opacity, curlFade) => {
@@ -84,12 +94,37 @@ export function DetailsLink({
       if (arrowRef.current) arrowRef.current.opacity = opacity;
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
 
+      const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
+      if (interactive !== interactiveRef.current) {
+        interactiveRef.current = interactive;
+        if (!interactive) forceLeaveRef.current();
+      }
+
       const visible = opacity > CONFIG.detailsLink.PREVIEW_MIN_OPACITY;
       if (visible === visibleRef.current) return;
       visibleRef.current = visible;
-      if (!visible && previewImage) clearHoveredPreview(previewImage);
+      if (!previewImage) return;
+      if (!hoveredRef.current) return;
+      if (visible) setHoveredPreview(previewImage);
+      else clearHoveredPreview(previewImage);
     },
   );
+
+  // The curl is a vertex shader, invisible to the raycaster. Rows are thin
+  // enough to follow it as a rigid body, which keeps the hit area under the
+  // glyphs on both folds.
+  useFrame(() => {
+    const curl = hitCurlRef.current;
+    const group = groupRef.current;
+    if (!curl || !group) return;
+
+    const baseY = hitCenterYRef.current;
+    const baseWorldY = group.getWorldPosition(curlWorld.current).y + baseY;
+    const { dy, dz, angle } = curlRowTransform(baseWorldY);
+    curl.position.y = baseY + dy;
+    curl.position.z = dz;
+    curl.rotation.x = -angle;
+  });
 
   const underlineMeshRef = useRef<THREE.Mesh>(null);
   const arrowMeshRef = useRef<THREE.Mesh>(null);
@@ -186,8 +221,20 @@ export function DetailsLink({
     arrowRef.current?.color.copy(c);
   };
 
-  const handleEnter = () => {
+  const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
     if (!finePointer()) return;
+    hoverSources.current[source] = active;
+    const wanted =
+      (hoverSources.current.twin || hoverSources.current.mesh) &&
+      interactiveRef.current;
+    if (wanted === hoveredRef.current) return;
+    hoveredRef.current = wanted;
+    if (wanted) handleEnter();
+    else handleLeave();
+  };
+
+  const handleEnter = () => {
+    document.body.style.cursor = "pointer";
     if (previewImage && visibleRef.current) setHoveredPreview(previewImage);
     gsap.to(hoverProxy.current, {
       t: 1,
@@ -240,7 +287,7 @@ export function DetailsLink({
   };
 
   const handleLeave = () => {
-    if (!finePointer()) return;
+    document.body.style.cursor = "auto";
     if (previewImage) clearHoveredPreview(previewImage);
     gsap.to(hoverProxy.current, {
       t: 0,
@@ -260,6 +307,28 @@ export function DetailsLink({
     }
     // underline slide completes on its own — do not reverse it
   };
+
+  useEffect(() => {
+    forceLeaveRef.current = () => {
+      if (previewImage) clearHoveredPreview(previewImage);
+      if (!hoveredRef.current) return;
+      hoveredRef.current = false;
+      handleLeave();
+    };
+  });
+
+  const hitPad = hitPadEm * calculatedFontSize;
+  const hit = revealBounds && {
+    width: revealBounds.maxX + arrowGap + arrowSize - revealBounds.minX,
+    height: revealBounds.maxY - revealBounds.minY + hitPad * 2,
+    centerX:
+      (revealBounds.minX + revealBounds.maxX + arrowGap + arrowSize) / 2,
+    centerY: (revealBounds.minY + revealBounds.maxY) / 2,
+  };
+  const hitCenterY = hit ? hit.centerY : 0;
+  useEffect(() => {
+    hitCenterYRef.current = hitCenterY;
+  }, [hitCenterY]);
 
   return (
     <group position={position} ref={groupRef}>
@@ -339,14 +408,33 @@ export function DetailsLink({
         />
       )}
 
+      {hit && (
+        <group ref={hitCurlRef} position={[0, hit.centerY, 0]}>
+          <mesh
+            ref={hitMeshRef}
+            position={[hit.centerX, 0, 0]}
+            onPointerOver={() => setHoverSource("mesh", true)}
+            onPointerOut={() => setHoverSource("mesh", false)}
+            onClick={(event) => {
+              if (!interactiveRef.current) return;
+              event.stopPropagation();
+              twinRef.current?.click();
+            }}
+          >
+            <planeGeometry args={[hit.width, hit.height]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+        </group>
+      )}
+
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
         <a
           ref={twinRef}
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
+          onMouseEnter={() => setHoverSource("twin", true)}
+          onMouseLeave={() => setHoverSource("twin", false)}
           className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`}
           style={{
             fontSize: `${pixelFontSize}px`,

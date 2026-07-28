@@ -139,6 +139,7 @@ export const CONFIG = {
         ARROW_DURATION: 0.2,
         UNDERLINE_PHASE_DURATION: 0.25,
         PREVIEW_MIN_OPACITY: 0.6,
+        INTERACT_MIN_OPACITY: 0.05,
     },
     detailsTimings: {
         HEADING_DELAY: 0.1,
