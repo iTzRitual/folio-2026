@@ -27,7 +27,7 @@ uniform float uTopCutY;
 uniform float uTopCutSpan;
 uniform float uBottomY;
 uniform float uBottomSpan;
-uniform float uStrength;
+uniform float uTopStrength;
 varying float vWorldY;
 
 void main() {
@@ -35,7 +35,7 @@ void main() {
     smoothstep(uTopY, uTopY + uTopSpan, vWorldY) *
     (1.0 - smoothstep(uTopCutY, uTopCutY + uTopCutSpan, vWorldY));
   float bottom = 1.0 - smoothstep(uBottomY, uBottomY + uBottomSpan, vWorldY);
-  float alpha = clamp(max(top, bottom), 0.0, 1.0) * uStrength;
+  float alpha = clamp(max(top * uTopStrength, bottom), 0.0, 1.0);
   gl_FragColor = vec4(uColor, alpha);
   #include <colorspace_fragment>
 }
@@ -62,7 +62,7 @@ export function CurlEdgeFade({
       uTopCutSpan: { value: 1 },
       uBottomY: { value: 0 },
       uBottomSpan: { value: 1 },
-      uStrength: { value: 0 },
+      uTopStrength: { value: 0 },
     }),
     [],
   );
@@ -81,7 +81,7 @@ export function CurlEdgeFade({
     material.uniforms.uTopCutSpan.value = radius * CONFIG.detailsCurl.EDGE_FADE_CUT_MULT;
     material.uniforms.uBottomY.value = -viewport.height / 2;
     material.uniforms.uBottomSpan.value = viewport.height * bottomSpanMult;
-    material.uniforms.uStrength.value = progressRef.current;
+    material.uniforms.uTopStrength.value = progressRef.current;
   });
 
   return (
