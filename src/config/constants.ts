@@ -105,11 +105,11 @@ export const CONFIG = {
         SIZE_MULT: 1.75,
         // Morph progress at which the plate starts growing into SIZE_MULT, so
         // the skull flattens first and only swells once it is nearly a plate.
+        // The screenshot fades in over the same range.
         GROW_START: 0.62,
         CORNER_RADIUS_MULT: 0.05,
         MORPH_IN_DURATION: 0.7,
         MORPH_OUT_DURATION: 0.45,
-        MORPH_IMAGE_FADE_START: 0.5,
         SCALE_SKULL_OUT_DURATION: 0.22,
         SCALE_PLANE_IN_DURATION: 0.3,
         SCALE_PLANE_IN_DELAY: 0.11,

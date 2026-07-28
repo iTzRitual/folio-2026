@@ -29,6 +29,11 @@ import { CONFIG } from "../config/constants";
 const PLATE_FACING = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(-Math.PI / 2, 0, 0),
 );
+// The screenshot rides in the mesh's own frame, so it needs the inverse turn:
+// its +Z normal onto local -Y, the face PLATE_FACING then points at the camera.
+const PLATE_IMAGE_FACING = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(Math.PI / 2, 0, 0),
+);
 const IDENTITY_QUATERNION = new THREE.Quaternion();
 
 export default function Model({
@@ -125,8 +130,12 @@ export default function Model({
       max: 30,
       step: 0.5,
     },
+    pinMorph: false,
+    pinnedMorph: { value: 0, min: 0, max: 1, step: 0.01 },
   });
   const previewMode = isDebug ? levaPreview.mode : CONFIG.projectPreview.MODE;
+  const pinnedMorph =
+    isDebug && levaPreview.pinMorph ? levaPreview.pinnedMorph : null;
   const previewSizeMult = isDebug
     ? levaPreview.sizeMult
     : CONFIG.projectPreview.SIZE_MULT;
@@ -179,6 +188,8 @@ export default function Model({
     local: new THREE.Quaternion(),
     target: new THREE.Quaternion(),
     plateCenter: new THREE.Vector3(),
+    meshScale: new THREE.Vector3(),
+    parentScale: new THREE.Vector3(),
   });
 
   useGSAP(
@@ -198,19 +209,13 @@ export default function Model({
 
       if (previewMode === "morph") {
         proxy.skull = 1;
-        const duration = active ? cfg.MORPH_IN_DURATION : cfg.MORPH_OUT_DURATION;
 
+        // `plate` is not tweened here: it is read off `morph` in the frame loop,
+        // so the screenshot cannot resolve before the plate it sits on exists.
         gsap.to(proxy, {
           morph: active ? 1 : 0,
-          duration,
+          duration: active ? cfg.MORPH_IN_DURATION : cfg.MORPH_OUT_DURATION,
           ease: active ? "power3.inOut" : "power2.inOut",
-        });
-        // The screenshot only resolves once the plate has mostly formed.
-        gsap.to(proxy, {
-          plate: active ? 1 : 0,
-          duration: duration * (1 - cfg.MORPH_IMAGE_FADE_START),
-          delay: active ? duration * cfg.MORPH_IMAGE_FADE_START : 0,
-          ease: "power2.out",
         });
         return;
       }
@@ -313,9 +318,9 @@ export default function Model({
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
   const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
 
-  const previewWidth = flatTarget.rectWidth * responsiveScale * previewSizeMult;
-  const previewHeight =
-    flatTarget.rectHeight * responsiveScale * previewSizeMult;
+  // Geometry-local, like the morph target itself — the group carries the scale.
+  const previewWidth = flatTarget.rectWidth;
+  const previewHeight = flatTarget.rectHeight;
 
   const levaSkullRotation = useControls("Skull Rotation", {
     x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
@@ -581,6 +586,16 @@ export default function Model({
     const preview = previewProxy.current;
     const skullMesh = skullMeshRef.current;
 
+    if (pinnedMorph !== null) preview.morph = pinnedMorph;
+
+    // In morph mode the plate's reveal *is* its growth, read off the one
+    // timeline value. Scale mode moves the two independently, so it keeps the
+    // tweened proxy.
+    const plate =
+      previewMode === "morph"
+        ? THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1)
+        : THREE.MathUtils.clamp(preview.plate, 0, 1);
+
     if (skullMesh?.morphTargetInfluences) {
       skullMesh.morphTargetInfluences[0] = preview.morph;
     }
@@ -591,7 +606,7 @@ export default function Model({
     // fade, so the two cross over and it comes back on the way out.
     if (skullMesh) {
       const glass = skullMesh.material as THREE.Material;
-      const glassOpacity = 1 - THREE.MathUtils.clamp(preview.plate, 0, 1);
+      const glassOpacity = 1 - plate;
       const fading = glassOpacity < 1 - 1e-3;
 
       // Only bucket it with the transparent objects while it is actually
@@ -641,32 +656,62 @@ export default function Model({
 
     const previewGroup = previewGroupRef.current;
     if (previewGroup) {
-      previewGroup.visible = preview.plate > 1e-3;
-      previewGroup.scale.setScalar(
-        previewMode === "scale" ? Math.max(preview.plate, 1e-4) : 1,
-      );
+      previewGroup.visible = plate > 1e-3;
 
-      // Track where the plate actually lands rather than assuming the model
-      // sits centred on the group's origin.
       if (previewGroup.visible && skullMesh && previewGroup.parent) {
-        const center = orientTemp.current.plateCenter;
-        center.set(flatTarget.centerX, flatTarget.centerY, flatTarget.centerZ);
-        skullMesh.localToWorld(center);
-        previewGroup.parent.worldToLocal(center);
-        center.z +=
-          (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
-            CONFIG.projectPreview.IMAGE_GAP) *
-          responsiveScale *
-          plateGrowth;
+        const temp = orientTemp.current;
+        const center = temp.plateCenter;
+
+        if (previewMode === "morph") {
+          // Ride the flattened geometry's own frame: the gap is measured along
+          // the slab's local thickness axis and every transform between the
+          // mesh and this group — the skull's rotation, the orient slerp, the
+          // growth — arrives through the copy instead of being re-derived.
+          center.set(
+            flatTarget.centerX,
+            flatTarget.centerY -
+              CONFIG.projectPreview.SLAB_THICKNESS / 2 -
+              CONFIG.projectPreview.IMAGE_GAP,
+            flatTarget.centerZ,
+          );
+          skullMesh.localToWorld(center);
+          previewGroup.parent.worldToLocal(center);
+
+          skullMesh.getWorldQuaternion(temp.mesh);
+          previewGroup.parent.getWorldQuaternion(temp.parent);
+          previewGroup.quaternion
+            .copy(temp.parent)
+            .invert()
+            .multiply(temp.mesh)
+            .multiply(PLATE_IMAGE_FACING);
+
+          skullMesh.getWorldScale(temp.meshScale);
+          previewGroup.parent.getWorldScale(temp.parentScale);
+          previewGroup.scale.setScalar(temp.meshScale.x / temp.parentScale.x);
+        } else {
+          center.set(
+            flatTarget.centerX,
+            flatTarget.centerY,
+            flatTarget.centerZ,
+          );
+          skullMesh.localToWorld(center);
+          previewGroup.parent.worldToLocal(center);
+          center.z +=
+            (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
+              CONFIG.projectPreview.IMAGE_GAP) *
+            responsiveScale;
+
+          previewGroup.quaternion.identity();
+          previewGroup.scale.setScalar(
+            responsiveScale * previewSizeMult * Math.max(plate, 1e-4),
+          );
+        }
+
         previewGroup.position.copy(center);
       }
     }
     if (previewMaterialRef.current) {
-      previewMaterialRef.current.opacity = THREE.MathUtils.clamp(
-        preview.plate,
-        0,
-        1,
-      );
+      previewMaterialRef.current.opacity = plate;
     }
 
     const pointer = pointerTracking.current;
@@ -693,7 +738,7 @@ export default function Model({
           pointer.velocity / previewTuning.fullScale,
           -1,
           1,
-        ) * preview.plate;
+        ) * plate;
 
     // Negated: the centre lags behind, so it trails the pointer's direction.
     previewUniforms.uPreviewBend.value =
