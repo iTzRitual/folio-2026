@@ -32,7 +32,7 @@ varying float vWorldY;
 
 void main() {
   float top =
-    smoothstep(uTopY - uTopSpan, uTopY, vWorldY) *
+    smoothstep(uTopY, uTopY + uTopSpan, vWorldY) *
     (1.0 - smoothstep(uTopCutY, uTopCutY + uTopCutSpan, vWorldY));
   float bottom = 1.0 - smoothstep(uBottomY, uBottomY + uBottomSpan, vWorldY);
   float alpha = clamp(max(top, bottom), 0.0, 1.0) * uStrength;
@@ -76,7 +76,7 @@ export function CurlEdgeFade({
 
     material.uniforms.uColor.value.set(palette.bg);
     material.uniforms.uTopY.value = foldY;
-    material.uniforms.uTopSpan.value = viewport.height * topSpanMult;
+    material.uniforms.uTopSpan.value = radius * topSpanMult;
     material.uniforms.uTopCutY.value = foldY + radius;
     material.uniforms.uTopCutSpan.value = radius * CONFIG.detailsCurl.EDGE_FADE_CUT_MULT;
     material.uniforms.uBottomY.value = -viewport.height / 2;

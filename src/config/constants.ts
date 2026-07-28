@@ -102,7 +102,7 @@ export const CONFIG = {
         MAX_ANGLE: 1.5,
         FADE_ANGLE_START: 0.15,
         FADE_ANGLE_END: 1.25,
-        EDGE_FADE_TOP_MULT: 0.16,
+        EDGE_FADE_TOP_MULT: 0.85,
         EDGE_FADE_BOTTOM_MULT: 0.28,
         EDGE_FADE_CUT_MULT: 0.25,
         GLYPH_DETAIL: 3,
