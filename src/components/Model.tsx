@@ -585,6 +585,22 @@ export default function Model({
       skullMesh.morphTargetInfluences[0] = preview.morph;
     }
 
+    // The flattened skull only exists to carry the animation — once the
+    // screenshot is up it would just sit behind it, showing through wherever
+    // the plate bends away. Dissolve it as the exact inverse of the image's own
+    // fade, so the two cross over and it comes back on the way out.
+    if (skullMesh) {
+      const glass = skullMesh.material as THREE.Material;
+      const glassOpacity = 1 - THREE.MathUtils.clamp(preview.plate, 0, 1);
+      const fading = glassOpacity < 1 - 1e-3;
+
+      // Only bucket it with the transparent objects while it is actually
+      // fading; opaque is how it renders for the whole hero.
+      if (glass.transparent !== fading) glass.transparent = fading;
+      glass.opacity = glassOpacity;
+      skullMesh.visible = glassOpacity > 1e-3;
+    }
+
     // The skull flattens at its own size, then swells into the screenshot's
     // footprint over the tail of the morph, so both land on the same rectangle.
     const plateGrowth = THREE.MathUtils.lerp(
