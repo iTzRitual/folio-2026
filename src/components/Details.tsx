@@ -27,12 +27,7 @@ import {
   DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
-import {
-  applyCurlSettings,
-  setCurlTintColor,
-  type CurlSettings,
-} from "@/lib/detailsCurl";
-import { useTheme } from "@/context/ThemeContext";
+import { applyCurlSettings, type CurlSettings } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
 
 const CURL_DEFAULTS: CurlSettings = {
@@ -42,8 +37,6 @@ const CURL_DEFAULTS: CurlSettings = {
   maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
   fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
-  shadeStrength: CONFIG.detailsCurl.SHADE_STRENGTH,
-  tintBandMult: CONFIG.detailsCurl.TINT_BAND_MULT,
   bend: 1,
 };
 
@@ -77,18 +70,6 @@ const CURL_LEVA_SCHEMA = {
     value: CURL_DEFAULTS.fadeAngleEnd,
     min: 0.05,
     max: 3,
-    step: 0.01,
-  },
-  shadeStrength: {
-    value: CURL_DEFAULTS.shadeStrength,
-    min: 0,
-    max: 1,
-    step: 0.01,
-  },
-  tintBandMult: {
-    value: CURL_DEFAULTS.tintBandMult,
-    min: 0.02,
-    max: 0.6,
     step: 0.01,
   },
 };
@@ -145,14 +126,7 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
-    shadeStrength,
-    tintBandMult,
   } = curl;
-
-  const { palette } = useTheme();
-  useLayoutEffect(() => {
-    setCurlTintColor(palette.bg);
-  }, [palette.bg]);
 
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
@@ -201,8 +175,6 @@ export function Details({
       maxAngle,
       fadeAngleStart,
       fadeAngleEnd,
-      shadeStrength,
-      tintBandMult,
       bend: prefersReducedMotion ? 0 : 1,
     });
   }, [
@@ -215,8 +187,6 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
-    shadeStrength,
-    tintBandMult,
     prefersReducedMotion,
   ]);
 

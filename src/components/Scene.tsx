@@ -10,6 +10,7 @@ import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
+import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { Suspense } from "react";
@@ -50,6 +51,7 @@ function SceneContent({
         {!isMobile && <Header />}
         {!isMobile && <HeroText />}
         {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
+        {!isMobile && <CurlEdgeFade />}
         {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
             <CustomAberration isDebug={isDebug} />

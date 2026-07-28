@@ -1,11 +1,5 @@
-import { Color, type WebGLProgramParametersWithUniforms } from "three";
-import { CONFIG, THEMES } from "@/config/constants";
-
-export const curlTintUniform = { value: new Color(THEMES.Dark.bg) };
-
-export function setCurlTintColor(hex: string) {
-    curlTintUniform.value.set(hex);
-}
+import type { WebGLProgramParametersWithUniforms } from "three";
+import { CONFIG } from "@/config/constants";
 
 export const curlUniforms: Record<string, { value: number }> = {
     uCurlFoldY: { value: 0 },
@@ -17,9 +11,6 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFadeStart: { value: 0 },
     uCurlFadeEndRise: { value: 1 },
     uCurlFadeEndDrop: { value: 1 },
-    uCurlShadeStrength: { value: CONFIG.detailsCurl.SHADE_STRENGTH },
-    uCurlTintBottomY: { value: -1e6 },
-    uCurlTintBottomSpan: { value: 1 },
 };
 
 const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1 };
@@ -31,8 +22,6 @@ export interface CurlSettings {
     maxAngle: number;
     fadeAngleStart: number;
     fadeAngleEnd: number;
-    shadeStrength: number;
-    tintBandMult: number;
     bend: number;
 }
 
@@ -58,12 +47,6 @@ export function applyCurlSettings(
         viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
-    curlUniforms.uCurlShadeStrength.value = settings.shadeStrength;
-    curlUniforms.uCurlTintBottomY.value = -viewportHeight / 2;
-    curlUniforms.uCurlTintBottomSpan.value = Math.max(
-        viewportHeight * settings.tintBandMult,
-        0.0001,
-    );
 
     const fadeStart = settings.fadeAngleStart * radius;
     const fadeEndRise = Math.max(settings.fadeAngleEnd * radius, fadeStart + 1e-4);
@@ -87,10 +70,6 @@ uniform float uCurlBend;
 uniform float uCurlFadeStart;
 uniform float uCurlFadeEndRise;
 uniform float uCurlFadeEndDrop;
-uniform float uCurlShadeStrength;
-uniform float uCurlTintBottomY;
-uniform float uCurlTintBottomSpan;
-varying float vCurlShade;
 varying float vCurlFade;
 `;
 
@@ -98,7 +77,6 @@ const CURL_BODY = /* glsl */ `
 #include <begin_vertex>
 {
   vec4 curlWorld = modelMatrix * vec4(transformed, 1.0);
-  float curlPreY = transformed.y;
   float curlRise = curlWorld.y - uCurlFoldY;
   float curlDrop = uCurlBottomY - curlWorld.y;
   float curlLift = curlWorld.z - uCurlSheetZ;
@@ -119,19 +97,6 @@ const CURL_BODY = /* glsl */ `
   float curlFadeEnd =
     curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
   vCurlFade = 1.0 - smoothstep(uCurlFadeStart, curlFadeEnd, curlPast);
-
-  float curlFinalY = curlWorld.y + (transformed.y - curlPreY);
-  float curlTintTop = smoothstep(0.0, uCurlFadeEndRise, curlRise);
-  float curlTintBottom = 1.0 - smoothstep(
-    uCurlTintBottomY,
-    uCurlTintBottomY + uCurlTintBottomSpan,
-    curlFinalY
-  );
-  vCurlShade = clamp(
-    uCurlShadeStrength * max(curlTintTop, curlTintBottom),
-    0.0,
-    1.0
-  );
 }
 `;
 
@@ -145,10 +110,6 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
     shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
     shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
-    shader.uniforms.uCurlShadeStrength = curlUniforms.uCurlShadeStrength;
-    shader.uniforms.uCurlTintBottomY = curlUniforms.uCurlTintBottomY;
-    shader.uniforms.uCurlTintBottomSpan = curlUniforms.uCurlTintBottomSpan;
-    shader.uniforms.uCurlTint = curlTintUniform;
     shader.uniforms.uCurlFadePower = { value: 1 };
 
     shader.vertexShader = CURL_DEFS + shader.vertexShader;
@@ -166,13 +127,10 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
 
 const CURL_SHADE_FRAGMENT_DEFS = /* glsl */ `
 uniform float uCurlFadePower;
-uniform vec3 uCurlTint;
-varying float vCurlShade;
 varying float vCurlFade;
 `;
 
 const CURL_SHADE_FRAGMENT_BODY = /* glsl */ `
-diffuseColor.rgb = mix(diffuseColor.rgb, uCurlTint, vCurlShade);
 diffuseColor.a *= pow(max(vCurlFade, 0.0), uCurlFadePower);
 #include <opaque_fragment>
 `;
