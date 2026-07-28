@@ -100,8 +100,12 @@ export const CONFIG = {
         // Gap between the glass plate's front face and the image, so the
         // screenshot never z-fights the refraction.
         IMAGE_GAP: 0.06,
-        // 1 puts the screenshot exactly on the flattened plate's footprint.
-        SIZE_MULT: 1.7,
+        // Final size of both the plate and the screenshot on it, relative to
+        // the skull's own footprint.
+        SIZE_MULT: 1.75,
+        // Morph progress at which the plate starts growing into SIZE_MULT, so
+        // the skull flattens first and only swells once it is nearly a plate.
+        GROW_START: 0.62,
         CORNER_RADIUS_MULT: 0.05,
         MORPH_IN_DURATION: 0.7,
         MORPH_OUT_DURATION: 0.45,
@@ -119,9 +123,9 @@ export const CONFIG = {
         // Cross-plate segments the trailing-centre bend is sampled over.
         BEND_SEGMENTS: 48,
         // Peak lag of the plate's centre, as a fraction of its height.
-        BEND_MULT: 0.16,
+        BEND_MULT: 0.275,
         // Peak per-channel UV split, in texture units.
-        ABERRATION_MULT: 0.012,
+        ABERRATION_MULT: 0.06,
         // Pointer speed (in normalised units per second) that saturates both.
         VELOCITY_FULL_SCALE: 2.6,
         VELOCITY_SMOOTHING: 11,

@@ -104,8 +104,14 @@ export default function Model({
     aberrationMult: {
       value: CONFIG.projectPreview.ABERRATION_MULT,
       min: 0,
-      max: 0.06,
+      max: 0.2,
       step: 0.001,
+    },
+    growStart: {
+      value: CONFIG.projectPreview.GROW_START,
+      min: 0,
+      max: 0.95,
+      step: 0.01,
     },
     velocityFullScale: {
       value: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
@@ -130,12 +136,14 @@ export default function Model({
         aberration: levaPreview.aberrationMult,
         fullScale: levaPreview.velocityFullScale,
         smoothing: levaPreview.velocitySmoothing,
+        growStart: levaPreview.growStart,
       }
     : {
         bend: CONFIG.projectPreview.BEND_MULT,
         aberration: CONFIG.projectPreview.ABERRATION_MULT,
         fullScale: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
         smoothing: CONFIG.projectPreview.VELOCITY_SMOOTHING,
+        growStart: CONFIG.projectPreview.GROW_START,
       };
 
   const flatTarget = useMemo(
@@ -577,6 +585,14 @@ export default function Model({
       skullMesh.morphTargetInfluences[0] = preview.morph;
     }
 
+    // The skull flattens at its own size, then swells into the screenshot's
+    // footprint over the tail of the morph, so both land on the same rectangle.
+    const plateGrowth = THREE.MathUtils.lerp(
+      1,
+      previewSizeMult,
+      THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1),
+    );
+
     const orient = morphOrientRef.current;
     if (orient) {
       // Cancel out everything the skull is rotated by so the flattened plate
@@ -604,7 +620,7 @@ export default function Model({
         orient.quaternion.identity();
       }
 
-      orient.scale.setScalar(Math.max(preview.skull, 1e-4));
+      orient.scale.setScalar(Math.max(preview.skull, 1e-4) * plateGrowth);
     }
 
     const previewGroup = previewGroupRef.current;
@@ -624,7 +640,8 @@ export default function Model({
         center.z +=
           (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
             CONFIG.projectPreview.IMAGE_GAP) *
-          responsiveScale;
+          responsiveScale *
+          plateGrowth;
         previewGroup.position.copy(center);
       }
     }
