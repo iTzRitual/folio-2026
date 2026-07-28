@@ -3,7 +3,11 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import { Group, Vector3 } from "three";
-import { curlAngle, curlBottomAngle, curlOpacity } from "@/lib/detailsCurl";
+import {
+    curlAngle,
+    curlDropOpacity,
+    curlRiseOpacity,
+} from "@/lib/detailsCurl";
 
 export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
     applyOpacity: (opacity: number, curlFade: number) => void,
@@ -20,9 +24,11 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
 
         group.getWorldPosition(worldPosition.current);
         const angle = curlAngle(worldPosition.current.y);
-        const bottomAngle = curlBottomAngle(worldPosition.current.y);
-        const topFade = curlOpacity(angle);
-        const fade = Math.min(topFade, curlOpacity(bottomAngle));
+        const topFade = curlRiseOpacity(worldPosition.current.y);
+        const fade = Math.min(
+            topFade,
+            curlDropOpacity(worldPosition.current.y),
+        );
         applyOpacity(revealedRef.current ? fade : 0, topFade);
 
         const hidden = angle > 0;

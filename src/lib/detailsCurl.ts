@@ -8,14 +8,12 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlRadius: { value: 1 },
     uCurlMaxAngle: { value: CONFIG.detailsCurl.MAX_ANGLE },
     uCurlBend: { value: 1 },
-    uCurlFadeStart: { value: CONFIG.detailsCurl.FADE_ANGLE_START },
-    uCurlFadeEnd: { value: CONFIG.detailsCurl.FADE_ANGLE_END },
+    uCurlFadeStart: { value: 0 },
+    uCurlFadeEndRise: { value: 1 },
+    uCurlFadeEndDrop: { value: 1 },
 };
 
-export const curlFadeRange: { start: number; end: number } = {
-    start: CONFIG.detailsCurl.FADE_ANGLE_START,
-    end: CONFIG.detailsCurl.FADE_ANGLE_END,
-};
+const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1 };
 
 export interface CurlSettings {
     foldOffsetMult: number;
@@ -46,10 +44,20 @@ export function applyCurlSettings(
         -viewportHeight / 2 + viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
-    curlUniforms.uCurlFadeStart.value = settings.fadeAngleStart;
-    curlUniforms.uCurlFadeEnd.value = settings.fadeAngleEnd;
-    curlFadeRange.start = settings.fadeAngleStart;
-    curlFadeRange.end = settings.fadeAngleEnd;
+
+    const fadeStart = settings.fadeAngleStart * radius;
+    const fadeEndRise = Math.max(settings.fadeAngleEnd * radius, fadeStart + 1e-4);
+    const fadeEndDrop = Math.max(
+        viewportHeight * settings.bottomOffsetMult,
+        fadeStart + 1e-4,
+    );
+
+    curlUniforms.uCurlFadeStart.value = fadeStart;
+    curlUniforms.uCurlFadeEndRise.value = fadeEndRise;
+    curlUniforms.uCurlFadeEndDrop.value = fadeEndDrop;
+    curlFadeSpans.start = fadeStart;
+    curlFadeSpans.endRise = fadeEndRise;
+    curlFadeSpans.endDrop = fadeEndDrop;
 }
 
 const CURL_DEFS = /* glsl */ `
@@ -100,7 +108,8 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
 
 const CURL_FADE_VERTEX_DEFS = /* glsl */ `
 uniform float uCurlFadeStart;
-uniform float uCurlFadeEnd;
+uniform float uCurlFadeEndRise;
+uniform float uCurlFadeEndDrop;
 varying float vCurlFade;
 `;
 
@@ -109,11 +118,9 @@ const CURL_FADE_VERTEX_BODY = /* glsl */ `
   vec4 fadeWorld = modelMatrix * vec4(position, 1.0);
   float fadeRise = max(fadeWorld.y - uCurlFoldY, 0.0);
   float fadeDrop = max(uCurlBottomY - fadeWorld.y, 0.0);
-  float fadeAngle = min(
-    max(fadeRise, fadeDrop) / uCurlRadius,
-    uCurlMaxAngle
-  );
-  vCurlFade = 1.0 - smoothstep(uCurlFadeStart, uCurlFadeEnd, fadeAngle);
+  float fadeEnd = fadeRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
+  vCurlFade =
+    1.0 - smoothstep(uCurlFadeStart, fadeEnd, max(fadeRise, fadeDrop));
 }
 `;
 
@@ -132,7 +139,8 @@ export function applyCurlFadeShader(
     applyCurlShader(shader);
 
     shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
-    shader.uniforms.uCurlFadeEnd = curlUniforms.uCurlFadeEnd;
+    shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
+    shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
 
     shader.vertexShader = CURL_FADE_VERTEX_DEFS + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
@@ -189,9 +197,21 @@ export function curlRowTransform(worldY: number) {
     return { dy: 0, dz: 0, angle: 0 };
 }
 
-export function curlOpacity(angle: number) {
-    const { start, end } = curlFadeRange;
-    if (angle <= start) return 1;
-    if (angle >= end) return 0;
-    return 1 - (angle - start) / (end - start);
+function fadeOverSpan(distance: number, end: number) {
+    const { start } = curlFadeSpans;
+    if (distance <= start) return 1;
+    if (distance >= end) return 0;
+    return 1 - (distance - start) / (end - start);
+}
+
+export function curlRiseOpacity(worldY: number) {
+    const rise = worldY - curlUniforms.uCurlFoldY.value;
+    if (rise <= 0) return 1;
+    return fadeOverSpan(rise, curlFadeSpans.endRise);
+}
+
+export function curlDropOpacity(worldY: number) {
+    const drop = curlUniforms.uCurlBottomY.value - worldY;
+    if (drop <= 0) return 1;
+    return fadeOverSpan(drop, curlFadeSpans.endDrop);
 }
