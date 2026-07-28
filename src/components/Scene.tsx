@@ -51,7 +51,7 @@ function SceneContent({
         {!isMobile && <Header />}
         {!isMobile && <HeroText />}
         {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
-        {!isMobile && <CurlEdgeFade />}
+        {!isMobile && <CurlEdgeFade isDebug={isDebug} />}
         {!isMobile && !prefersReducedMotion && (
           <EffectComposer multisampling={0}>
             <CustomAberration isDebug={isDebug} />

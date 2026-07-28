@@ -2,6 +2,7 @@
 
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
+import { useControls } from "leva";
 import { Color, ShaderMaterial } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -41,13 +42,31 @@ void main() {
 }
 `;
 
-export function CurlEdgeFade({
-  topSpanMult = CONFIG.detailsCurl.EDGE_FADE_TOP_MULT,
-  bottomSpanMult = CONFIG.detailsCurl.EDGE_FADE_BOTTOM_MULT,
-}: {
-  topSpanMult?: number;
-  bottomSpanMult?: number;
-}) {
+const EDGE_FADE_DEFAULTS = {
+  topSpanMult: CONFIG.detailsCurl.EDGE_FADE_TOP_MULT,
+  bottomSpanMult: CONFIG.detailsCurl.EDGE_FADE_BOTTOM_MULT,
+};
+
+const EDGE_FADE_LEVA_SCHEMA = {
+  topSpanMult: {
+    value: EDGE_FADE_DEFAULTS.topSpanMult,
+    min: 0.05,
+    max: 2,
+    step: 0.01,
+  },
+  bottomSpanMult: {
+    value: EDGE_FADE_DEFAULTS.bottomSpanMult,
+    min: 0.01,
+    max: 0.6,
+    step: 0.005,
+  },
+};
+
+export function CurlEdgeFade({ isDebug = false }: { isDebug?: boolean }) {
+  const levaEdgeFade = useControls("Curl edge fade", EDGE_FADE_LEVA_SCHEMA);
+  const { topSpanMult, bottomSpanMult } = isDebug
+    ? levaEdgeFade
+    : EDGE_FADE_DEFAULTS;
   const { viewport } = useHeroLayout();
   const { palette } = useTheme();
   const { progressRef } = useHeroTransition();
