@@ -89,7 +89,7 @@ export function DetailsLink({
     (opacity, curlFade) => {
       if (materialRef.current) materialRef.current.opacity = opacity;
       if (arrowRef.current) arrowRef.current.opacity = opacity;
-      if (plateRef.current) plateRef.current.opacity = opacity;
+      if (plateRef.current) plateRef.current.opacity = opacity > 0 ? 1 : 0;
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
 
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;

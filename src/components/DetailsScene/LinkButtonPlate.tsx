@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, type RefObject } from "react";
 import { Vector2, type MeshBasicMaterial } from "three";
 import { CONFIG } from "@/config/constants";
-import { roundedCurlShader } from "@/lib/revealBlockShader";
+import { roundedCurlFadeShader } from "@/lib/revealBlockShader";
 import type { TextBounds } from "@/lib/textBounds";
 import { curlBlockRect } from "./CurlRevealBlock";
 
@@ -36,7 +36,7 @@ export function LinkButtonPlate({
         );
     }, [radiusUv, radius, width, height]);
 
-    const shader = useMemo(() => roundedCurlShader(radiusUv), [radiusUv]);
+    const shader = useMemo(() => roundedCurlFadeShader(radiusUv), [radiusUv]);
 
     return (
         <mesh
