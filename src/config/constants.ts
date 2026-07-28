@@ -97,7 +97,7 @@ export const CONFIG = {
     },
     detailsCurl: {
         FOLD_OFFSET_MULT: 0,
-        BOTTOM_OFFSET_MULT: 0.16,
+        BOTTOM_OFFSET_MULT: 0,
         RADIUS_MULT: 0.085,
         MAX_ANGLE: 1.5,
         FADE_ANGLE_START: 0.15,

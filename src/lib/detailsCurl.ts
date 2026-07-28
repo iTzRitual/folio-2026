@@ -40,17 +40,17 @@ export function applyCurlSettings(
             titleSettledBottomY - settings.fadeAngleEnd * radius,
         ) +
         viewportHeight * settings.foldOffsetMult;
+    const maxDescent = radius * Math.sin(Math.min(settings.maxAngle, Math.PI / 2));
     curlUniforms.uCurlBottomY.value =
-        -viewportHeight / 2 + viewportHeight * settings.bottomOffsetMult;
+        -viewportHeight / 2 +
+        maxDescent +
+        viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
 
     const fadeStart = settings.fadeAngleStart * radius;
     const fadeEndRise = Math.max(settings.fadeAngleEnd * radius, fadeStart + 1e-4);
-    const fadeEndDrop = Math.max(
-        viewportHeight * settings.bottomOffsetMult,
-        fadeStart + 1e-4,
-    );
+    const fadeEndDrop = Math.max(settings.maxAngle * radius, fadeStart + 1e-4);
 
     curlUniforms.uCurlFadeStart.value = fadeStart;
     curlUniforms.uCurlFadeEndRise.value = fadeEndRise;
