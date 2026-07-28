@@ -101,7 +101,7 @@ export const CONFIG = {
         // screenshot never z-fights the refraction.
         IMAGE_GAP: 0.06,
         // 1 puts the screenshot exactly on the flattened plate's footprint.
-        SIZE_MULT: 1,
+        SIZE_MULT: 1.7,
         CORNER_RADIUS_MULT: 0.05,
         MORPH_IN_DURATION: 0.7,
         MORPH_OUT_DURATION: 0.45,
@@ -112,6 +112,19 @@ export const CONFIG = {
         SCALE_PLANE_OUT_DURATION: 0.18,
         SCALE_SKULL_IN_DURATION: 0.3,
         SCALE_SKULL_IN_DELAY: 0.09,
+        // Crossing a row boundary fires leave before enter. Waiting this long
+        // before dropping the hover keeps the list one continuous region, so
+        // sweeping down it swaps the screenshot instead of re-morphing.
+        HOVER_GRACE_MS: 90,
+        // Cross-plate segments the trailing-centre bend is sampled over.
+        BEND_SEGMENTS: 48,
+        // Peak lag of the plate's centre, as a fraction of its height.
+        BEND_MULT: 0.16,
+        // Peak per-channel UV split, in texture units.
+        ABERRATION_MULT: 0.012,
+        // Pointer speed (in normalised units per second) that saturates both.
+        VELOCITY_FULL_SCALE: 2.6,
+        VELOCITY_SMOOTHING: 11,
     },
     detailsLink: {
         HOVER_COLOR: "#FFFFFF",

@@ -11,12 +11,55 @@ import * as THREE from "three";
 import { PROJECT_PREVIEW_SOURCES } from "@/data/content";
 import { CONFIG } from "@/config/constants";
 
-const ROUNDED_DEFS = /* glsl */ `
-uniform vec2 uPreviewRadiusUv;
+/**
+ * Written every frame from the pointer's vertical speed. Module scope because
+ * there is exactly one preview plate, matching how the details curl shares its
+ * uniforms.
+ */
+export const previewUniforms = {
+    /** Signed lag of the plate's centre, in local units. */
+    uPreviewBend: { value: 0 },
+    /** Signed per-channel UV split. */
+    uPreviewSplit: { value: 0 },
+};
+
+const VERTEX_DEFS = /* glsl */ `
+uniform float uPreviewBend;
 varying vec2 vPreviewUv;
 `;
 
-const ROUNDED_ALPHA = /* glsl */ `
+// The left and right edges lead and the middle trails, so the plate bows
+// against the pointer instead of sliding rigidly.
+const VERTEX_BEND = /* glsl */ `
+#include <begin_vertex>
+transformed.y += uPreviewBend * sin(uv.x * 3.141592653589793);
+`;
+
+const FRAGMENT_DEFS = /* glsl */ `
+uniform vec2 uPreviewRadiusUv;
+uniform float uPreviewSplit;
+varying vec2 vPreviewUv;
+`;
+
+// Smearing the channels along the direction of travel, strongest where the
+// plate is bending hardest.
+const FRAGMENT_MAP = /* glsl */ `
+#ifdef USE_MAP
+{
+  float split = uPreviewSplit * sin(vPreviewUv.x * 3.141592653589793);
+  vec2 offset = vec2(0.0, split);
+  vec4 centerSample = texture2D(map, vMapUv);
+  diffuseColor *= vec4(
+    texture2D(map, vMapUv + offset).r,
+    centerSample.g,
+    texture2D(map, vMapUv - offset).b,
+    centerSample.a
+  );
+}
+#endif
+`;
+
+const FRAGMENT_ALPHA = /* glsl */ `
 {
   vec2 corner =
     max(abs(vPreviewUv - 0.5) - (0.5 - uPreviewRadiusUv), 0.0) / uPreviewRadiusUv;
@@ -27,19 +70,21 @@ const ROUNDED_ALPHA = /* glsl */ `
 #include <opaque_fragment>
 `;
 
-function roundedShader(radiusUv: { value: THREE.Vector2 }) {
+function previewShader(radiusUv: { value: THREE.Vector2 }) {
     return (shader: THREE.WebGLProgramParametersWithUniforms) => {
         shader.uniforms.uPreviewRadiusUv = radiusUv;
+        shader.uniforms.uPreviewBend = previewUniforms.uPreviewBend;
+        shader.uniforms.uPreviewSplit = previewUniforms.uPreviewSplit;
 
-        shader.vertexShader = `varying vec2 vPreviewUv;\n${shader.vertexShader}`.replace(
-            "void main() {",
-            "void main() {\n  vPreviewUv = uv;",
-        );
-        shader.fragmentShader = ROUNDED_DEFS + shader.fragmentShader;
-        shader.fragmentShader = shader.fragmentShader.replace(
-            "#include <opaque_fragment>",
-            ROUNDED_ALPHA,
-        );
+        shader.vertexShader = VERTEX_DEFS + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader
+            .replace("void main() {", "void main() {\n  vPreviewUv = uv;")
+            .replace("#include <begin_vertex>", VERTEX_BEND);
+
+        shader.fragmentShader = FRAGMENT_DEFS + shader.fragmentShader;
+        shader.fragmentShader = shader.fragmentShader
+            .replace("#include <map_fragment>", FRAGMENT_MAP)
+            .replace("#include <opaque_fragment>", FRAGMENT_ALPHA);
     };
 }
 
@@ -92,7 +137,7 @@ export function ProjectPreviewPlane({
     materialRef,
 }: ProjectPreviewPlaneProps) {
     const radiusUv = useMemo(() => ({ value: new THREE.Vector2(1, 1) }), []);
-    const applyShader = useMemo(() => roundedShader(radiusUv), [radiusUv]);
+    const applyShader = useMemo(() => previewShader(radiusUv), [radiusUv]);
 
     const radius = Math.min(
         height * CONFIG.projectPreview.CORNER_RADIUS_MULT,
@@ -114,7 +159,14 @@ export function ProjectPreviewPlane({
 
     return (
         <mesh visible={texture !== null}>
-            <planeGeometry args={[width, height]} />
+            <planeGeometry
+                args={[
+                    width,
+                    height,
+                    CONFIG.projectPreview.BEND_SEGMENTS,
+                    1,
+                ]}
+            />
             <meshBasicMaterial
                 ref={materialRef}
                 map={texture}

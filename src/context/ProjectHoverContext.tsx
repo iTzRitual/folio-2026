@@ -4,10 +4,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { CONFIG } from "@/config/constants";
 
 interface ProjectHoverValue {
   /** Preview texture of the project currently under the cursor, or null. */
@@ -19,17 +22,36 @@ interface ProjectHoverValue {
 const ProjectHoverContext = createContext<ProjectHoverValue | null>(null);
 
 export function ProjectHoverProvider({ children }: { children: ReactNode }) {
-  const [hoveredPreview, setHoveredPreview] = useState<string | null>(null);
+  const [hoveredPreview, setPreview] = useState<string | null>(null);
+  const pendingClear = useRef<number | null>(null);
 
-  // A link only clears its own preview: when the pointer slides straight from
-  // one link to the next, the leave can land after the enter.
-  const clearHoveredPreview = useCallback((src: string) => {
-    setHoveredPreview((current) => (current === src ? null : current));
+  const cancelPendingClear = () => {
+    if (pendingClear.current === null) return;
+    clearTimeout(pendingClear.current);
+    pendingClear.current = null;
+  };
+
+  const setHoveredPreview = useCallback((src: string) => {
+    cancelPendingClear();
+    setPreview(src);
   }, []);
+
+  // Leaving a row fires before entering the next one, so clearing immediately
+  // would tear a hole in the hover on every boundary. Hold the preview across
+  // the handover and only drop it once the pointer has really left the list.
+  const clearHoveredPreview = useCallback((src: string) => {
+    cancelPendingClear();
+    pendingClear.current = window.setTimeout(() => {
+      pendingClear.current = null;
+      setPreview((current) => (current === src ? null : current));
+    }, CONFIG.projectPreview.HOVER_GRACE_MS);
+  }, []);
+
+  useEffect(() => cancelPendingClear, []);
 
   const value = useMemo(
     () => ({ hoveredPreview, setHoveredPreview, clearHoveredPreview }),
-    [hoveredPreview, clearHoveredPreview],
+    [hoveredPreview, setHoveredPreview, clearHoveredPreview],
   );
 
   return (

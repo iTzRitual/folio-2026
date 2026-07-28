@@ -18,6 +18,7 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { attachFlatMorphTarget, buildFlatMorphTarget } from "@/lib/skullMorph";
 import {
   ProjectPreviewPlane,
+  previewUniforms,
   useProjectPreviewTextures,
 } from "./DetailsScene/ProjectPreviewPlane";
 import { CONFIG } from "../config/constants";
@@ -81,6 +82,7 @@ export default function Model({
   if (hoveredPreview && hoveredPreview !== shownPreview) {
     setShownPreview(hoveredPreview);
   }
+  const previewActive = hoveredPreview !== null;
 
   const levaPreview = useControls("Project preview", {
     mode: {
@@ -121,6 +123,8 @@ export default function Model({
     });
   }, [nodes.Sphere, flatTarget]);
 
+  const pointerTracking = useRef({ lastY: 0, velocity: 0, seeded: false });
+
   // 0 = skull, 1 = fully revealed preview. `skull` only moves in "scale" mode.
   const previewProxy = useRef({ morph: 0, plate: 0, skull: 1 });
   const orientTemp = useRef({
@@ -135,7 +139,7 @@ export default function Model({
   useGSAP(
     () => {
       const proxy = previewProxy.current;
-      const active = hoveredPreview !== null;
+      const active = previewActive;
       const cfg = CONFIG.projectPreview;
 
       gsap.killTweensOf(proxy);
@@ -202,7 +206,9 @@ export default function Model({
           );
       }
     },
-    { dependencies: [hoveredPreview, previewMode, prefersReducedMotion] },
+    // Keyed on whether *any* project is hovered, not on which one — sweeping
+    // down the list swaps the screenshot without restarting the morph.
+    { dependencies: [previewActive, previewMode, prefersReducedMotion] },
   );
 
   useGSAP(() => {
@@ -586,6 +592,39 @@ export default function Model({
         1,
       );
     }
+
+    const pointer = pointerTracking.current;
+    const cfg = CONFIG.projectPreview;
+
+    if (!pointer.seeded) {
+      pointer.lastY = state.pointer.y;
+      pointer.seeded = true;
+    }
+
+    const rawVelocity = (state.pointer.y - pointer.lastY) / Math.max(dt, 1e-4);
+    pointer.lastY = state.pointer.y;
+    // Chasing the raw reading rounds off the spikes on the way in and lets the
+    // plate spring back on its own once the pointer stops.
+    pointer.velocity = THREE.MathUtils.damp(
+      pointer.velocity,
+      rawVelocity,
+      cfg.VELOCITY_SMOOTHING,
+      dt,
+    );
+
+    const travel = prefersReducedMotion
+      ? 0
+      : THREE.MathUtils.clamp(
+          pointer.velocity / cfg.VELOCITY_FULL_SCALE,
+          -1,
+          1,
+        ) * preview.plate;
+
+    // Negated: the centre lags behind, so it trails the pointer's direction.
+    previewUniforms.uPreviewBend.value =
+      -travel * cfg.BEND_MULT * previewHeight;
+    previewUniforms.uPreviewSplit.value =
+      travel * cfg.ABERRATION_MULT;
   });
 
   return (
