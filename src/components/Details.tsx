@@ -27,7 +27,12 @@ import {
   DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
-import { applyCurlSettings, type CurlSettings } from "@/lib/detailsCurl";
+import {
+  applyCurlSettings,
+  setCurlTintColor,
+  type CurlSettings,
+} from "@/lib/detailsCurl";
+import { useTheme } from "@/context/ThemeContext";
 import { CONFIG } from "../config/constants";
 
 const CURL_SHADE_MODES = {
@@ -170,6 +175,11 @@ export function Details({
     shadeSpanMult,
     shadeMode,
   } = curl;
+
+  const { palette } = useTheme();
+  useLayoutEffect(() => {
+    setCurlTintColor(palette.bg);
+  }, [palette.bg]);
 
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();

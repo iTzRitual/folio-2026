@@ -1,5 +1,11 @@
-import type { WebGLProgramParametersWithUniforms } from "three";
-import { CONFIG } from "@/config/constants";
+import { Color, type WebGLProgramParametersWithUniforms } from "three";
+import { CONFIG, THEMES } from "@/config/constants";
+
+export const curlTintUniform = { value: new Color(THEMES.Dark.bg) };
+
+export function setCurlTintColor(hex: string) {
+    curlTintUniform.value.set(hex);
+}
 
 export const curlUniforms: Record<string, { value: number }> = {
     uCurlFoldY: { value: 0 },
@@ -121,7 +127,7 @@ const CURL_BODY = /* glsl */ `
     : (uCurlShadeMode < 1.5
         ? sin(curlShadeT * 1.5707963)
         : curlShadeT * curlShadeT * curlShadeT);
-  vCurlShade = 1.0 - uCurlShadeStrength * curlShadeCurve;
+  vCurlShade = clamp(uCurlShadeStrength * curlShadeCurve, 0.0, 1.0);
 }
 `;
 
@@ -138,6 +144,7 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlShadeStrength = curlUniforms.uCurlShadeStrength;
     shader.uniforms.uCurlShadeSpan = curlUniforms.uCurlShadeSpan;
     shader.uniforms.uCurlShadeMode = curlUniforms.uCurlShadeMode;
+    shader.uniforms.uCurlTint = curlTintUniform;
     shader.uniforms.uCurlFadePower = { value: 1 };
 
     shader.vertexShader = CURL_DEFS + shader.vertexShader;
@@ -155,12 +162,13 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
 
 const CURL_SHADE_FRAGMENT_DEFS = /* glsl */ `
 uniform float uCurlFadePower;
+uniform vec3 uCurlTint;
 varying float vCurlShade;
 varying float vCurlFade;
 `;
 
 const CURL_SHADE_FRAGMENT_BODY = /* glsl */ `
-diffuseColor.rgb *= vCurlShade;
+diffuseColor.rgb = mix(diffuseColor.rgb, uCurlTint, vCurlShade);
 diffuseColor.a *= pow(max(vCurlFade, 0.0), uCurlFadePower);
 #include <opaque_fragment>
 `;
