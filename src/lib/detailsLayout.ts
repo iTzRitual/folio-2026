@@ -16,6 +16,7 @@ export type DetailsColumn = "left" | "right";
 export interface DetailsSectionOffsets {
     headingY: number;
     bodyY: number;
+    bottomY: number;
 }
 
 export interface DetailsLayout {
@@ -165,12 +166,16 @@ export function calculateDetailsLayout({
 
     const place = (key: string, column: DetailsColumn) => {
         const top = cursors[column];
-        offsets[key] = { headingY: top, bodyY: top + bodyTopOffset };
-
         const height = Math.max(
             headingFontSize,
             bodyTopOffset + lineCounts[key] * lineHeights[key],
         );
+
+        offsets[key] = {
+            headingY: top,
+            bodyY: top + bodyTopOffset,
+            bottomY: top + height,
+        };
         cursors[column] = top + height + sectionGap;
     };
 
@@ -190,12 +195,16 @@ export function calculateDetailsLayout({
 
     const bioTopY = detailsOverflow + viewportHeight;
     const bioTextY = bioTopY + headingFontSize * L.BIO_CONTENT_TOP_MULT;
-    offsets.bio = { headingY: bioTopY, bodyY: bioTextY };
 
     const bioHeight = Math.max(
         bioImageHeight,
         bioTextY - bioTopY + bioLines.length * bodyLineHeight,
     );
+    offsets.bio = {
+        headingY: bioTopY,
+        bodyY: bioTextY,
+        bottomY: bioTopY + bioHeight,
+    };
     const bioOverflow = Math.max(0, bioHeight - usableHeight);
 
     const contentHeight = bioTopY + bioHeight;

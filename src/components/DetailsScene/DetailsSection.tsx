@@ -1,5 +1,7 @@
 "use client";
 
+import type { RefObject } from "react";
+import type { Group } from "three";
 import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
 import { CONFIG, FONTS } from "@/config/constants";
@@ -26,6 +28,7 @@ interface DetailsSectionProps {
     pxTo3DWidth: number;
     startTrigger: boolean;
     staggerStep: number;
+    headingGroupRef?: RefObject<Group | null>;
 }
 
 export function DetailsSection({
@@ -43,28 +46,31 @@ export function DetailsSection({
     pxTo3DWidth,
     startTrigger,
     staggerStep,
+    headingGroupRef,
 }: DetailsSectionProps) {
     const { palette } = useTheme();
 
     return (
         <>
-            <DetailsText
-                text={heading}
-                position={[headingX, headingY, 0]}
-                anchorX="left"
-                anchorY="top"
-                calculatedFontSize={headingFontSize}
-                pixelFontSize={headingFontSize / pxTo3DWidth}
-                font={FONTS.karlaLight}
-                fontWeightClass="font-light"
-                color={palette.textPrimary}
-                blockColor={palette.textPrimary}
-                startTrigger={startTrigger}
-                delay={CONFIG.detailsTimings.HEADING_DELAY}
-                direction={direction}
-                lineHeight={1}
-                letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
-            />
+            <group ref={headingGroupRef}>
+                <DetailsText
+                    text={heading}
+                    position={[headingX, headingY, 0]}
+                    anchorX="left"
+                    anchorY="top"
+                    calculatedFontSize={headingFontSize}
+                    pixelFontSize={headingFontSize / pxTo3DWidth}
+                    font={FONTS.karlaLight}
+                    fontWeightClass="font-light"
+                    color={palette.textPrimary}
+                    blockColor={palette.textPrimary}
+                    startTrigger={startTrigger}
+                    delay={CONFIG.detailsTimings.HEADING_DELAY}
+                    direction={direction}
+                    lineHeight={1}
+                    letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
+                />
+            </group>
 
             {items.map((item, index) => {
                 const shared = {

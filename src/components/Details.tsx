@@ -27,7 +27,11 @@ import {
   DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
-import { applyCurlSettings, type CurlSettings } from "@/lib/detailsCurl";
+import {
+  applyCurlSettings,
+  curlUniforms,
+  type CurlSettings,
+} from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
 
 const CURL_DEFAULTS: CurlSettings = {
@@ -136,6 +140,9 @@ export function Details({
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const revealedRef = useRef<Record<string, boolean>>({});
 
+  const experienceHeadingRef = useRef<Group>(null);
+  const projectsHeadingRef = useRef<Group>(null);
+  const educationHeadingRef = useRef<Group>(null);
   const layout = useMemo(
     () =>
       calculateDetailsLayout({
@@ -203,6 +210,29 @@ export function Details({
     if (rootGroupRef.current) {
       rootGroupRef.current.position.y = groupY;
     }
+
+    const foldY = curlUniforms.uCurlFoldY.value;
+    const headingHeight = layout.headingFontSize * pxTo3DHeight;
+
+    const stickHeading = (headingGroup: Group | null, key: string) => {
+      if (!headingGroup) return;
+
+      const offsets = layout.sections[key];
+      const naturalY = groupY + sectionTop - offsets.headingY * pxTo3DHeight;
+      const sectionBottomY =
+        groupY + sectionTop - offsets.bottomY * pxTo3DHeight;
+
+      const belowFold = Math.min(
+        Math.max(foldY - naturalY, 0),
+        foldY - sectionBottomY - headingHeight,
+      );
+
+      headingGroup.position.y = foldY - belowFold - naturalY;
+    };
+
+    stickHeading(experienceHeadingRef.current, "experience");
+    stickHeading(projectsHeadingRef.current, "projects");
+    stickHeading(educationHeadingRef.current, "education");
 
     const projects = layout.sections.projects;
     const projectsCenter =
@@ -295,6 +325,7 @@ export function Details({
         bodyAnchorX="left"
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.experience}
+        headingGroupRef={experienceHeadingRef}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
       />
@@ -309,6 +340,7 @@ export function Details({
         bodyAnchorX="left"
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.projects}
+        headingGroupRef={projectsHeadingRef}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
         bodyLineHeight={layout.projectLineHeight * pxTo3DHeight}
@@ -324,6 +356,7 @@ export function Details({
         bodyAnchorX="left"
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.education}
+        headingGroupRef={educationHeadingRef}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
       />
