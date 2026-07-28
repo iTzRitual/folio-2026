@@ -55,6 +55,7 @@ const CURL_DEFAULTS: CurlSettings = {
   fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
   fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
   shadeStrength: CONFIG.detailsCurl.SHADE_STRENGTH,
+  shadeSpanMult: CONFIG.detailsCurl.SHADE_SPAN_MULT,
   shadeMode: CONFIG.detailsCurl.SHADE_MODE,
   bend: 1,
 };
@@ -94,6 +95,12 @@ const CURL_LEVA_SCHEMA = {
   shadeStrength: {
     value: CURL_DEFAULTS.shadeStrength,
     min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  shadeSpanMult: {
+    value: CURL_DEFAULTS.shadeSpanMult,
+    min: 0.1,
     max: 1,
     step: 0.01,
   },
@@ -160,6 +167,7 @@ export function Details({
     fadeAngleStart,
     fadeAngleEnd,
     shadeStrength,
+    shadeSpanMult,
     shadeMode,
   } = curl;
 
@@ -211,6 +219,7 @@ export function Details({
       fadeAngleStart,
       fadeAngleEnd,
       shadeStrength,
+      shadeSpanMult,
       shadeMode,
       bend: prefersReducedMotion ? 0 : 1,
     });
@@ -225,6 +234,7 @@ export function Details({
     fadeAngleStart,
     fadeAngleEnd,
     shadeStrength,
+    shadeSpanMult,
     shadeMode,
     prefersReducedMotion,
   ]);

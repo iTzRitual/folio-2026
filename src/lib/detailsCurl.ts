@@ -12,6 +12,7 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFadeEndRise: { value: 1 },
     uCurlFadeEndDrop: { value: 1 },
     uCurlShadeStrength: { value: CONFIG.detailsCurl.SHADE_STRENGTH },
+    uCurlShadeSpan: { value: CONFIG.detailsCurl.SHADE_SPAN_MULT },
     uCurlShadeMode: { value: CONFIG.detailsCurl.SHADE_MODE },
 };
 
@@ -25,6 +26,7 @@ export interface CurlSettings {
     fadeAngleStart: number;
     fadeAngleEnd: number;
     shadeStrength: number;
+    shadeSpanMult: number;
     shadeMode: number;
     bend: number;
 }
@@ -52,6 +54,7 @@ export function applyCurlSettings(
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
     curlUniforms.uCurlShadeStrength.value = settings.shadeStrength;
+    curlUniforms.uCurlShadeSpan.value = settings.shadeSpanMult;
     curlUniforms.uCurlShadeMode.value = settings.shadeMode;
 
     const fadeStart = settings.fadeAngleStart * radius;
@@ -77,6 +80,7 @@ uniform float uCurlFadeStart;
 uniform float uCurlFadeEndRise;
 uniform float uCurlFadeEndDrop;
 uniform float uCurlShadeStrength;
+uniform float uCurlShadeSpan;
 uniform float uCurlShadeMode;
 varying float vCurlShade;
 `;
@@ -102,7 +106,7 @@ const CURL_BODY = /* glsl */ `
   }
 
   float curlShadeSpan =
-    curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
+    (curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop) * uCurlShadeSpan;
   float curlShadeT = clamp(
     max(curlRise, curlDrop) / max(curlShadeSpan, 1e-5),
     0.0,
@@ -128,6 +132,7 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
     shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
     shader.uniforms.uCurlShadeStrength = curlUniforms.uCurlShadeStrength;
+    shader.uniforms.uCurlShadeSpan = curlUniforms.uCurlShadeSpan;
     shader.uniforms.uCurlShadeMode = curlUniforms.uCurlShadeMode;
 
     shader.vertexShader = CURL_DEFS + shader.vertexShader;

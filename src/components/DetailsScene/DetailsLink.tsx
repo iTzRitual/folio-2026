@@ -84,6 +84,7 @@ export function DetailsLink({
   const forceLeaveRef = useRef<() => void>(() => {});
   const hoverSources = useRef({ twin: false, mesh: false });
   const hoveredRef = useRef(false);
+  const plateShownRef = useRef(false);
 
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
     (opacity, curlFade) => {
@@ -93,7 +94,9 @@ export function DetailsLink({
       );
       if (materialRef.current) materialRef.current.opacity = inkFade;
       if (arrowRef.current) arrowRef.current.opacity = inkFade;
-      if (plateRef.current) plateRef.current.opacity = opacity > 0 ? 1 : 0;
+      if (plateRef.current) {
+        plateRef.current.opacity = plateShownRef.current ? 1 : 0;
+      }
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
 
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
@@ -138,6 +141,7 @@ export function DetailsLink({
 
   const handleHalfway = useCallback(() => {
     revealedRef.current = true;
+    plateShownRef.current = true;
   }, [revealedRef]);
 
   useEffect(() => {
