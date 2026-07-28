@@ -27,8 +27,6 @@ interface DetailsTextProps {
   letterSpacing?: number;
   htmlLetterSpacingOffset?: number;
   blockColor?: string;
-  selectionColor?: string;
-  selectionBgColor?: string;
   onSync?: (mesh: Mesh) => void;
 }
 
@@ -49,8 +47,6 @@ export function DetailsText({
   letterSpacing = -0.03,
   htmlLetterSpacingOffset = -0.004,
   blockColor,
-  selectionBgColor = "#BCBCBC",
-  selectionColor = "#1D1D1D",
   onSync,
 }: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -138,12 +134,8 @@ export function DetailsText({
           }}
         >
           <p
-            className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
-            style={{
-              color: "transparent",
-              "--selection-bg": selectionBgColor,
-              "--selection-color": selectionColor,
-            } as React.CSSProperties}
+            className="m-0 p-0"
+            style={{ color: "transparent" }}
           >
             {text}
           </p>

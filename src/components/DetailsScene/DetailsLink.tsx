@@ -15,6 +15,7 @@ import {
 } from "@/lib/textBounds";
 import { CurlRevealBlock } from "./CurlRevealBlock";
 import { useCurlFade } from "./useCurlFade";
+import { useTheme } from "@/context/ThemeContext";
 import { useProjectHover } from "@/context/ProjectHoverContext";
 
 interface DetailsLinkProps {
@@ -38,8 +39,6 @@ interface DetailsLinkProps {
   /** Row-to-row spacing in em, used to close the dead space between links. */
   rowPitchEm?: number;
   blockColor?: string;
-  selectionColor?: string;
-  selectionBgColor?: string;
   onSync?: (mesh: Mesh) => void;
 }
 
@@ -63,8 +62,6 @@ export function DetailsLink({
   htmlLetterSpacingOffset = -0.004,
   rowPitchEm,
   blockColor,
-  selectionBgColor = "#BCBCBC",
-  selectionColor = "#1D1D1D",
   onSync,
 }: DetailsLinkProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -74,6 +71,7 @@ export function DetailsLink({
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const { setHoveredPreview, clearHoveredPreview } = useProjectHover();
+  const { palette } = useTheme();
   // A link stays in the scene well past both folds, curled and faded out.
   // Anything still legible stays clickable; the preview is held to a stricter
   // threshold so a barely-there row does not swap the model out.
@@ -213,7 +211,7 @@ export function DetailsLink({
   const applyHoverColor = () => {
     const c = new THREE.Color().lerpColors(
       new THREE.Color(color),
-      new THREE.Color(CONFIG.detailsLink.HOVER_COLOR),
+      new THREE.Color(palette.hover),
       hoverProxy.current.t,
     );
     materialRef.current?.color.copy(c);
@@ -449,14 +447,8 @@ export function DetailsLink({
             />
           )}
           <p
-            className="m-0 p-0 selection:bg-(--selection-bg) selection:text-(--selection-color)"
-            style={
-              {
-                color: "transparent",
-                "--selection-bg": selectionBgColor,
-                "--selection-color": selectionColor,
-              } as React.CSSProperties
-            }
+            className="m-0 p-0"
+            style={{ color: "transparent" }}
           >
             {text}
             <span

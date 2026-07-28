@@ -2,7 +2,8 @@
 
 import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
-import { CONFIG, THEME, FONTS } from "@/config/constants";
+import { CONFIG, FONTS } from "@/config/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 export interface DetailsSectionItem {
     text: string;
@@ -43,6 +44,8 @@ export function DetailsSection({
     startTrigger,
     staggerStep,
 }: DetailsSectionProps) {
+    const { palette } = useTheme();
+
     return (
         <>
             <DetailsText
@@ -54,10 +57,8 @@ export function DetailsSection({
                 pixelFontSize={headingFontSize / pxTo3DWidth}
                 font={FONTS.karlaLight}
                 fontWeightClass="font-light"
-                color={THEME.white}
-                blockColor={THEME.white}
-                selectionBgColor={THEME.white}
-                selectionColor={THEME.darkest}
+                color={palette.textPrimary}
+                blockColor={palette.textPrimary}
                 startTrigger={startTrigger}
                 delay={CONFIG.detailsTimings.HEADING_DELAY}
                 direction={direction}
@@ -79,10 +80,8 @@ export function DetailsSection({
                     pixelFontSize: bodyFontSize / pxTo3DWidth,
                     font: FONTS.karlaLight,
                     fontWeightClass: "font-light" as const,
-                    color: THEME.light,
-                    blockColor: THEME.light,
-                    selectionBgColor: THEME.light,
-                    selectionColor: THEME.darkest,
+                    color: palette.textBody,
+                    blockColor: palette.textBody,
                     startTrigger,
                     delay: CONFIG.detailsTimings.BODY_DELAY + index * staggerStep,
                     direction,

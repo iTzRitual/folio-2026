@@ -13,8 +13,12 @@ import { Details } from "./Details";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { Suspense } from "react";
-import { THEME } from "../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import {
+  ThemeBridge,
+  useTheme,
+  type ThemeContextValue,
+} from "@/context/ThemeContext";
 import type { BioVariant } from "@/data/content";
 
 function SceneContent({
@@ -29,12 +33,13 @@ function SceneContent({
   bioVariant: BioVariant;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { palette } = useTheme();
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <ProjectHoverProvider>
-        <color attach="background" args={[THEME.darkest]} />
+        <color attach="background" args={[palette.bg]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment preset="city" />
 
@@ -61,11 +66,13 @@ export default function Scene({
   isMobile,
   isDebug,
   bioVariant,
+  themeContext,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
   isDebug: boolean;
   bioVariant: BioVariant;
+  themeContext: ThemeContextValue;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
@@ -111,7 +118,9 @@ export default function Scene({
           }}
           flipflops={3}
         />
-        <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} bioVariant={bioVariant} />
+        <ThemeBridge value={themeContext}>
+          <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} bioVariant={bioVariant} />
+        </ThemeBridge>
         {isDebug && <Stats />}
       </Canvas>
     </div>

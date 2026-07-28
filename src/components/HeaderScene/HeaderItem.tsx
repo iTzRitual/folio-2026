@@ -6,7 +6,8 @@ import gsap from "gsap";
 import * as THREE from "three";
 import type { Mesh } from "three";
 import { AnimatedRevealText } from "../AnimatedRevealText";
-import { CONFIG, FONTS, THEME } from "@/config/constants";
+import { CONFIG, FONTS } from "@/config/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 interface HeaderItemProps {
   text: string;
@@ -39,6 +40,8 @@ export function HeaderItem({
 }: HeaderItemProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const revealedRef = useRef(false);
+  const { palette } = useTheme();
+  const hoveredRef = useRef(false);
 
   const font = bold ? FONTS.karlaExtraBold : FONTS.karlaLight;
   const weightClass = bold ? "font-extrabold" : "font-light";
@@ -82,14 +85,23 @@ export function HeaderItem({
 
   const handleEnter = () => {
     if (!revealedRef.current) return;
+    hoveredRef.current = true;
     document.body.style.cursor = "pointer";
-    tintTo(CONFIG.header.HOVER_COLOR);
+    tintTo(palette.hover);
   };
 
   const handleLeave = () => {
+    hoveredRef.current = false;
     document.body.style.cursor = "auto";
-    tintTo(THEME.dark);
+    tintTo(palette.textSecondary);
   };
+
+  useEffect(() => {
+    if (!materialRef.current) return;
+    materialRef.current.color.set(
+      hoveredRef.current ? palette.hover : palette.textSecondary,
+    );
+  }, [palette]);
 
   const twinClass = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${weightClass} leading-none block no-underline outline-none ${
     anchorX === "right" ? "-translate-x-full" : "left-0"
@@ -103,9 +115,7 @@ export function HeaderItem({
   } as React.CSSProperties;
 
   const label = (
-    <p className="m-0 p-0 selection:bg-[#BCBCBC] selection:text-[#1D1D1D]">
-      {text}
-    </p>
+    <p className="m-0 p-0">{text}</p>
   );
 
   const hitPad = (
@@ -125,7 +135,7 @@ export function HeaderItem({
     ) : (
       <AnimatedRevealText
         delay={delay}
-        blockColor={THEME.dark}
+        blockColor="var(--text-secondary)"
         direction={direction}
         startTrigger={startTrigger}
         onReveal={() => {
@@ -153,7 +163,7 @@ export function HeaderItem({
           ref={materialRef}
           transparent
           opacity={0}
-          color={THEME.dark}
+          color={palette.textSecondary}
         />
       </Text>
 

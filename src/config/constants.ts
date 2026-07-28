@@ -1,12 +1,25 @@
-export const THEME = {
-    darkest: "#1D1D1D",
-    dark: "#BCBCBC",
-    light: "#D6D6D6",
-    white: "#FFFFFF",
-    selectionBg: "#E2E2E2",
-    hint: "#A0A0A0",
-    stacked: "#BEBEBE",
+export const THEMES = {
+    Dark: {
+        bg: "#1D1D1D",
+        textPrimary: "#FFFFFF",
+        textSecondary: "#BCBCBC",
+        textBody: "#D6D6D6",
+        textHint: "#A0A0A0",
+        textStacked: "#BEBEBE",
+        hover: "#FFFFFF",
+    },
+    Light: {
+        bg: "#E9E9E9",
+        textPrimary: "#141414",
+        textSecondary: "#4A4A4A",
+        textBody: "#333333",
+        textHint: "#5F5F5F",
+        textStacked: "#484848",
+        hover: "#000000",
+    },
 } as const;
+
+export type Palette = (typeof THEMES)[keyof typeof THEMES];
 
 
 export const FONTS = {
@@ -131,7 +144,6 @@ export const CONFIG = {
         VELOCITY_SMOOTHING: 11,
     },
     detailsLink: {
-        HOVER_COLOR: "#FFFFFF",
         COLOR_DURATION: 0.15,
         ARROW_SIZE_MULT: 0.4,
         ARROW_GAP_MULT: 0.3,
@@ -155,7 +167,6 @@ export const CONFIG = {
         SLOT_TS: [0, 0.2, 0.56, 0.75, 1],
         SEGMENT_GAP_EM: 0.45,
         HIT_PAD_EM: 0.6,
-        HOVER_COLOR: "#FFFFFF",
         HOVER_DURATION: 0.15,
         REVEAL_DELAY: 0.35,
         REVEAL_STAGGER: 0.07,

@@ -26,7 +26,7 @@ export function AnimatedRevealText({
   children,
   animateOnScroll = false,
   delay = 0,
-  blockColor = "#ffffff",
+  blockColor = "var(--text-primary)",
   stagger = CONFIG.copy.STAGGER,
   duration = CONFIG.copy.DURATION,
   onReveal,

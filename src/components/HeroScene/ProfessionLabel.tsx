@@ -1,10 +1,11 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ProfessionLabelProps {
   children: React.ReactNode;
@@ -52,6 +53,7 @@ export function ProfessionLabel({
   const htmlOpacityRef = useRef<HTMLDivElement>(null);
   const textRevealedRef = useRef(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { palette } = useTheme();
 
   const elapsed = useRef(0);
 
@@ -120,7 +122,7 @@ export function ProfessionLabel({
   const shaderMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color("#BEBEBE") },
+        uColor: { value: new THREE.Color() },
         uIsLeft: { value: isLeft ? 1.0 : 0.0 },
         uProgress: { value: 0.0 },
         uOpacity: { value: 1.0 },
@@ -157,6 +159,10 @@ export function ProfessionLabel({
     });
   }, [isLeft]);
 
+  useEffect(() => {
+    shaderMaterial.uniforms.uColor.value.set(palette.textStacked);
+  }, [shaderMaterial, palette.textStacked]);
+
   return (
     <group>
       <group position={[position[0], finalY, position[2]]} ref={labelGroupRef}>
@@ -173,7 +179,7 @@ export function ProfessionLabel({
             ref={textMaterialRef}
             transparent
             opacity={0}
-            color="#BEBEBE"
+            color={palette.textStacked}
           />
         </Text>
 
@@ -193,13 +199,13 @@ export function ProfessionLabel({
             <AnimatedRevealText
               delay={CONFIG.professionLabel.DELAY}
               direction={direction}
-              blockColor="#BEBEBE"
+              blockColor="var(--text-stacked)"
               startTrigger={startTrigger}
               onReveal={() => {
                 textRevealedRef.current = true;
               }}
             >
-              <p className="selection:bg-[#BEBEBE] selection:text-[#1D1D1D]">
+              <p>
                 {children}
               </p>
             </AnimatedRevealText>

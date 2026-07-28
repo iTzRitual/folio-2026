@@ -140,12 +140,12 @@ export function Loader({ onExitStart, onComplete }: LoaderProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-white font-karla font-extrabold text-6xl pointer-events-none"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-(--text-primary) font-karla font-extrabold text-6xl pointer-events-none"
     >
       <div className="block-line-wrapper">
         <div
           ref={blockRef}
-          className="block-revealer bg-white"
+          className="block-revealer bg-(--text-primary)"
           style={{ transform: "scaleX(0)", height: "100%" }}
         />
 

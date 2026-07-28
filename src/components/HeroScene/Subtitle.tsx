@@ -3,6 +3,7 @@ import { AnimatedRevealText } from "../AnimatedRevealText";
 import { useRef } from "react";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 interface SubtitleProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function Subtitle({
   pixelFontSize,
 }: SubtitleProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const { palette } = useTheme();
 
   return (
     <group position={[0, y, 0]}>
@@ -30,7 +32,7 @@ export function Subtitle({
         font="fonts/Karla-ExtraBold.ttf"
         lineHeight={1}
         outlineWidth={CONFIG.subtitle.OUTLINE_WIDTH}
-        outlineColor="#BCBCBC"
+        outlineColor={palette.textSecondary}
         letterSpacing={CONFIG.subtitle.LETTER_SPACING}
       >
         {children}
@@ -38,7 +40,7 @@ export function Subtitle({
           ref={materialRef}
           transparent
           opacity={0}
-          color="#BCBCBC"
+          color={palette.textSecondary}
         />
       </Text>
 
@@ -52,14 +54,14 @@ export function Subtitle({
       >
         <AnimatedRevealText
           delay={CONFIG.subtitle.DELAY}
-          blockColor="#BCBCBC"
+          blockColor="var(--text-secondary)"
           direction="rightToLeft"
           startTrigger={startTrigger}
           onReveal={() => {
             if (materialRef.current) materialRef.current.opacity = 1;
           }}
         >
-          <p className="selection:bg-[#BCBCBC] selection:text-[#1D1D1D]">
+          <p>
             {children}
           </p>
         </AnimatedRevealText>

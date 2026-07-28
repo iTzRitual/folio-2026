@@ -17,6 +17,7 @@ import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
 import { useFontsReady } from "@/hooks/useFontsReady";
+import { useTheme } from "@/context/ThemeContext";
 import {
     bioVariants,
     DEFAULT_BIO_VARIANT,
@@ -51,6 +52,7 @@ export default function Home() {
     const lenis = useLenis();
     const [overflowViewports, setOverflowViewports] = useState(0);
     const fontsReady = useFontsReady();
+    const themeContext = useTheme();
 
     const levaBio = useControls("Bio", BIO_LEVA_SCHEMA);
     const bioVariant: BioVariant = isDebug
@@ -138,7 +140,7 @@ export default function Home() {
                     <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
                 )}
 
-                <div className="relative w-full min-h-screen overflow-x-hidden bg-[#1D1D1D]">
+                <div className="relative w-full min-h-screen overflow-x-hidden bg-(--bg)">
                     <div className="fixed inset-0 z-0 pointer-events-none">
                         {!removeLoader && (
                             <Loader
@@ -152,6 +154,7 @@ export default function Home() {
                                 isMobile={isMobile}
                                 isDebug={isDebug}
                                 bioVariant={bioVariant}
+                                themeContext={themeContext}
                             />
                         </div>
                     </div>

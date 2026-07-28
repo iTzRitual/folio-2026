@@ -22,17 +22,17 @@ const Section = ({ title, delay, children }: SectionProps) => {
     <div className="mb-12">
       <AnimatedRevealText
         delay={delay}
-        blockColor="#FFFFFF"
+        blockColor="var(--text-primary)"
         direction="leftToRight"
         animateOnScroll={true}
       >
-        <h3 className="text-white font-black text-left w-full text-3xl pb-2">
+        <h3 className="text-(--text-primary) font-black text-left w-full text-3xl pb-2">
           {title}
         </h3>
       </AnimatedRevealText>
       <AnimatedRevealText
         delay={delay + 0.1}
-        blockColor="#BCBCBC"
+        blockColor="var(--text-secondary)"
         direction="leftToRight"
         animateOnScroll={true}
       >
@@ -49,7 +49,7 @@ export const MobileContent = () => {
         {experienceData.map((item, index) => (
           <li
             key={index}
-            className="text-white font-karla text-left w-full text-lg"
+            className="text-(--text-primary) font-karla text-left w-full text-lg"
           >
             - {item.position} at {item.company} ({item.duration})
           </li>
@@ -60,7 +60,7 @@ export const MobileContent = () => {
         {projectsData.map((item, index) => (
           <li
             key={index}
-            className="text-white font-karla text-left w-full text-lg"
+            className="text-(--text-primary) font-karla text-left w-full text-lg"
           >
             - {item.name}
           </li>
@@ -71,7 +71,7 @@ export const MobileContent = () => {
         {educationData.map((item, index) => (
           <li
             key={index}
-            className="text-white font-karla text-left w-full text-lg"
+            className="text-(--text-primary) font-karla text-left w-full text-lg"
           >
             - {item.degree} in {item.field} from {item.institution}
           </li>
@@ -82,7 +82,7 @@ export const MobileContent = () => {
         {bioData.map((paragraph, index) => (
           <li
             key={index}
-            className="text-white font-karla text-left w-full text-lg list-none"
+            className="text-(--text-primary) font-karla text-left w-full text-lg list-none"
           >
             {paragraph}
           </li>

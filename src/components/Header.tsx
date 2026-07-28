@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { CONFIG } from "@/config/constants";
-import { headerContent, type ThemeOption } from "@/data/content";
+import { headerContent } from "@/data/content";
 import { HeaderItem } from "./HeaderScene/HeaderItem";
 import { Clock } from "./HeaderScene/Clock";
 import { ThemeToggle } from "./HeaderScene/ThemeToggle";
@@ -13,7 +13,7 @@ export function Header() {
   const { viewport, marginX, pxTo3DWidth, pxTo3DHeight, leftX, rightX } =
     useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const [theme, setTheme] = useState<ThemeOption>("Dark");
+  const { theme, setTheme } = useTheme();
 
   const calculatedFontSize =
     (viewport.width - 2 * marginX) * CONFIG.header.FONT_SIZE;

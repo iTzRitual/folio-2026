@@ -5,7 +5,8 @@ import { useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { CONFIG, THEME, FONTS } from "../../config/constants";
+import { CONFIG, FONTS } from "../../config/constants";
+import { useTheme } from "@/context/ThemeContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
@@ -55,6 +56,7 @@ export function Title({
   const [textWidth3D, setTextWidth3D] = useState(0);
   const [isScrollHintReady, setIsScrollHintReady] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { palette } = useTheme();
 
   const {
     TARGET_SCALE: targetScale,
@@ -302,7 +304,7 @@ export function Title({
           font={FONTS.karlaExtraBold}
           lineHeight={1}
           outlineWidth={0.005}
-          outlineColor="white"
+          outlineColor={palette.textPrimary}
           letterSpacing={-0.03}
           onSync={(textMesh) => {
             textMesh.geometry.computeBoundingBox();
@@ -318,7 +320,7 @@ export function Title({
             ref={materialRef}
             transparent
             opacity={0}
-            color={THEME.white}
+            color={palette.textPrimary}
           />
         </Text>
 
@@ -339,7 +341,7 @@ export function Title({
                   if (materialRef.current) materialRef.current.opacity = 1;
                 }}
               >
-                <h1 className="selection:bg-[#E2E2E2] selection:text-[#1D1D1D] m-0">
+                <h1 className="m-0">
                   {children}
                 </h1>
               </AnimatedRevealText>
@@ -368,7 +370,7 @@ export function Title({
             ref={scrollTextRef}
             transparent
             opacity={0}
-            color={THEME.hint}
+            color={palette.textHint}
           />
         </Text>
 
@@ -380,7 +382,7 @@ export function Title({
             font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color={THEME.stacked}
+            color={palette.textStacked}
             position={[0, stackedFontSize * 0.1, 0]}
           >
             Frontend Engineer
@@ -388,7 +390,7 @@ export function Title({
               ref={stackedTopRef}
               transparent
               opacity={0}
-              color={THEME.stacked}
+              color={palette.textStacked}
             />
           </Text>
 
@@ -399,7 +401,7 @@ export function Title({
             font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color={THEME.stacked}
+            color={palette.textStacked}
             position={[0, -stackedFontSize * 0.1, 0]}
           >
             Creative Technologist
@@ -407,7 +409,7 @@ export function Title({
               ref={stackedBottomRef}
               transparent
               opacity={0}
-              color={THEME.stacked}
+              color={palette.textStacked}
             />
           </Text>
         </group>

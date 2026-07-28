@@ -3,7 +3,8 @@
 import { Suspense } from "react";
 import { DetailsText } from "./DetailsText";
 import { AnimatedRevealImage } from "./AnimatedRevealImage";
-import { CONFIG, THEME, FONTS } from "@/config/constants";
+import { CONFIG, FONTS } from "@/config/constants";
+import { useTheme } from "@/context/ThemeContext";
 import { bioImage } from "@/data/content";
 
 interface BioSectionProps {
@@ -37,6 +38,8 @@ export function BioSection({
     pxTo3DWidth,
     startTrigger,
 }: BioSectionProps) {
+    const { palette } = useTheme();
+
     return (
         <>
             <DetailsText
@@ -48,10 +51,8 @@ export function BioSection({
                 pixelFontSize={headingFontSize / pxTo3DWidth}
                 font={FONTS.karlaLight}
                 fontWeightClass="font-light"
-                color={THEME.white}
-                blockColor={THEME.white}
-                selectionBgColor={THEME.white}
-                selectionColor={THEME.darkest}
+                color={palette.textPrimary}
+                blockColor={palette.textPrimary}
                 startTrigger={startTrigger}
                 delay={CONFIG.detailsTimings.HEADING_DELAY}
                 direction="leftToRight"
@@ -87,10 +88,8 @@ export function BioSection({
                         pixelFontSize={bodyFontSize / pxTo3DWidth}
                         font={FONTS.karlaLight}
                         fontWeightClass="font-light"
-                        color={THEME.light}
-                        blockColor={THEME.light}
-                        selectionBgColor={THEME.light}
-                        selectionColor={THEME.darkest}
+                        color={palette.textBody}
+                        blockColor={palette.textBody}
                         startTrigger={startTrigger}
                         delay={
                             CONFIG.detailsTimings.BODY_DELAY +

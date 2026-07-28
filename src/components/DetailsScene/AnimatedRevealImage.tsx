@@ -10,7 +10,8 @@ import {
     type Group,
     type MeshBasicMaterial,
 } from "three";
-import { CONFIG, THEME } from "@/config/constants";
+import { CONFIG } from "@/config/constants";
+import { useTheme } from "@/context/ThemeContext";
 import { applyCurlFadeShader } from "@/lib/detailsCurl";
 import { roundedCurlShader } from "@/lib/revealBlockShader";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -40,9 +41,11 @@ export function AnimatedRevealImage({
     delay = 0,
     stagger = CONFIG.copy.STAGGER,
     duration = CONFIG.copy.DURATION,
-    blockColor = THEME.stacked,
+    blockColor,
     startTrigger,
 }: AnimatedRevealImageProps) {
+    const { palette } = useTheme();
+    const revealColor = blockColor ?? palette.textStacked;
     const texture = useTexture(src);
     const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -176,7 +179,7 @@ export function AnimatedRevealImage({
                             ref={(material) => {
                                 blockMaterialRefs.current[index] = material;
                             }}
-                            color={blockColor}
+                            color={revealColor}
                             transparent
                             opacity={0}
                             onBeforeCompile={applyBlockShader}
