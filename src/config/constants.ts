@@ -154,6 +154,7 @@ export const CONFIG = {
         HTML_LETTER_SPACING_OFFSET: -0.004,
         SLOT_TS: [0, 0.2, 0.56, 0.75, 1],
         SEGMENT_GAP_EM: 0.45,
+        HIT_PAD_EM: 0.6,
         HOVER_COLOR: "#FFFFFF",
         HOVER_DURATION: 0.15,
         REVEAL_DELAY: 0.35,

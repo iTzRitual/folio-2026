@@ -108,6 +108,17 @@ export function HeaderItem({
     </p>
   );
 
+  const hitPad = (
+    <span
+      aria-hidden
+      className="absolute inset-x-0 block"
+      style={{
+        top: `${-CONFIG.header.HIT_PAD_EM}em`,
+        bottom: `${-CONFIG.header.HIT_PAD_EM}em`,
+      }}
+    />
+  );
+
   const twinBody =
     revealMode === "fade" ? (
       label
@@ -150,22 +161,24 @@ export function HeaderItem({
         {href ? (
           <a
             href={href}
-            className={twinClass}
+            className={`${twinClass} relative`}
             style={twinStyle}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
           >
+            {hitPad}
             {twinBody}
           </a>
         ) : onActivate ? (
           <button
             type="button"
-            className={`${twinClass} bg-transparent border-0 cursor-pointer`}
+            className={`${twinClass} relative bg-transparent border-0 cursor-pointer`}
             style={twinStyle}
             onClick={onActivate}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
           >
+            {hitPad}
             {twinBody}
           </button>
         ) : (
