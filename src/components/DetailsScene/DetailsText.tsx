@@ -51,11 +51,14 @@ export function DetailsText({
 }: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const shownRef = useRef(false);
   const [bounds, setBounds] = useState<TextBounds | null>(null);
 
-  const { groupRef, twinRef, revealedRef } = useCurlFade((opacity, curlFade) => {
-    if (materialRef.current) materialRef.current.opacity = opacity;
-    if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
+  const { groupRef, twinRef, revealedRef } = useCurlFade(() => {
+    if (materialRef.current) {
+      materialRef.current.opacity = shownRef.current ? 1 : 0;
+    }
+    if (blockMaterialRef.current) blockMaterialRef.current.opacity = 1;
   });
 
   const handleSync = (mesh: Mesh) => {
@@ -70,6 +73,7 @@ export function DetailsText({
 
   const handleHalfway = useCallback(() => {
     revealedRef.current = true;
+    shownRef.current = true;
   }, [revealedRef]);
 
   const xAlignClass = useMemo(() => {

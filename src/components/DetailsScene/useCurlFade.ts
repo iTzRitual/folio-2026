@@ -10,7 +10,7 @@ import {
 } from "@/lib/detailsCurl";
 
 export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
-    applyOpacity: (opacity: number, curlFade: number) => void,
+    applyOpacity: (opacity: number) => void,
 ) {
     const groupRef = useRef<Group>(null);
     const twinRef = useRef<T>(null);
@@ -24,12 +24,11 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
 
         group.getWorldPosition(worldPosition.current);
         const angle = curlAngle(worldPosition.current.y);
-        const topFade = curlRiseOpacity(worldPosition.current.y);
         const fade = Math.min(
-            topFade,
+            curlRiseOpacity(worldPosition.current.y),
             curlDropOpacity(worldPosition.current.y),
         );
-        applyOpacity(revealedRef.current ? fade : 0, topFade);
+        applyOpacity(revealedRef.current ? fade : 0);
 
         const hidden = angle > 0;
         if (hidden !== twinHiddenRef.current) {

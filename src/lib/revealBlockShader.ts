@@ -1,5 +1,5 @@
 import type { Vector2, WebGLProgramParametersWithUniforms } from "three";
-import { applyCurlFadeShader, applyCurlShader } from "./detailsCurl";
+import { applyCurlShader } from "./detailsCurl";
 
 const BLOCK_VARYING = /* glsl */ `
 varying vec2 vBlockUv;
@@ -40,29 +40,9 @@ function applyRoundedCorners(
     );
 }
 
-export function roundedCurlFadeShader(radiusUv: { value: Vector2 }) {
-    return (shader: WebGLProgramParametersWithUniforms) => {
-        applyCurlFadeShader(shader);
-        applyRoundedCorners(shader, radiusUv);
-    };
-}
-
 export function roundedCurlShader(radiusUv: { value: Vector2 }) {
     return (shader: WebGLProgramParametersWithUniforms) => {
         applyCurlShader(shader);
-
-        shader.uniforms.uBlockRadiusUv = radiusUv;
-
-        shader.vertexShader = BLOCK_VARYING + shader.vertexShader;
-        shader.vertexShader = shader.vertexShader.replace(
-            "void main() {",
-            "void main() {\n  vBlockUv = uv;",
-        );
-
-        shader.fragmentShader = BLOCK_DEFS + shader.fragmentShader;
-        shader.fragmentShader = shader.fragmentShader.replace(
-            "#include <opaque_fragment>",
-            BLOCK_ALPHA,
-        );
+        applyRoundedCorners(shader, radiusUv);
     };
 }

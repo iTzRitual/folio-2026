@@ -12,7 +12,7 @@ import {
 } from "three";
 import { CONFIG } from "@/config/constants";
 import { useTheme } from "@/context/ThemeContext";
-import { applyCurlFadeShader } from "@/lib/detailsCurl";
+import { applyCurlShader } from "@/lib/detailsCurl";
 import { roundedCurlShader } from "@/lib/revealBlockShader";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useCurlFade } from "./useCurlFade";
@@ -73,13 +73,13 @@ export function AnimatedRevealImage({
 
     const revealedRef = useRef(false);
 
-    const { groupRef } = useCurlFade((_opacity, curlFade) => {
+    const { groupRef } = useCurlFade(() => {
         if (imageMaterialRef.current) {
             imageMaterialRef.current.opacity = revealedRef.current ? 1 : 0;
         }
 
         for (const material of blockMaterialRefs.current) {
-            if (material) material.opacity = curlFade;
+            if (material) material.opacity = 1;
         }
     });
 
@@ -155,7 +155,7 @@ export function AnimatedRevealImage({
                     toneMapped={false}
                     transparent
                     opacity={0}
-                    onBeforeCompile={applyCurlFadeShader}
+                    onBeforeCompile={applyCurlShader}
                 />
             </mesh>
 

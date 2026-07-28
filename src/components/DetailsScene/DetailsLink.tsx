@@ -7,7 +7,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
-import { applyCurlShader, curlRowTransform } from "@/lib/detailsCurl";
+import { curlFadePowerShader, curlRowTransform } from "@/lib/detailsCurl";
 import {
   readTextBounds,
   sameTextBounds,
@@ -87,17 +87,12 @@ export function DetailsLink({
   const plateShownRef = useRef(false);
 
   const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
-    (opacity, curlFade) => {
-      const inkFade = Math.pow(
-        opacity,
-        CONFIG.detailsLink.BUTTON_TEXT_FADE_POWER,
-      );
-      if (materialRef.current) materialRef.current.opacity = inkFade;
-      if (arrowRef.current) arrowRef.current.opacity = inkFade;
-      if (plateRef.current) {
-        plateRef.current.opacity = plateShownRef.current ? 1 : 0;
-      }
-      if (blockMaterialRef.current) blockMaterialRef.current.opacity = curlFade;
+    (opacity) => {
+      const shown = plateShownRef.current ? 1 : 0;
+      if (materialRef.current) materialRef.current.opacity = shown;
+      if (arrowRef.current) arrowRef.current.opacity = shown;
+      if (plateRef.current) plateRef.current.opacity = shown;
+      if (blockMaterialRef.current) blockMaterialRef.current.opacity = 1;
 
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
       if (interactive !== interactiveRef.current) {
@@ -183,6 +178,11 @@ export function DetailsLink({
   };
 
   const revealColor = blockColor ?? color;
+
+  const inkShader = useMemo(
+    () => curlFadePowerShader(CONFIG.detailsLink.BUTTON_TEXT_FADE_POWER),
+    [],
+  );
 
   // The twin is only as tall as its own line, so consecutive rows leave a
   // strip of nothing between them — enough to drop the hover and bounce the
@@ -304,7 +304,7 @@ export function DetailsLink({
           transparent
           opacity={0}
           color={color}
-          onBeforeCompile={applyCurlShader}
+          onBeforeCompile={inkShader}
         />
       </Text>
 
@@ -319,7 +319,7 @@ export function DetailsLink({
             color={color}
             transparent
             opacity={0}
-            onBeforeCompile={applyCurlShader}
+            onBeforeCompile={inkShader}
           />
         </mesh>
       )}
