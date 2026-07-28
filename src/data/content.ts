@@ -6,6 +6,20 @@ export const heroContent = {
     scrollHint: "Scroll to explore CV",
 } as const;
 
+export const headerContent = {
+    coordinates: "51.10°N 17.03°E",
+    availability: "Available for work",
+    themeOptions: ["Light", "Dark"] as const,
+    themeSeparator: "/",
+    timeZone: "Europe/Warsaw",
+    contact: {
+        label: "Contact",
+        href: "mailto:hello@natanmokrzycki.com",
+    },
+} as const;
+
+export type ThemeOption = (typeof headerContent.themeOptions)[number];
+
 export const experienceData = [
     {
         company: "Nowa Łukasz Walter",

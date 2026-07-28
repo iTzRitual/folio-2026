@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
+import { Header } from "./Header";
 import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
 import { CustomAberration } from "./Effects/CustomAberration";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
@@ -41,6 +42,7 @@ function SceneContent({
           <Model isMobile={isMobile} isDebug={isDebug} />
         </Suspense>
 
+        {!isMobile && <Header />}
         {!isMobile && <HeroText />}
         {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
         {!isMobile && !prefersReducedMotion && (
