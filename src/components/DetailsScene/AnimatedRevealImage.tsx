@@ -11,7 +11,7 @@ import {
     type MeshBasicMaterial,
 } from "three";
 import { CONFIG, THEME } from "@/config/constants";
-import { applyCurlShader } from "@/lib/detailsCurl";
+import { applyCurlFadeShader } from "@/lib/detailsCurl";
 import { roundedCurlShader } from "@/lib/revealBlockShader";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useCurlFade } from "./useCurlFade";
@@ -68,8 +68,12 @@ export function AnimatedRevealImage({
         [blockRadiusUv],
     );
 
-    const { groupRef, revealedRef } = useCurlFade((opacity, curlFade) => {
-        if (imageMaterialRef.current) imageMaterialRef.current.opacity = opacity;
+    const revealedRef = useRef(false);
+
+    const { groupRef } = useCurlFade((_opacity, curlFade) => {
+        if (imageMaterialRef.current) {
+            imageMaterialRef.current.opacity = revealedRef.current ? 1 : 0;
+        }
 
         for (const material of blockMaterialRefs.current) {
             if (material) material.opacity = curlFade;
@@ -78,7 +82,7 @@ export function AnimatedRevealImage({
 
     useEffect(() => {
         revealedRef.current = true;
-    }, [revealedRef]);
+    }, []);
 
     useGSAP(
         () => {
@@ -148,7 +152,7 @@ export function AnimatedRevealImage({
                     toneMapped={false}
                     transparent
                     opacity={0}
-                    onBeforeCompile={applyCurlShader}
+                    onBeforeCompile={applyCurlFadeShader}
                 />
             </mesh>
 

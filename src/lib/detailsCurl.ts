@@ -8,6 +8,8 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlRadius: { value: 1 },
     uCurlMaxAngle: { value: CONFIG.detailsCurl.MAX_ANGLE },
     uCurlBend: { value: 1 },
+    uCurlFadeStart: { value: CONFIG.detailsCurl.FADE_ANGLE_START },
+    uCurlFadeEnd: { value: CONFIG.detailsCurl.FADE_ANGLE_END },
 };
 
 export const curlFadeRange: { start: number; end: number } = {
@@ -44,6 +46,8 @@ export function applyCurlSettings(
         -viewportHeight / 2 + viewportHeight * settings.bottomOffsetMult;
     curlUniforms.uCurlMaxAngle.value = settings.maxAngle;
     curlUniforms.uCurlBend.value = settings.bend;
+    curlUniforms.uCurlFadeStart.value = settings.fadeAngleStart;
+    curlUniforms.uCurlFadeEnd.value = settings.fadeAngleEnd;
     curlFadeRange.start = settings.fadeAngleStart;
     curlFadeRange.end = settings.fadeAngleEnd;
 }
@@ -91,6 +95,55 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         CURL_BODY,
+    );
+}
+
+const CURL_FADE_VERTEX_DEFS = /* glsl */ `
+uniform float uCurlFadeStart;
+uniform float uCurlFadeEnd;
+varying float vCurlFade;
+`;
+
+const CURL_FADE_VERTEX_BODY = /* glsl */ `
+{
+  vec4 fadeWorld = modelMatrix * vec4(position, 1.0);
+  float fadeRise = max(fadeWorld.y - uCurlFoldY, 0.0);
+  float fadeDrop = max(uCurlBottomY - fadeWorld.y, 0.0);
+  float fadeAngle = min(
+    max(fadeRise, fadeDrop) / uCurlRadius,
+    uCurlMaxAngle
+  );
+  vCurlFade = 1.0 - smoothstep(uCurlFadeStart, uCurlFadeEnd, fadeAngle);
+}
+`;
+
+const CURL_FADE_FRAGMENT_DEFS = /* glsl */ `
+varying float vCurlFade;
+`;
+
+const CURL_FADE_FRAGMENT_BODY = /* glsl */ `
+diffuseColor.a *= vCurlFade;
+#include <opaque_fragment>
+`;
+
+export function applyCurlFadeShader(
+    shader: WebGLProgramParametersWithUniforms,
+) {
+    applyCurlShader(shader);
+
+    shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
+    shader.uniforms.uCurlFadeEnd = curlUniforms.uCurlFadeEnd;
+
+    shader.vertexShader = CURL_FADE_VERTEX_DEFS + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+        "#include <project_vertex>",
+        CURL_FADE_VERTEX_BODY + "#include <project_vertex>",
+    );
+
+    shader.fragmentShader = CURL_FADE_FRAGMENT_DEFS + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        CURL_FADE_FRAGMENT_BODY,
     );
 }
 
