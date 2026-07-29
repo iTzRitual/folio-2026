@@ -18,6 +18,16 @@ import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
 import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 
+// Built once instead of on every hover enter and leave.
+const FINE_POINTER_QUERY =
+  typeof window === "undefined"
+    ? ({ matches: false } as MediaQueryList)
+    : window.matchMedia("(hover: hover) and (pointer: fine)");
+const REDUCED_MOTION_QUERY =
+  typeof window === "undefined"
+    ? ({ matches: false } as MediaQueryList)
+    : window.matchMedia("(prefers-reduced-motion: reduce)");
+
 // One texture for every link. Loading per instance let the HTTP cache dedupe
 // the request but still produced one THREE.Texture and one GPU upload each.
 let arrowTexturePromise: Promise<THREE.Texture> | null = null;
@@ -219,10 +229,8 @@ export function DetailsLink({
   const arrowY =
     -calculatedFontSize * 0.15 - 1.5 * (calculatedFontSize / pixelFontSize);
 
-  const finePointer = () =>
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  const reducedMotion = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = () => FINE_POINTER_QUERY.matches;
+  const reducedMotion = () => REDUCED_MOTION_QUERY.matches;
 
   const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
     if (!finePointer()) return;

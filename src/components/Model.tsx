@@ -275,6 +275,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     const teleported = !isMobile && stage !== previousStage.current;
     previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
+    // Layout-inducing on some engines, and the mobile branch below wants it
+    // twice.
+    const scrollY = isMobile ? window.scrollY : 0;
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
       isInteractionLockedRef.current = shouldLockInteraction;
@@ -320,7 +323,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           new THREE.Vector3(0, 0, 2),
         );
 
-        const scrolledScreens = window.scrollY / window.innerHeight;
+        const scrolledScreens = scrollY / window.innerHeight;
         const mobileYOffset = 0.1;
         const targetY =
           CONFIG.model.BASE_MODEL_Y +
@@ -374,7 +377,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     if (transitionScaleGroupRef.current) {
       if (isMobile) {
         const scaleOutProgress = THREE.MathUtils.clamp(
-          window.scrollY / (window.innerHeight * 0.8),
+          scrollY / (window.innerHeight * 0.8),
           0,
           1,
         );
