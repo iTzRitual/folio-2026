@@ -31,10 +31,12 @@ function SceneContent({
   startAnimation,
   isMobile,
   bioVariant,
+  degraded,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
   bioVariant: BioVariant;
+  degraded: boolean;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { palette } = useTheme();
@@ -59,7 +61,7 @@ function SceneContent({
           <EffectComposer multisampling={0}>
             <>
               <HeaderExclusion />
-              {!prefersReducedMotion && <CustomAberration />}
+              {!prefersReducedMotion && !degraded && <CustomAberration />}
             </>
           </EffectComposer>
         )}
@@ -87,6 +89,12 @@ export default function Scene({
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
   const [dpr, setDpr] = useState(1);
+  // PerformanceMonitor gives up after `flipflops`, so without this the DPR
+  // simply freezes wherever it last landed. Dropping the aberration pass is the
+  // bigger lever anyway: it is the only full-screen multi-tap pass in the
+  // pipeline, and raising DPR makes it cost more, which is what provokes the
+  // decline it is reacting to.
+  const [degraded, setDegraded] = useState(false);
 
   return (
     <div
@@ -100,6 +108,12 @@ export default function Scene({
         eventPrefix="client"
         style={{ touchAction: "auto" }}
         dpr={dpr}
+        gl={{
+          // EffectComposer renders into its own targets, so MSAA on the default
+          // framebuffer is paid for and then discarded.
+          antialias: false,
+          powerPreference: "high-performance",
+        }}
       >
         <PerformanceMonitor
           bounds={() => [45, 55]}
@@ -127,6 +141,10 @@ export default function Scene({
             });
           }}
           flipflops={3}
+          onFallback={() => {
+            setDpr(0.75);
+            setDegraded(true);
+          }}
         />
         <ThemeBridge value={themeContext}>
           <DebugSettingsBridge value={debugSettings}>
@@ -134,6 +152,7 @@ export default function Scene({
               startAnimation={startAnimation}
               isMobile={isMobile}
               bioVariant={bioVariant}
+              degraded={degraded}
             />
           </DebugSettingsBridge>
         </ThemeBridge>
