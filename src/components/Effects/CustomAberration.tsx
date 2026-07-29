@@ -36,16 +36,34 @@ const SCROLL_LEVA_SCHEMA = {
   release: { value: SCROLL_DEFAULTS.release, min: 2, max: 40, step: 1 },
 };
 
+function affordableTaps(width: number, height: number) {
+  const {
+    SCROLL_TAPS,
+    SCROLL_TAPS_MIN,
+    SCROLL_TAP_PIXEL_BUDGET,
+    SCROLL_TAP_DPR_CEILING,
+  } = CONFIG.customAberration;
+
+  const devicePixels = width * height * SCROLL_TAP_DPR_CEILING ** 2;
+  if (devicePixels <= 0) return SCROLL_TAPS;
+
+  return MathUtils.clamp(
+    Math.round((SCROLL_TAPS * SCROLL_TAP_PIXEL_BUDGET) / devicePixels),
+    SCROLL_TAPS_MIN,
+    SCROLL_TAPS,
+  );
+}
+
 export const CustomAberration = forwardRef<CustomAberrationEffect, {
   isDebug?: boolean;
 }>(({ isDebug = false }, ref) => {
     const levaScroll = useControls("Scroll blur", SCROLL_LEVA_SCHEMA);
     const scroll = isDebug ? levaScroll : SCROLL_DEFAULTS;
-    const effect = useMemo(
-      () => new CustomAberrationEffect(scroll.taps),
-      [scroll.taps],
-    );
     const { size } = useThree();
+    const taps = isDebug
+      ? scroll.taps
+      : affordableTaps(size.width, size.height);
+    const effect = useMemo(() => new CustomAberrationEffect(taps), [taps]);
 
     const currentMouse = useRef(new Vector2(0.5, 0.5));
     const targetMouse = useRef(new Vector2(0.5, 0.5));

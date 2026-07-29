@@ -206,6 +206,15 @@ export const CONFIG = {
         SAFE_DELTA_MIN: 0.0001,
         VEL_MULT: 0.016666,
         SCROLL_TAPS: 8,
+        SCROLL_TAPS_MIN: 3,
+        // Device pixels the pass can cover at full tap count. Above this the
+        // taps are scaled down, since each one costs three dependent fetches
+        // over the entire screen.
+        SCROLL_TAP_PIXEL_BUDGET: 2_500_000,
+        // Ceiling PerformanceMonitor raises DPR to. Budgeting against it keeps
+        // the tap count stable while the monitor adapts, so a DPR change never
+        // forces a shader recompile.
+        SCROLL_TAP_DPR_CEILING: 1.5,
         SCROLL_BLUR: 0.022,
         SCROLL_SPLIT: 0.04,
         SCROLL_VEL_SCALE: 20.0,

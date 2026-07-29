@@ -43,6 +43,20 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec2 newUv = uv - uvOffset;
     vec2 rgbOffset = u_mouseVelocity * strength * u_aberrationIntensity * 1.5;
 
+    // The tap loop costs three dependent fetches per iteration. When the page
+    // is still, every tap lands on the same texel — the split alone needs
+    // three fetches, not SCROLL_TAPS * 3. The test is on uniforms only, so the
+    // branch is coherent across the whole pass.
+    if (abs(u_scrollVelocity) * u_scrollBlur < 0.0001) {
+        outputColor = vec4(
+            texture2D(inputBuffer, newUv + rgbOffset).r,
+            texture2D(inputBuffer, newUv).g,
+            texture2D(inputBuffer, newUv - rgbOffset).b,
+            1.0
+        );
+        return;
+    }
+
     vec2 fromCenter = (uv - 0.5) * vec2(u_scrollVignette.x, 1.0);
     float edge = mix(
         u_scrollVignette.w,
