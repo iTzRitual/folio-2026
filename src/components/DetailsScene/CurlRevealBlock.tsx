@@ -1,6 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import {
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    type RefObject,
+} from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Vector2, type Mesh, type MeshBasicMaterial } from "three";
@@ -53,6 +59,9 @@ export function CurlRevealBlock({
     const prefersReducedMotion = usePrefersReducedMotion();
     const meshRef = useRef<Mesh>(null);
     const playedRef = useRef(false);
+    // The wipe is one-shot. Leaving the mesh in the graph afterwards keeps it
+    // in every frame's traversal and transparent sort for nothing.
+    const [spent, setSpent] = useState(false);
     const onHalfwayRef = useRef(onHalfway);
     const radiusUv = useMemo(() => ({ value: new Vector2(1, 1) }), []);
 
@@ -102,6 +111,7 @@ export function CurlRevealBlock({
                 const call = gsap.delayedCall(delay, () => {
                     fired = true;
                     onHalfwayRef.current();
+                    setSpent(true);
                 });
 
                 return () => {
@@ -117,6 +127,7 @@ export function CurlRevealBlock({
                 },
                 onComplete: () => {
                     mesh.visible = false;
+                    setSpent(true);
                 },
             });
 
@@ -158,6 +169,8 @@ export function CurlRevealBlock({
             ],
         },
     );
+
+    if (spent) return null;
 
     return (
         <mesh
