@@ -170,11 +170,17 @@ export function calculateDetailsLayout({
             headingFontSize,
             bodyTopOffset + lineCounts[key] * lineHeights[key],
         );
+        const inkHeight = Math.max(
+            headingFontSize,
+            bodyTopOffset +
+                (lineCounts[key] - 1) * lineHeights[key] +
+                bodyLineHeight,
+        );
 
         offsets[key] = {
             headingY: top,
             bodyY: top + bodyTopOffset,
-            bottomY: top + height,
+            bottomY: top + inkHeight,
         };
         cursors[column] = top + height + sectionGap;
     };
