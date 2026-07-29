@@ -92,8 +92,8 @@ export const MobileContent = () => {
       <Image
         src={bioImage.src}
         alt={bioImage.alt}
-        width={1500}
-        height={2000}
+        width={960}
+        height={1280}
         className="h-auto w-3/5 max-w-64"
       />
     </section>
