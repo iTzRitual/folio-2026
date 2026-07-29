@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Leva, useControls } from "leva";
 import { Loader } from "@/components/Loader";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -19,10 +18,9 @@ import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { useTheme } from "@/context/ThemeContext";
 import {
-    bioVariants,
-    DEFAULT_BIO_VARIANT,
-    type BioVariant,
-} from "@/data/content";
+    DEBUG_DEFAULTS,
+    type DebugSettings,
+} from "@/context/DebugSettingsContext";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,16 +28,15 @@ const DynamicScene = dynamic(() => import("@/components/Scene"), {
     ssr: false,
 });
 
+// Code-split so leva never reaches the production bundle; only /debug pays for
+// it.
+const DynamicDebugPanel = dynamic(() => import("@/components/DebugPanel"), {
+    ssr: false,
+});
+
 const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
 const LENIS_OPTIONS = { autoRaf: false } as const;
-
-const BIO_LEVA_SCHEMA = {
-    variant: {
-        value: DEFAULT_BIO_VARIANT,
-        options: Object.keys(bioVariants) as BioVariant[],
-    },
-};
 
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
@@ -54,10 +51,9 @@ export default function Home() {
     const fontsReady = useFontsReady();
     const themeContext = useTheme();
 
-    const levaBio = useControls("Bio", BIO_LEVA_SCHEMA);
-    const bioVariant: BioVariant = isDebug
-        ? levaBio.variant
-        : DEFAULT_BIO_VARIANT;
+    const [debugSettings, setDebugSettings] =
+        useState<DebugSettings>(DEBUG_DEFAULTS);
+    const bioVariant = debugSettings.bio.variant;
 
     useEffect(() => {
         if (isMobile) return;
@@ -135,7 +131,7 @@ export default function Home() {
         <>
             <NoJsContent />
             <div className="js-only-app">
-                <Leva collapsed hidden={!isDebug} />
+                {isDebug && <DynamicDebugPanel onChange={setDebugSettings} />}
                 {removeLoader && !prefersReducedMotion && (
                     <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
                 )}
@@ -155,6 +151,7 @@ export default function Home() {
                                 isDebug={isDebug}
                                 bioVariant={bioVariant}
                                 themeContext={themeContext}
+                                debugSettings={debugSettings}
                             />
                         </div>
                     </div>

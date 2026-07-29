@@ -2,8 +2,8 @@
 
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useControls } from "leva";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { Group, MathUtils } from "three";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
@@ -27,83 +27,13 @@ import {
   DETAILS_SECTION_KEYS,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
-import {
-  applyCurlSettings,
-  curlUniforms,
-  type CurlSettings,
-} from "@/lib/detailsCurl";
+import { applyCurlSettings, curlUniforms } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
-
-const CURL_DEFAULTS: CurlSettings = {
-  foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
-  bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,
-  radiusMult: CONFIG.detailsCurl.RADIUS_MULT,
-  maxAngle: CONFIG.detailsCurl.MAX_ANGLE,
-  fadeAngleStart: CONFIG.detailsCurl.FADE_ANGLE_START,
-  fadeAngleEnd: CONFIG.detailsCurl.FADE_ANGLE_END,
-  bend: 1,
-};
-
-const CURL_LEVA_SCHEMA = {
-  foldOffsetMult: {
-    value: CURL_DEFAULTS.foldOffsetMult,
-    min: -0.3,
-    max: 0.3,
-    step: 0.005,
-  },
-  bottomOffsetMult: {
-    value: CURL_DEFAULTS.bottomOffsetMult,
-    min: 0,
-    max: 0.5,
-    step: 0.005,
-  },
-  radiusMult: {
-    value: CURL_DEFAULTS.radiusMult,
-    min: 0.03,
-    max: 1,
-    step: 0.005,
-  },
-  maxAngle: { value: CURL_DEFAULTS.maxAngle, min: 0.2, max: 3, step: 0.01 },
-  fadeAngleStart: {
-    value: CURL_DEFAULTS.fadeAngleStart,
-    min: 0,
-    max: 2,
-    step: 0.01,
-  },
-  fadeAngleEnd: {
-    value: CURL_DEFAULTS.fadeAngleEnd,
-    min: 0.05,
-    max: 3,
-    step: 0.01,
-  },
-};
-
-const ANCHOR_DEFAULTS = {
-  foldFadeClearance: CONFIG.model.FOLD_FADE_CLEARANCE_MULT,
-  foldFadeSpan: CONFIG.model.FOLD_FADE_SPAN_MULT,
-};
-
-const ANCHOR_LEVA_SCHEMA = {
-  foldFadeClearance: {
-    value: ANCHOR_DEFAULTS.foldFadeClearance,
-    min: 0,
-    max: 0.6,
-    step: 0.01,
-  },
-  foldFadeSpan: {
-    value: ANCHOR_DEFAULTS.foldFadeSpan,
-    min: 0.05,
-    max: 1.2,
-    step: 0.01,
-  },
-};
 
 export function Details({
   bioVariant = DEFAULT_BIO_VARIANT,
-  isDebug = false,
 }: {
   bioVariant?: BioVariant;
-  isDebug?: boolean;
 }) {
   const {
     size,
@@ -117,12 +47,8 @@ export function Details({
   } = useHeroLayout();
 
   const prefersReducedMotion = usePrefersReducedMotion();
-  const levaCurl = useControls("Details curl", CURL_LEVA_SCHEMA);
-  const curl: CurlSettings = isDebug
-    ? { ...levaCurl, bend: 1 }
-    : CURL_DEFAULTS;
-  const levaAnchor = useControls("Model anchor", ANCHOR_LEVA_SCHEMA);
-  const anchorCfg = isDebug ? levaAnchor : ANCHOR_DEFAULTS;
+  const debug = useDebugSettings();
+  const anchorCfg = debug.modelAnchor;
   const {
     foldOffsetMult,
     bottomOffsetMult,
@@ -130,7 +56,7 @@ export function Details({
     maxAngle,
     fadeAngleStart,
     fadeAngleEnd,
-  } = curl;
+  } = debug.curl;
 
   const { startTrigger } = useAnimationContext();
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();

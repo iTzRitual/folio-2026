@@ -1,40 +1,9 @@
 import React, { forwardRef, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Vector2, MathUtils } from "three";
-import { useControls } from "leva";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "../../config/constants";
-
-const SCROLL_DEFAULTS = {
-  velocityScale: CONFIG.customAberration.SCROLL_VEL_SCALE,
-  blur: CONFIG.customAberration.SCROLL_BLUR,
-  split: CONFIG.customAberration.SCROLL_SPLIT,
-  taps: CONFIG.customAberration.SCROLL_TAPS,
-  vignetteXWeight: CONFIG.customAberration.SCROLL_VIGNETTE_X_WEIGHT,
-  vignetteInner: CONFIG.customAberration.SCROLL_VIGNETTE_INNER,
-  vignetteOuter: CONFIG.customAberration.SCROLL_VIGNETTE_OUTER,
-  vignetteFloor: CONFIG.customAberration.SCROLL_VIGNETTE_FLOOR,
-  attack: CONFIG.customAberration.SCROLL_ATTACK_MULT,
-  release: CONFIG.customAberration.SCROLL_RELEASE_MULT,
-};
-
-const SCROLL_LEVA_SCHEMA = {
-  velocityScale: { value: SCROLL_DEFAULTS.velocityScale, min: 1, max: 60, step: 1 },
-  blur: { value: SCROLL_DEFAULTS.blur, min: 0, max: 0.12, step: 0.001 },
-  split: { value: SCROLL_DEFAULTS.split, min: 0, max: 0.03, step: 0.0005 },
-  taps: { value: SCROLL_DEFAULTS.taps, min: 2, max: 16, step: 1 },
-  vignetteXWeight: {
-    value: SCROLL_DEFAULTS.vignetteXWeight,
-    min: 0,
-    max: 1.5,
-    step: 0.05,
-  },
-  vignetteInner: { value: SCROLL_DEFAULTS.vignetteInner, min: 0, max: 0.7, step: 0.01 },
-  vignetteOuter: { value: SCROLL_DEFAULTS.vignetteOuter, min: 0.05, max: 1.2, step: 0.01 },
-  vignetteFloor: { value: SCROLL_DEFAULTS.vignetteFloor, min: 0, max: 1, step: 0.05 },
-  attack: { value: SCROLL_DEFAULTS.attack, min: 5, max: 80, step: 1 },
-  release: { value: SCROLL_DEFAULTS.release, min: 2, max: 40, step: 1 },
-};
 
 function affordableTaps(width: number, height: number) {
   const {
@@ -54,15 +23,13 @@ function affordableTaps(width: number, height: number) {
   );
 }
 
-export const CustomAberration = forwardRef<CustomAberrationEffect, {
-  isDebug?: boolean;
-}>(({ isDebug = false }, ref) => {
-    const levaScroll = useControls("Scroll blur", SCROLL_LEVA_SCHEMA);
-    const scroll = isDebug ? levaScroll : SCROLL_DEFAULTS;
+export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
+    const scroll = useDebugSettings().scrollBlur;
     const { size } = useThree();
-    const taps = isDebug
-      ? scroll.taps
-      : affordableTaps(size.width, size.height);
+    const taps = Math.min(
+      scroll.taps,
+      affordableTaps(size.width, size.height),
+    );
     const effect = useMemo(() => new CustomAberrationEffect(taps), [taps]);
 
     const currentMouse = useRef(new Vector2(0.5, 0.5));

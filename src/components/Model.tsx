@@ -7,10 +7,10 @@ import {
 import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { useControls } from "leva";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import {
@@ -51,13 +51,7 @@ const BLANK_BUFFER = new THREE.DataTexture(
 );
 BLANK_BUFFER.needsUpdate = true;
 
-export default function Model({
-  isMobile,
-  isDebug = false,
-}: {
-  isMobile?: boolean;
-  isDebug?: boolean;
-}) {
+export default function Model({ isMobile }: { isMobile?: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -108,71 +102,19 @@ export default function Model({
   }
   const previewActive = hoveredPreview !== null;
 
-  const levaPreview = useControls("Project preview", {
-    mode: {
-      value: CONFIG.projectPreview.MODE,
-      options: ["morph", "scale"] as const,
-    },
-    sizeMult: {
-      value: CONFIG.projectPreview.SIZE_MULT,
-      min: 0.5,
-      max: 2.5,
-      step: 0.05,
-    },
-    bendMult: {
-      value: CONFIG.projectPreview.BEND_MULT,
-      min: 0,
-      max: 0.6,
-      step: 0.005,
-    },
-    aberrationMult: {
-      value: CONFIG.projectPreview.ABERRATION_MULT,
-      min: 0,
-      max: 0.2,
-      step: 0.001,
-    },
-    growStart: {
-      value: CONFIG.projectPreview.GROW_START,
-      min: 0,
-      max: 0.95,
-      step: 0.01,
-    },
-    velocityFullScale: {
-      value: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
-      min: 0.2,
-      max: 8,
-      step: 0.1,
-    },
-    velocitySmoothing: {
-      value: CONFIG.projectPreview.VELOCITY_SMOOTHING,
-      min: 1,
-      max: 30,
-      step: 0.5,
-    },
-    pinMorph: false,
-    pinnedMorph: { value: 0, min: 0, max: 1, step: 0.01 },
-  });
-  const previewMode = isDebug ? levaPreview.mode : CONFIG.projectPreview.MODE;
-  const pinnedMorph =
-    isDebug && levaPreview.pinMorph ? levaPreview.pinnedMorph : null;
-  const previewSizeMult = isDebug
-    ? levaPreview.sizeMult
-    : CONFIG.projectPreview.SIZE_MULT;
-  const previewTuning = isDebug
-    ? {
-        bend: levaPreview.bendMult,
-        aberration: levaPreview.aberrationMult,
-        fullScale: levaPreview.velocityFullScale,
-        smoothing: levaPreview.velocitySmoothing,
-        growStart: levaPreview.growStart,
-      }
-    : {
-        bend: CONFIG.projectPreview.BEND_MULT,
-        aberration: CONFIG.projectPreview.ABERRATION_MULT,
-        fullScale: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
-        smoothing: CONFIG.projectPreview.VELOCITY_SMOOTHING,
-        growStart: CONFIG.projectPreview.GROW_START,
-      };
+  const debug = useDebugSettings();
+  const previewMode = debug.projectPreview.mode;
+  const pinnedMorph = debug.projectPreview.pinMorph
+    ? debug.projectPreview.pinnedMorph
+    : null;
+  const previewSizeMult = debug.projectPreview.sizeMult;
+  const previewTuning = {
+    bend: debug.projectPreview.bendMult,
+    aberration: debug.projectPreview.aberrationMult,
+    fullScale: debug.projectPreview.velocityFullScale,
+    smoothing: debug.projectPreview.velocitySmoothing,
+    growStart: debug.projectPreview.growStart,
+  };
 
   const flatTarget = useMemo(
     () =>
@@ -311,27 +253,7 @@ export default function Model({
     });
   }, [startTrigger, prefersReducedMotion]);
 
-  const levaMaterialProps = useControls({
-    thickness: { value: 0.65, min: 0, max: 5, step: 0.05 },
-    roughness: { value: 0.2, min: 0, max: 1, step: 0.1 },
-    transmission: { value: 0.97, min: 0, max: 1, step: 0.01 },
-    ior: { value: 0.9, min: 0, max: 3, step: 0.1 },
-    chromaticAberration: { value: 1.0, min: 0, max: 1, step: 0.01 },
-    backside: { value: false },
-    scale: { value: 0.8, min: 0, max: 3, step: 0.05 },
-  });
-
-  const materialProps = isDebug
-    ? levaMaterialProps
-    : {
-        thickness: 0.65,
-        roughness: 0.2,
-        transmission: 0.97,
-        ior: 0.9,
-        chromaticAberration: 1.0,
-        backside: false,
-        scale: 0.8,
-      };
+  const materialProps = debug.material;
 
   const responsiveScale = baseResponsiveScale * materialProps.scale;
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
@@ -341,19 +263,7 @@ export default function Model({
   const previewWidth = flatTarget.rectWidth;
   const previewHeight = flatTarget.rectHeight;
 
-  const levaSkullRotation = useControls("Skull Rotation", {
-    x: { value: -1.3, min: -Math.PI, max: Math.PI, step: 0.05 },
-    y: { value: -3.13, min: -Math.PI, max: Math.PI, step: 0.05 },
-    z: { value: 0.85, min: -Math.PI, max: Math.PI, step: 0.05 },
-  });
-
-  const skullRotation = isDebug
-    ? levaSkullRotation
-    : {
-        x: -1.3,
-        y: -3.13,
-        z: 0.85,
-      };
+  const skullRotation = debug.skullRotation;
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);

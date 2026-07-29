@@ -3,29 +3,15 @@
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAnimationContext } from "@/context/AnimationContext";
-import { useControls } from "leva";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "@/config/constants";
 import { headerContent } from "@/data/content";
 import { HeaderItem } from "./HeaderScene/HeaderItem";
 import { Clock } from "./HeaderScene/Clock";
 import { ThemeToggle } from "./HeaderScene/ThemeToggle";
 
-const HEADER_DEFAULTS = {
-  fontSize: CONFIG.header.FONT_SIZE,
-};
-
-const HEADER_LEVA_SCHEMA = {
-  fontSize: {
-    value: HEADER_DEFAULTS.fontSize,
-    min: 0.004,
-    max: 0.02,
-    step: 0.0001,
-  },
-};
-
-export function Header({ isDebug = false }: { isDebug?: boolean }) {
-  const levaHeader = useControls("Header", HEADER_LEVA_SCHEMA);
-  const { fontSize } = isDebug ? levaHeader : HEADER_DEFAULTS;
+export function Header() {
+  const { fontSize } = useDebugSettings().header;
   const { viewport, marginX, pxTo3DWidth, pxTo3DHeight, leftX, rightX } =
     useHeroLayout();
   const { startTrigger } = useAnimationContext();

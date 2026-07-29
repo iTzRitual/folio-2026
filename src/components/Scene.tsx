@@ -21,17 +21,19 @@ import {
   useTheme,
   type ThemeContextValue,
 } from "@/context/ThemeContext";
+import {
+  DebugSettingsBridge,
+  type DebugSettings,
+} from "@/context/DebugSettingsContext";
 import type { BioVariant } from "@/data/content";
 
 function SceneContent({
   startAnimation,
   isMobile,
-  isDebug,
   bioVariant,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
-  isDebug: boolean;
   bioVariant: BioVariant;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -46,18 +48,18 @@ function SceneContent({
         <Environment files="/hdri/city.hdr" />
 
         <Suspense fallback={null}>
-          <Model isMobile={isMobile} isDebug={isDebug} />
+          <Model isMobile={isMobile} />
         </Suspense>
 
-        {!isMobile && <Header isDebug={isDebug} />}
+        {!isMobile && <Header />}
         {!isMobile && <HeroText />}
-        {!isMobile && <Details bioVariant={bioVariant} isDebug={isDebug} />}
-        {!isMobile && <CurlEdgeFade isDebug={isDebug} />}
+        {!isMobile && <Details bioVariant={bioVariant} />}
+        {!isMobile && <CurlEdgeFade />}
         {!isMobile && (
           <EffectComposer multisampling={0}>
             <>
-              <HeaderExclusion isDebug={isDebug} />
-              {!prefersReducedMotion && <CustomAberration isDebug={isDebug} />}
+              <HeaderExclusion />
+              {!prefersReducedMotion && <CustomAberration />}
             </>
           </EffectComposer>
         )}
@@ -73,12 +75,14 @@ export default function Scene({
   isDebug,
   bioVariant,
   themeContext,
+  debugSettings,
 }: {
   startAnimation: boolean;
   isMobile: boolean;
   isDebug: boolean;
   bioVariant: BioVariant;
   themeContext: ThemeContextValue;
+  debugSettings: DebugSettings;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
@@ -125,7 +129,13 @@ export default function Scene({
           flipflops={3}
         />
         <ThemeBridge value={themeContext}>
-          <SceneContent startAnimation={startAnimation} isMobile={isMobile} isDebug={isDebug} bioVariant={bioVariant} />
+          <DebugSettingsBridge value={debugSettings}>
+            <SceneContent
+              startAnimation={startAnimation}
+              isMobile={isMobile}
+              bioVariant={bioVariant}
+            />
+          </DebugSettingsBridge>
         </ThemeBridge>
         {isDebug && <Stats />}
       </Canvas>
