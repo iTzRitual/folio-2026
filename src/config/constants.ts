@@ -60,6 +60,13 @@ export const CONFIG = {
         IDLE_ROTATION_SPEED_Y_MAG: 0.1,
         IDLE_ROTATION_SPEED: 2,
         DEPTH_Z: 2,
+        // Below this scale the skull covers too few pixels for the refraction
+        // buffer to be worth a second render of the whole scene.
+        TRANSMISSION_MIN_SCALE: 0.02,
+        TRANSMISSION_RESOLUTION: 256,
+        TRANSMISSION_RESOLUTION_MOBILE: 128,
+        TRANSMISSION_SAMPLES: 4,
+        TRANSMISSION_SAMPLES_MOBILE: 2,
     },
     detailsLayout: {
         HEADING_SIZE_MULT: 0.03,

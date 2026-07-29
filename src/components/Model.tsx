@@ -38,6 +38,16 @@ const IDENTITY_QUATERNION = new THREE.Quaternion();
 
 useGLTF.setDecoderPath("/draco/");
 
+// Swapping this in for the refraction buffer is what stops
+// MeshTransmissionMaterial re-rendering the scene: it only does so while its
+// buffer is still the FBO it created.
+const BLANK_BUFFER = new THREE.DataTexture(
+  new Uint8Array([0, 0, 0, 255]),
+  1,
+  1,
+);
+BLANK_BUFFER.needsUpdate = true;
+
 export default function Model({
   isMobile,
   isDebug = false,
@@ -79,6 +89,9 @@ export default function Model({
   const previewGroupRef = useRef<THREE.Group>(null);
   const previewMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const skullMeshRef = useRef<THREE.Mesh | null>(null);
+  const transmissionRef =
+    useRef<React.ComponentRef<typeof MeshTransmissionMaterial>>(null);
+  const refractionBuffer = useRef<THREE.Texture | null>(null);
 
   // Details — and with it the project hover — is desktop only.
   const previewTextures = useProjectPreviewTextures(!isMobile);
@@ -618,6 +631,23 @@ export default function Model({
       skullMesh.visible = glassOpacity > 1e-3;
     }
 
+    // The refraction buffer costs a full second render of the scene. Once the
+    // skull has scaled away into the details stage, or the screenshot has taken
+    // its place, there is nothing left to refract.
+    if (transmissionRef.current) {
+      const current = transmissionRef.current.buffer;
+      if (current && current !== BLANK_BUFFER) refractionBuffer.current = current;
+
+      const worthRefracting =
+        skullMesh?.visible !== false &&
+        (transitionScaleGroupRef.current?.scale.x ?? 1) >
+          CONFIG.model.TRANSMISSION_MIN_SCALE;
+
+      transmissionRef.current.buffer = worthRefracting
+        ? (refractionBuffer.current ?? undefined)
+        : BLANK_BUFFER;
+    }
+
     // The skull flattens at its own size, then swells into the screenshot's
     // footprint over the tail of the morph, so both land on the same rectangle.
     const plateGrowth = THREE.MathUtils.lerp(
@@ -821,9 +851,18 @@ export default function Model({
                     scale={responsiveScale}
                   >
                     <MeshTransmissionMaterial
+                      ref={transmissionRef}
                       {...materialProps}
-                      resolution={256}
-                      samples={4}
+                      resolution={
+                        isMobile
+                          ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
+                          : CONFIG.model.TRANSMISSION_RESOLUTION
+                      }
+                      samples={
+                        isMobile
+                          ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
+                          : CONFIG.model.TRANSMISSION_SAMPLES
+                      }
                     />
                   </Clone>
                 </Center>
