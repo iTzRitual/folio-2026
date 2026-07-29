@@ -38,6 +38,8 @@ const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
 const LENIS_OPTIONS = { autoRaf: false } as const;
 
+const RESIZE_DEBOUNCE_MS = 150;
+
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
@@ -69,8 +71,21 @@ export default function Home() {
             );
 
         update();
-        window.addEventListener("resize", update);
-        return () => window.removeEventListener("resize", update);
+
+        // A drag-resize fires this continuously, and each pass measures and
+        // greedy-wraps the whole bio on a canvas context before landing in a
+        // state change that triggers ScrollTrigger.refresh().
+        let debounce: number | undefined;
+        const onResize = () => {
+            window.clearTimeout(debounce);
+            debounce = window.setTimeout(update, RESIZE_DEBOUNCE_MS);
+        };
+
+        window.addEventListener("resize", onResize);
+        return () => {
+            window.clearTimeout(debounce);
+            window.removeEventListener("resize", onResize);
+        };
     }, [isMobile, bioVariant, fontsReady]);
 
     useEffect(() => {

@@ -123,6 +123,10 @@ export function AnimatedRevealText({
         });
         tl.set(block, { transformOrigin: exitOrigin });
         tl.to(block, { scaleX: 0, duration: duration, ease: "power4.inOut" });
+        // The stylesheet promotes every revealer to its own compositor layer.
+        // The wipe is one-shot, so holding those layers for the rest of the
+        // session is pure memory — and there is one per split line.
+        tl.set(block, { willChange: "auto" });
 
         return tl;
       };

@@ -18,6 +18,23 @@ import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
 import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 
+// One texture for every link. Loading per instance let the HTTP cache dedupe
+// the request but still produced one THREE.Texture and one GPU upload each.
+let arrowTexturePromise: Promise<THREE.Texture> | null = null;
+let arrowTexture: THREE.Texture | null = null;
+
+function loadArrowTexture() {
+  arrowTexturePromise ??= new Promise((resolve) => {
+    new THREE.TextureLoader().load("/link_arrow.svg", (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      arrowTexture = texture;
+      resolve(texture);
+    });
+  });
+
+  return arrowTexturePromise;
+}
+
 interface DetailsLinkProps {
   text: string;
   href: string;
@@ -131,7 +148,7 @@ export function DetailsLink({
     minY: 0,
     maxY: 0,
   });
-  const [arrowTex, setArrowTex] = useState<THREE.Texture | null>(null);
+  const [arrowTex, setArrowTex] = useState<THREE.Texture | null>(arrowTexture);
   const [revealBounds, setRevealBounds] = useState<TextBounds | null>(null);
 
   const handleHalfway = useCallback(() => {
@@ -140,10 +157,14 @@ export function DetailsLink({
   }, [revealedRef]);
 
   useEffect(() => {
-    new THREE.TextureLoader().load("/link_arrow.svg", (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      setArrowTex(tex);
+    if (arrowTexture) return;
+    let cancelled = false;
+    loadArrowTexture().then((texture) => {
+      if (!cancelled) setArrowTex(texture);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
 
