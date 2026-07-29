@@ -36,6 +36,8 @@ const PLATE_IMAGE_FACING = new THREE.Quaternion().setFromEuler(
 );
 const IDENTITY_QUATERNION = new THREE.Quaternion();
 
+useGLTF.setDecoderPath("/draco/");
+
 export default function Model({
   isMobile,
   isDebug = false,

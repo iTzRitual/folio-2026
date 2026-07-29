@@ -43,7 +43,7 @@ function SceneContent({
         <ProjectHoverProvider>
         <color attach="background" args={[palette.bg]} />
         <directionalLight intensity={3} position={[0, 3, 2]} />
-        <Environment preset="city" />
+        <Environment files="/hdri/city.hdr" />
 
         <Suspense fallback={null}>
           <Model isMobile={isMobile} isDebug={isDebug} />
