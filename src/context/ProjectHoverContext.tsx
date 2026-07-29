@@ -12,16 +12,18 @@ import {
 } from "react";
 import { CONFIG } from "@/config/constants";
 
-interface ProjectHoverValue {
-  /** Preview texture of the project currently under the cursor, or null. */
-  hoveredPreview: string | null;
+interface ProjectHoverActions {
   setHoveredPreview: (src: string) => void;
   clearHoveredPreview: (src: string) => void;
   /** Drops the hover outright, whichever link is holding it. */
   resetHoveredPreview: () => void;
 }
 
-const ProjectHoverContext = createContext<ProjectHoverValue | null>(null);
+/** Preview texture of the project currently under the cursor, or null. */
+const ProjectHoverStateContext = createContext<string | null>(null);
+const ProjectHoverActionsContext = createContext<ProjectHoverActions | null>(
+  null,
+);
 
 export function ProjectHoverProvider({ children }: { children: ReactNode }) {
   const [hoveredPreview, setPreview] = useState<string | null>(null);
@@ -56,32 +58,33 @@ export function ProjectHoverProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => cancelPendingClear, []);
 
-  const value = useMemo(
-    () => ({
-      hoveredPreview,
-      setHoveredPreview,
-      clearHoveredPreview,
-      resetHoveredPreview,
-    }),
-    [
-      hoveredPreview,
-      setHoveredPreview,
-      clearHoveredPreview,
-      resetHoveredPreview,
-    ],
+  // Kept apart from the hovered value so the links, which only ever write it,
+  // are not re-rendered by their own hover. Each one carries an <Html> twin
+  // whose React root re-renders along with it.
+  const actions = useMemo(
+    () => ({ setHoveredPreview, clearHoveredPreview, resetHoveredPreview }),
+    [setHoveredPreview, clearHoveredPreview, resetHoveredPreview],
   );
 
   return (
-    <ProjectHoverContext.Provider value={value}>
-      {children}
-    </ProjectHoverContext.Provider>
+    <ProjectHoverActionsContext.Provider value={actions}>
+      <ProjectHoverStateContext.Provider value={hoveredPreview}>
+        {children}
+      </ProjectHoverStateContext.Provider>
+    </ProjectHoverActionsContext.Provider>
   );
 }
 
-export function useProjectHover() {
-  const context = useContext(ProjectHoverContext);
+export function useProjectHoverActions() {
+  const context = useContext(ProjectHoverActionsContext);
   if (!context) {
-    throw new Error("useProjectHover must be used inside ProjectHoverProvider");
+    throw new Error(
+      "useProjectHoverActions must be used inside ProjectHoverProvider",
+    );
   }
   return context;
+}
+
+export function useHoveredPreview() {
+  return useContext(ProjectHoverStateContext);
 }

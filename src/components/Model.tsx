@@ -13,7 +13,10 @@ import { useGSAP } from "@gsap/react";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { useProjectHover } from "@/context/ProjectHoverContext";
+import {
+  useHoveredPreview,
+  useProjectHoverActions,
+} from "@/context/ProjectHoverContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { attachFlatMorphTarget, buildFlatMorphTarget } from "@/lib/skullMorph";
 import {
@@ -95,7 +98,8 @@ export default function Model({
 
   // Details — and with it the project hover — is desktop only.
   const previewTextures = useProjectPreviewTextures(!isMobile);
-  const { hoveredPreview, resetHoveredPreview } = useProjectHover();
+  const hoveredPreview = useHoveredPreview();
+  const { resetHoveredPreview } = useProjectHoverActions();
   // Keep the last hovered preview around so the plate can animate back out
   // with the right screenshot still on it.
   const [shownPreview, setShownPreview] = useState<string | null>(null);

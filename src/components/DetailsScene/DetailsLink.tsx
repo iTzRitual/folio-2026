@@ -16,7 +16,7 @@ import {
 import { CurlRevealBlock } from "./CurlRevealBlock";
 import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
-import { useProjectHover } from "@/context/ProjectHoverContext";
+import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 
 interface DetailsLinkProps {
   text: string;
@@ -71,7 +71,7 @@ export function DetailsLink({
 
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
-  const { setHoveredPreview, clearHoveredPreview } = useProjectHover();
+  const { setHoveredPreview, clearHoveredPreview } = useProjectHoverActions();
   // A link stays in the scene well past both folds, curled and faded out.
   // Anything still legible stays clickable; the preview is held to a stricter
   // threshold so a barely-there row does not swap the model out.
