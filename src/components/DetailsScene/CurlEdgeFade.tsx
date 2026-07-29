@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useControls } from "leva";
 import { Color, ShaderMaterial } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -86,6 +86,10 @@ export function CurlEdgeFade({ isDebug = false }: { isDebug?: boolean }) {
     [],
   );
 
+  useEffect(() => {
+    materialRef.current?.uniforms.uColor.value.set(palette.bg);
+  }, [palette.bg]);
+
   useFrame(() => {
     const material = materialRef.current;
     if (!material) return;
@@ -93,7 +97,6 @@ export function CurlEdgeFade({ isDebug = false }: { isDebug?: boolean }) {
     const foldY = curlUniforms.uCurlFoldY.value;
     const radius = curlUniforms.uCurlRadius.value;
 
-    material.uniforms.uColor.value.set(palette.bg);
     material.uniforms.uTopY.value = foldY;
     material.uniforms.uTopSpan.value = radius * topSpanMult;
     material.uniforms.uTopCutY.value = foldY + radius;
