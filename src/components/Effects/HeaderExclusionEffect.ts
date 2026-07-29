@@ -1,5 +1,6 @@
 import { Effect } from "postprocessing";
 import {
+  Color,
   LinearFilter,
   Uniform,
   WebGLRenderTarget,
@@ -9,11 +10,10 @@ import {
 } from "three";
 
 export const HEADER_LAYER = 1;
-const EMPTY_LAYER = 31;
 
 const FRAGMENT = /* glsl */ `
 uniform sampler2D u_header;
-uniform sampler2D u_backdropSample;
+uniform vec3 u_bg;
 uniform float u_threshold;
 uniform float u_softness;
 uniform float u_strength;
@@ -33,7 +33,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   }
 
   vec3 backdrop = clamp(inputColor.rgb, 0.0, 1.0);
-  vec3 bg = clamp(texture2D(u_backdropSample, vec2(0.5)).rgb, 0.0, 1.0);
+  vec3 bg = clamp(u_bg, 0.0, 1.0);
   float difference = distance(linearToSRGB(backdrop), linearToSRGB(bg));
   float coverage = smoothstep(
     u_threshold,
@@ -52,7 +52,6 @@ export class HeaderExclusionEffect extends Effect {
   private readonly scene: Scene;
   private readonly camera: Camera;
   private readonly target: WebGLRenderTarget;
-  private readonly backdropSample: WebGLRenderTarget;
 
   constructor(scene: Scene, camera: Camera) {
     const target = new WebGLRenderTarget(1, 1, {
@@ -62,17 +61,10 @@ export class HeaderExclusionEffect extends Effect {
       stencilBuffer: false,
     });
 
-    const backdropSample = new WebGLRenderTarget(1, 1, {
-      minFilter: LinearFilter,
-      magFilter: LinearFilter,
-      depthBuffer: false,
-      stencilBuffer: false,
-    });
-
     super("HeaderExclusionEffect", FRAGMENT, {
       uniforms: new Map<string, Uniform<unknown>>([
         ["u_header", new Uniform(target.texture)],
-        ["u_backdropSample", new Uniform(backdropSample.texture)],
+        ["u_bg", new Uniform(new Color())],
         ["u_threshold", new Uniform(0.05)],
         ["u_softness", new Uniform(0.15)],
         ["u_strength", new Uniform(1)],
@@ -82,18 +74,17 @@ export class HeaderExclusionEffect extends Effect {
     this.scene = scene;
     this.camera = camera;
     this.target = target;
-    this.backdropSample = backdropSample;
   }
 
   update(renderer: WebGLRenderer) {
+    const background = this.scene.background;
+    if (background instanceof Color) {
+      (this.uniforms.get("u_bg")!.value as Color).copy(background);
+    }
+
     const previousTarget = renderer.getRenderTarget();
     const previousMask = this.camera.layers.mask;
     const previousClearAlpha = renderer.getClearAlpha();
-    const previousBackground = this.scene.background;
-
-    this.camera.layers.set(EMPTY_LAYER);
-    renderer.setRenderTarget(this.backdropSample);
-    renderer.render(this.scene, this.camera);
 
     this.camera.layers.set(HEADER_LAYER);
     this.scene.background = null;
@@ -101,7 +92,7 @@ export class HeaderExclusionEffect extends Effect {
     renderer.setRenderTarget(this.target);
     renderer.render(this.scene, this.camera);
 
-    this.scene.background = previousBackground;
+    this.scene.background = background;
     renderer.setClearAlpha(previousClearAlpha);
     renderer.setRenderTarget(previousTarget);
     this.camera.layers.mask = previousMask;
@@ -113,7 +104,6 @@ export class HeaderExclusionEffect extends Effect {
 
   dispose() {
     this.target.dispose();
-    this.backdropSample.dispose();
     super.dispose();
   }
 }
