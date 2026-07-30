@@ -51,10 +51,26 @@ export const SECTION_HEADINGS = {
     experience: "Experience",
     projects: "Featured Projects",
     education: "Education",
-    courses: "Courses & Certifications",
+    courses: "Courses\n& Certifications",
     bio: "About me",
     skills: "Skills",
 } as const;
+
+export function headingLines(heading: string): string[] {
+    return heading.split("\n");
+}
+
+export function headingBlockHeight(
+    heading: string,
+    headingFontSize: number,
+): number {
+    const lines = headingLines(heading).length;
+    return (
+        headingFontSize *
+        (1 +
+            (lines - 1) * CONFIG.detailsLayout.HEADING_LINE_HEIGHT_MULT)
+    );
+}
 
 const STACKED_SECTIONS = [
     "experience",
@@ -95,14 +111,18 @@ export function calculateDetailsLayout({
 
     const widestHeading = STACKED_SECTIONS.reduce(
         (max, key) =>
-            Math.max(
+            headingLines(SECTION_HEADINGS[key]).reduce(
+                (lineMax, line) =>
+                    Math.max(
+                        lineMax,
+                        measureTextWidth(
+                            line,
+                            headingFontSize,
+                            L.LETTER_SPACING,
+                            fontsReady,
+                        ),
+                    ),
                 max,
-                measureTextWidth(
-                    SECTION_HEADINGS[key],
-                    headingFontSize,
-                    L.LETTER_SPACING,
-                    fontsReady,
-                ),
             ),
         0,
     );
@@ -175,12 +195,16 @@ export function calculateDetailsLayout({
 
     const place = (key: string, column: DetailsColumn) => {
         const top = cursors[column];
-        const height = Math.max(
+        const headingHeight = headingBlockHeight(
+            SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
             headingFontSize,
+        );
+        const height = Math.max(
+            headingHeight,
             bodyTopOffset + lineCounts[key] * lineHeights[key],
         );
         const inkHeight = Math.max(
-            headingFontSize,
+            headingHeight,
             bodyTopOffset +
                 (lineCounts[key] - 1) * lineHeights[key] +
                 bodyLineHeight,

@@ -6,6 +6,7 @@ import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
 import { CONFIG, FONTS } from "@/config/constants";
 import { useTheme } from "@/context/ThemeContext";
+import { headingLines } from "@/lib/detailsLayout";
 
 export interface DetailsSectionItem {
     text: string;
@@ -53,23 +54,33 @@ export function DetailsSection({
     return (
         <>
             <group ref={headingGroupRef}>
-                <DetailsText
-                    text={heading}
-                    position={[headingX, headingY, 0]}
-                    anchorX="left"
-                    anchorY="top"
-                    calculatedFontSize={headingFontSize}
-                    pixelFontSize={headingFontSize / pxTo3DWidth}
-                    font={FONTS.karlaLight}
-                    fontWeightClass="font-light"
-                    color={palette.textPrimary}
-                    blockColor={palette.textPrimary}
-                    startTrigger={startTrigger}
-                    delay={CONFIG.detailsTimings.HEADING_DELAY}
-                    direction={direction}
-                    lineHeight={1}
-                    letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
-                />
+                {headingLines(heading).map((line, index) => (
+                    <DetailsText
+                        key={line}
+                        text={line}
+                        position={[
+                            headingX,
+                            headingY -
+                                index *
+                                    headingFontSize *
+                                    CONFIG.detailsLayout.HEADING_LINE_HEIGHT_MULT,
+                            0,
+                        ]}
+                        anchorX="left"
+                        anchorY="top"
+                        calculatedFontSize={headingFontSize}
+                        pixelFontSize={headingFontSize / pxTo3DWidth}
+                        font={FONTS.karlaLight}
+                        fontWeightClass="font-light"
+                        color={palette.textPrimary}
+                        blockColor={palette.textPrimary}
+                        startTrigger={startTrigger}
+                        delay={CONFIG.detailsTimings.HEADING_DELAY}
+                        direction={direction}
+                        lineHeight={1}
+                        letterSpacing={CONFIG.detailsLayout.LETTER_SPACING}
+                    />
+                ))}
             </group>
 
             {items.map((item, index) => {

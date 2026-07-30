@@ -26,6 +26,7 @@ import {
 import {
   SECTION_HEADINGS,
   DETAILS_SECTION_KEYS,
+  headingBlockHeight,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
 import { applyCurlSettings, curlUniforms } from "@/lib/detailsCurl";
@@ -153,11 +154,15 @@ export function Details({
     }
 
     const foldY = curlUniforms.uCurlFoldY.value;
-    const headingHeight = layout.headingFontSize * pxTo3DHeight;
 
     const stickHeading = (headingGroup: Group | null, key: string) => {
       if (!headingGroup) return;
 
+      const headingHeight =
+        headingBlockHeight(
+          SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
+          layout.headingFontSize,
+        ) * pxTo3DHeight;
       const offsets = layout.sections[key];
       const naturalY = groupY + sectionTop - offsets.headingY * pxTo3DHeight;
       const sectionBottomY =

@@ -80,6 +80,7 @@ export const CONFIG = {
         RIGHT_TITLE_OFFSET_MULT: 0.2,
         GAP_MULT: 0.08,
         BODY_TOP_OFFSET_MULT: 0.38,
+        HEADING_LINE_HEIGHT_MULT: 1.1,
         BODY_LINE_HEIGHT_MULT: 1.5,
         PROJECT_ROW_PITCH_MULT: 2.25,
         LETTER_SPACING: -0.03,
