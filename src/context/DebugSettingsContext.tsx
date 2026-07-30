@@ -7,15 +7,15 @@ import { DEFAULT_BIO_VARIANT, type BioVariant } from "@/data/content";
 export interface DebugSettings {
     bio: { variant: BioVariant };
     projectPreview: {
-        mode: "morph" | "scale";
         sizeMult: number;
         bendMult: number;
         aberrationMult: number;
-        growStart: number;
         velocityFullScale: number;
         velocitySmoothing: number;
-        pinMorph: boolean;
-        pinnedMorph: number;
+        glitchSlice: number;
+        glitchSplit: number;
+        pinGlitch: boolean;
+        pinnedGlitch: number;
     };
     material: {
         thickness: number;
@@ -61,15 +61,15 @@ export interface DebugSettings {
 export const DEBUG_DEFAULTS: DebugSettings = {
     bio: { variant: DEFAULT_BIO_VARIANT },
     projectPreview: {
-        mode: CONFIG.projectPreview.MODE,
-        sizeMult: CONFIG.projectPreview.SIZE_MULT,
+        sizeMult: 1,
         bendMult: CONFIG.projectPreview.BEND_MULT,
         aberrationMult: CONFIG.projectPreview.ABERRATION_MULT,
-        growStart: CONFIG.projectPreview.GROW_START,
         velocityFullScale: CONFIG.projectPreview.VELOCITY_FULL_SCALE,
         velocitySmoothing: CONFIG.projectPreview.VELOCITY_SMOOTHING,
-        pinMorph: false,
-        pinnedMorph: 0,
+        glitchSlice: CONFIG.projectPreview.GLITCH_SLICE,
+        glitchSplit: CONFIG.projectPreview.GLITCH_SPLIT,
+        pinGlitch: false,
+        pinnedGlitch: 0,
     },
     material: {
         thickness: 0.65,

@@ -123,55 +123,48 @@ export const CONFIG = {
         IMAGE_SEGMENTS: 24,
     },
     projectPreview: {
-        // "morph": the skull flattens into the screenshot plate.
-        // "scale": the skull scales out while the plate scales in.
-        MODE: "morph" as "morph" | "scale",
+        // The screenshots are 1600x1000.
         ASPECT: 1.6,
-        // Thickness the flattened glass plate keeps, in geometry-local units.
-        SLAB_THICKNESS: 0.05,
-        // Gap between the glass plate's front face and the image, so the
-        // screenshot never z-fights the refraction.
-        IMAGE_GAP: 0.06,
-        // Final size of both the plate and the screenshot on it, relative to
-        // the skull's own footprint.
-        SIZE_MULT: 1.75,
-        // Morph progress at which the plate starts growing into SIZE_MULT, so
-        // the skull flattens first and only swells once it is nearly a plate.
-        // The screenshot fades in over the same range.
-        GROW_START: 0.62,
+        // Plate width as a fraction of the viewport's.
+        WIDTH_FRACTION: 0.28,
         CORNER_RADIUS_MULT: 0.05,
-        MORPH_IN_DURATION: 0.7,
-        MORPH_OUT_DURATION: 0.45,
-        SCALE_SKULL_OUT_DURATION: 0.22,
-        SCALE_PLANE_IN_DURATION: 0.3,
-        SCALE_PLANE_IN_DELAY: 0.11,
-        SCALE_PLANE_OUT_DURATION: 0.18,
-        SCALE_SKULL_IN_DURATION: 0.3,
-        SCALE_SKULL_IN_DELAY: 0.09,
         // Crossing a row boundary fires leave before enter. Waiting this long
         // before dropping the hover keeps the list one continuous region, so
-        // sweeping down it swaps the screenshot instead of re-morphing.
+        // sweeping down it swaps the screenshot instead of replaying the
+        // entrance.
         HOVER_GRACE_MS: 90,
-        // Damping the plate follows the pointer and grows to full size with,
-        // above the anchor's own so it keeps up with a sweep down the list and
-        // is up to size before the morph lands.
-        HOVER_SMOOTHING: 14,
-        // Plate presence at which the model starts travelling to the pointer.
-        // The morph runs in place first, so the still-glassy skull — which has
-        // no curl of its own — never crosses the fold uncurled.
-        TRAVEL_START: 0.4,
-        // Cross-plate segments the trailing-centre bend is sampled over.
-        BEND_SEGMENTS: 48,
-        // Rows the plate is split into so it can roll around the details fold
-        // instead of tilting rigidly: it stands nearly three curl radii tall.
-        CURL_SEGMENTS: 24,
-        // Peak lag of the plate's centre, as a fraction of its height.
+        // Damping the plate chases the pointer with. High enough that it reads
+        // as sitting on the cursor; the lag it does keep is what the bend is
+        // measured from.
+        FOLLOW_SMOOTHING: 22,
+        // Grid the two-axis trailing-centre bend is sampled over.
+        BEND_SEGMENTS_X: 32,
+        BEND_SEGMENTS_Y: 20,
+        // Peak lag of the plate's centre, as a fraction of its own span.
         BEND_MULT: 0.275,
         // Peak per-channel UV split, in texture units.
         ABERRATION_MULT: 0.06,
-        // Plate speed (in normalised units per second) that saturates both.
+        // Pointer speed (in normalised units per second) that saturates both.
         VELOCITY_FULL_SCALE: 2.6,
         VELOCITY_SMOOTHING: 11,
+        // Horizontal bands the glitch slices the plate into, and reveals it in.
+        GLITCH_BANDS: 18,
+        // Peak horizontal slice offset, in texture units.
+        GLITCH_SLICE: 0.05,
+        // Peak channel split the glitch adds on top of the travel's own.
+        GLITCH_SPLIT: 0.018,
+        // Times a second the slice pattern reshuffles. Baked into the shader.
+        GLITCH_HZ: 24,
+        ENTER_REVEAL_DURATION: 0.26,
+        ENTER_GLITCH_DURATION: 0.42,
+        ENTER_SCALE_FROM: 0.94,
+        ENTER_SCALE_DURATION: 0.3,
+        EXIT_REVEAL_DURATION: 0.16,
+        EXIT_GLITCH_DURATION: 0.12,
+        EXIT_SCALE_TO: 0.97,
+        SWAP_GLITCH_DURATION: 0.22,
+        // Above everything else in the scene; the plate covers the buttons.
+        RENDER_ORDER: 999,
     },
     detailsLink: {
         ARROW_SIZE_MULT: 0.4,

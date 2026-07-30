@@ -5,7 +5,7 @@ import {
   Center,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -14,31 +14,9 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { curlScrimCoverY } from "@/lib/detailsCurl";
-import {
-  useHoveredPreview,
-  useProjectHoverActions,
-} from "@/context/ProjectHoverContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { attachFlatMorphTarget, buildFlatMorphTarget } from "@/lib/skullMorph";
-import {
-  ProjectPreviewPlane,
-  previewUniforms,
-  useProjectPreviewTextures,
-} from "./DetailsScene/ProjectPreviewPlane";
 import { CONFIG } from "../config/constants";
 
-// The GLB is Blender-oriented, so the flattened plate lies in the mesh's local
-// XZ plane. Facing it at the camera means mapping local +Z to world up, which
-// is exactly the -90° X rotation the glTF node carries.
-const PLATE_FACING = new THREE.Quaternion().setFromEuler(
-  new THREE.Euler(-Math.PI / 2, 0, 0),
-);
-// The screenshot rides in the mesh's own frame, so it needs the inverse turn:
-// its +Z normal onto local -Y, the face PLATE_FACING then points at the camera.
-const PLATE_IMAGE_FACING = new THREE.Quaternion().setFromEuler(
-  new THREE.Euler(Math.PI / 2, 0, 0),
-);
-const IDENTITY_QUATERNION = new THREE.Quaternion();
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
 // lands where the gradient is already at full cover, so it never shows. Module
@@ -70,10 +48,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     grabAreaRadius: baseGrabAreaRadius,
     stickyAreaRadius: baseStickyAreaRadius,
     responsiveScale: baseResponsiveScale,
-    titleSettledBottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
+  const { progressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
@@ -90,146 +67,20 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
 
   const { viewport } = useThree();
 
-  const morphOrientRef = useRef<THREE.Group>(null);
   const skullRotationGroupRef = useRef<THREE.Group>(null);
-  const previewGroupRef = useRef<THREE.Group>(null);
-  const previewMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const skullMeshRef = useRef<THREE.Mesh | null>(null);
   const transmissionRef =
     useRef<React.ComponentRef<typeof MeshTransmissionMaterial>>(null);
   const refractionBuffer = useRef<THREE.Texture | null>(null);
 
-  // Details — and with it the project hover — is desktop only.
-  const previewTextures = useProjectPreviewTextures(!isMobile);
-  const hoveredPreview = useHoveredPreview();
-  const { resetHoveredPreview } = useProjectHoverActions();
-  // Keep the last hovered preview around so the plate can animate back out
-  // with the right screenshot still on it.
-  const [shownPreview, setShownPreview] = useState<string | null>(null);
-  if (hoveredPreview && hoveredPreview !== shownPreview) {
-    setShownPreview(hoveredPreview);
-  }
-  const previewActive = hoveredPreview !== null;
-
   const debug = useDebugSettings();
-  const previewMode = debug.projectPreview.mode;
-  const pinnedMorph = debug.projectPreview.pinMorph
-    ? debug.projectPreview.pinnedMorph
-    : null;
-  const previewSizeMult = debug.projectPreview.sizeMult;
-  const previewTuning = {
-    bend: debug.projectPreview.bendMult,
-    aberration: debug.projectPreview.aberrationMult,
-    fullScale: debug.projectPreview.velocityFullScale,
-    smoothing: debug.projectPreview.velocitySmoothing,
-    growStart: debug.projectPreview.growStart,
-  };
-
-  const flatTarget = useMemo(
-    () =>
-      buildFlatMorphTarget(
-        (nodes.Sphere as THREE.Mesh).geometry,
-        CONFIG.projectPreview.ASPECT,
-        CONFIG.projectPreview.SLAB_THICKNESS,
-      ),
-    [nodes.Sphere],
-  );
 
   useLayoutEffect(() => {
-    attachFlatMorphTarget((nodes.Sphere as THREE.Mesh).geometry, flatTarget);
-
     mesh.current?.traverse((child) => {
       if (skullMeshRef.current || !(child as THREE.Mesh).isMesh) return;
-      const found = child as THREE.Mesh;
-      skullMeshRef.current = found;
-      found.updateMorphTargets();
-      (found.material as THREE.Material).needsUpdate = true;
+      skullMeshRef.current = child as THREE.Mesh;
     });
-  }, [nodes.Sphere, flatTarget]);
-
-  const plateMotion = useRef({ lastY: 0, velocity: 0, seeded: false });
-
-  // 0 = skull, 1 = fully revealed preview. `skull` only moves in "scale" mode.
-  const previewProxy = useRef({ morph: 0, plate: 0, skull: 1 });
-  const orientTemp = useRef({
-    parent: new THREE.Quaternion(),
-    orient: new THREE.Quaternion(),
-    mesh: new THREE.Quaternion(),
-    local: new THREE.Quaternion(),
-    target: new THREE.Quaternion(),
-    plateCenter: new THREE.Vector3(),
-    meshScale: new THREE.Vector3(),
-    parentScale: new THREE.Vector3(),
-  });
-
-  useGSAP(
-    () => {
-      const proxy = previewProxy.current;
-      const active = previewActive;
-      const cfg = CONFIG.projectPreview;
-
-      gsap.killTweensOf(proxy);
-
-      if (prefersReducedMotion) {
-        proxy.morph = active && previewMode === "morph" ? 1 : 0;
-        proxy.plate = active ? 1 : 0;
-        proxy.skull = active && previewMode === "scale" ? 0 : 1;
-        return;
-      }
-
-      if (previewMode === "morph") {
-        proxy.skull = 1;
-
-        // `plate` is not tweened here: it is read off `morph` in the frame loop,
-        // so the screenshot cannot resolve before the plate it sits on exists.
-        gsap.to(proxy, {
-          morph: active ? 1 : 0,
-          duration: active ? cfg.MORPH_IN_DURATION : cfg.MORPH_OUT_DURATION,
-          ease: active ? "power3.inOut" : "power2.inOut",
-        });
-        return;
-      }
-
-      proxy.morph = 0;
-      const timeline = gsap.timeline();
-      if (active) {
-        timeline
-          .to(proxy, {
-            skull: 0,
-            duration: cfg.SCALE_SKULL_OUT_DURATION,
-            ease: "power2.in",
-          })
-          .to(
-            proxy,
-            {
-              plate: 1,
-              duration: cfg.SCALE_PLANE_IN_DURATION,
-              ease: "back.out(1.7)",
-            },
-            cfg.SCALE_PLANE_IN_DELAY,
-          );
-      } else {
-        timeline
-          .to(proxy, {
-            plate: 0,
-            duration: cfg.SCALE_PLANE_OUT_DURATION,
-            ease: "power2.in",
-          })
-          .to(
-            proxy,
-            {
-              skull: 1,
-              duration: cfg.SCALE_SKULL_IN_DURATION,
-              ease: "back.out(1.6)",
-            },
-            cfg.SCALE_SKULL_IN_DELAY,
-          );
-      }
-    },
-    // Keyed on whether *any* project is hovered, not on which one — sweeping
-    // down the list swaps the screenshot without restarting the morph.
-    { dependencies: [previewActive, previewMode, prefersReducedMotion] },
-  );
+  }, [nodes.Sphere]);
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -268,10 +119,6 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
   const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
   const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
 
-  // Geometry-local, like the morph target itself — the group carries the scale.
-  const previewWidth = flatTarget.rectWidth;
-  const previewHeight = flatTarget.rectHeight;
-
   const skullRotation = debug.skullRotation;
 
   useFrame((state, delta) => {
@@ -294,30 +141,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     // twice.
     const scrollY = isMobile ? window.scrollY : 0;
 
-    const preview = previewProxy.current;
-    if (pinnedMorph !== null) preview.morph = pinnedMorph;
-
-    // In morph mode the plate's reveal *is* its growth, read off the one
-    // timeline value. Scale mode moves the two independently, so it keeps the
-    // tweened proxy.
-    const plate =
-      previewMode === "morph"
-        ? THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1)
-        : THREE.MathUtils.clamp(preview.plate, 0, 1);
-    // Held at zero until the skull has finished becoming a plate, so the morph
-    // plays out where the skull already stood and only the finished plate — the
-    // one thing here that curls — travels up to the pointer.
-    const followBlend = THREE.MathUtils.smoothstep(
-      plate,
-      CONFIG.projectPreview.TRAVEL_START,
-      1,
-    );
-    // Full popup size the moment a project is hovered, whatever the model had
-    // shrunk to. The entry ramp and the anchor's fold fade both describe the
-    // model at rest, and a preview is not the model at rest.
-    const detailsScale = previewActive
-      ? CONFIG.model.DETAILS_POPUP_SCALE
-      : modelAnchorRef.current.scale * entryRamp;
+    const detailsScale = modelAnchorRef.current.scale * entryRamp;
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
       isInteractionLockedRef.current = shouldLockInteraction;
@@ -360,15 +184,14 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       state.camera,
       modelDepth.current,
     );
-    // The curl is authored against the details sheet at z≈0; the plate hangs a
-    // depth closer, so its world Y has to travel through this to land on the
-    // same screen height.
-    previewUniforms.uCurlDepthScale.value =
-      modelViewport.height / viewport.height;
+    // The scrim is authored against the details sheet at z≈0; the model hangs a
+    // depth closer, so the cut's world Y has to travel through this to land on
+    // the same screen height.
+    const foldDepthScale = modelViewport.height / viewport.height;
 
     FOLD_CLIP.constant =
       !isMobile && inDetails
-        ? curlScrimCoverY() * previewUniforms.uCurlDepthScale.value
+        ? curlScrimCoverY() * foldDepthScale
         : CLIP_DISABLED;
 
     if (animGroupRef.current) {
@@ -399,27 +222,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           modelAnchorRef.current.xFraction * modelViewport.width;
 
         const targetX = inDetails ? detailsTargetX : 0;
-        let targetY = inDetails ? detailsTargetY : heroYCurrent;
-
-        const followingPointer = inDetails && followBlend > 0;
-
-        if (followingPointer) {
-          const plateHalfHeight =
-            (previewHeight * responsiveScale * previewSizeMult * detailsScale) /
-            2;
-          const topLimit =
-            (titleSettledBottomY / viewport.height) * modelViewport.height -
-            plateHalfHeight;
-          const bottomLimit = -modelViewport.height / 2 + plateHalfHeight;
-
-          const pointerY = THREE.MathUtils.clamp(
-            (state.pointer.y * modelViewport.height) / 2,
-            bottomLimit,
-            Math.max(topLimit, bottomLimit),
-          );
-
-          targetY = THREE.MathUtils.lerp(targetY, pointerY, followBlend);
-        }
+        const targetY = inDetails ? detailsTargetY : heroYCurrent;
 
         animGroupRef.current.position.x = teleported
           ? targetX
@@ -434,7 +237,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           : THREE.MathUtils.damp(
               animGroupRef.current.position.y,
               targetY,
-              followingPointer ? CONFIG.projectPreview.HOVER_SMOOTHING : 10,
+              10,
               dt,
             );
       }
@@ -472,9 +275,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         const smoothScale = THREE.MathUtils.damp(
           currentScale,
           targetScale,
-          inDetails && previewActive
-            ? CONFIG.projectPreview.HOVER_SMOOTHING
-            : 10,
+          10,
           dt,
         );
         transitionScaleGroupRef.current.scale.setScalar(smoothScale);
@@ -569,40 +370,15 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
 
-    // The twins are positioned by transform, and a transform sliding out from
-    // under a stationary cursor never fires a leave. Scroll past the list fast
-    // enough and the hover sticks, stranding the plate in the hero. Nothing
-    // outside Details may hold it.
-    if (previewActive && !inDetails) resetHoveredPreview();
-
     const skullMesh = skullMeshRef.current;
 
-    if (skullMesh?.morphTargetInfluences) {
-      skullMesh.morphTargetInfluences[0] = preview.morph;
-    }
-
-    // The flattened skull only exists to carry the animation — once the
-    // screenshot is up it would just sit behind it, showing through wherever
-    // the plate bends away. Dissolve it as the exact inverse of the image's own
-    // fade, so the two cross over and it comes back on the way out.
-    if (skullMesh) {
-      const glass = skullMesh.material as THREE.Material;
-      const glassOpacity = 1 - plate;
-      const fading = glassOpacity < 1 - 1e-3;
-
-      // Only bucket it with the transparent objects while it is actually
-      // fading; opaque is how it renders for the whole hero.
-      if (glass.transparent !== fading) glass.transparent = fading;
-      glass.opacity = glassOpacity;
-      skullMesh.visible = glassOpacity > 1e-3;
-    }
-
     // The refraction buffer costs a full second render of the scene. Once the
-    // skull has scaled away into the details stage, or the screenshot has taken
-    // its place, there is nothing left to refract.
+    // skull has scaled away into the details stage there is nothing left to
+    // refract.
     if (transmissionRef.current) {
       const current = transmissionRef.current.buffer;
-      if (current && current !== BLANK_BUFFER) refractionBuffer.current = current;
+      if (current && current !== BLANK_BUFFER)
+        refractionBuffer.current = current;
 
       const worthRefracting =
         skullMesh?.visible !== false &&
@@ -613,142 +389,6 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         ? (refractionBuffer.current ?? undefined)
         : BLANK_BUFFER;
     }
-
-    // The skull flattens at its own size, then swells into the screenshot's
-    // footprint over the tail of the morph, so both land on the same rectangle.
-    const plateGrowth = THREE.MathUtils.lerp(
-      1,
-      previewSizeMult,
-      THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1),
-    );
-
-    const orient = morphOrientRef.current;
-    if (orient) {
-      // Cancel out everything the skull is rotated by so the flattened plate
-      // ends up square to the camera, blended in by the morph itself. The
-      // chain is re-measured each frame, so the idle spin unwinds with it.
-      if (preview.morph > 1e-4 && skullMesh) {
-        const temp = orientTemp.current;
-        skullMesh.getWorldQuaternion(temp.mesh);
-        orient.getWorldQuaternion(temp.orient);
-        temp.local.copy(temp.orient).invert().multiply(temp.mesh);
-        orient.parent?.getWorldQuaternion(temp.parent);
-
-        temp.target
-          .copy(temp.parent)
-          .invert()
-          .multiply(PLATE_FACING)
-          .multiply(temp.local.invert());
-
-        orient.quaternion.slerpQuaternions(
-          IDENTITY_QUATERNION,
-          temp.target,
-          preview.morph,
-        );
-      } else {
-        orient.quaternion.identity();
-      }
-
-      orient.scale.setScalar(Math.max(preview.skull, 1e-4) * plateGrowth);
-    }
-
-    const previewGroup = previewGroupRef.current;
-    if (previewGroup) {
-      previewGroup.visible = plate > 1e-3;
-
-      if (previewGroup.visible && skullMesh && previewGroup.parent) {
-        const temp = orientTemp.current;
-        const center = temp.plateCenter;
-
-        if (previewMode === "morph") {
-          // Ride the flattened geometry's own frame: the gap is measured along
-          // the slab's local thickness axis and every transform between the
-          // mesh and this group — the skull's rotation, the orient slerp, the
-          // growth — arrives through the copy instead of being re-derived.
-          center.set(
-            flatTarget.centerX,
-            flatTarget.centerY -
-              CONFIG.projectPreview.SLAB_THICKNESS / 2 -
-              CONFIG.projectPreview.IMAGE_GAP,
-            flatTarget.centerZ,
-          );
-          skullMesh.localToWorld(center);
-          previewGroup.parent.worldToLocal(center);
-
-          skullMesh.getWorldQuaternion(temp.mesh);
-          previewGroup.parent.getWorldQuaternion(temp.parent);
-          previewGroup.quaternion
-            .copy(temp.parent)
-            .invert()
-            .multiply(temp.mesh)
-            .multiply(PLATE_IMAGE_FACING);
-
-          skullMesh.getWorldScale(temp.meshScale);
-          previewGroup.parent.getWorldScale(temp.parentScale);
-          previewGroup.scale.setScalar(temp.meshScale.x / temp.parentScale.x);
-        } else {
-          center.set(
-            flatTarget.centerX,
-            flatTarget.centerY,
-            flatTarget.centerZ,
-          );
-          skullMesh.localToWorld(center);
-          previewGroup.parent.worldToLocal(center);
-          center.z +=
-            (CONFIG.projectPreview.SLAB_THICKNESS / 2 +
-              CONFIG.projectPreview.IMAGE_GAP) *
-            responsiveScale;
-
-          previewGroup.quaternion.identity();
-          previewGroup.scale.setScalar(
-            responsiveScale * previewSizeMult * Math.max(plate, 1e-4),
-          );
-        }
-
-        previewGroup.position.copy(center);
-      }
-    }
-    if (previewMaterialRef.current) {
-      previewMaterialRef.current.opacity = plate;
-    }
-
-    const motion = plateMotion.current;
-    // The plate lags the pointer, and while the morph runs in place it does not
-    // move at all — so the bend reads off its own travel, normalised the way
-    // the pointer was so the tuning still means the same thing. Measured
-    // against the page rather than the screen: held on a still cursor while the
-    // list scrolls past, the plate is travelling through the content, and bends
-    // for it exactly as if it had been dragged the same distance.
-    const motionY =
-      (outerGroupY / modelViewport.height) * 2 -
-      (detailsScrollRef.current / state.size.height) * 2;
-
-    if (!motion.seeded || teleported) {
-      motion.lastY = motionY;
-      motion.velocity = 0;
-      motion.seeded = true;
-    }
-
-    const rawVelocity = (motionY - motion.lastY) / Math.max(dt, 1e-4);
-    motion.lastY = motionY;
-    // Chasing the raw reading rounds off the spikes on the way in and lets the
-    // plate spring back on its own once it settles.
-    motion.velocity = THREE.MathUtils.damp(
-      motion.velocity,
-      rawVelocity,
-      previewTuning.smoothing,
-      dt,
-    );
-
-    const travel = prefersReducedMotion
-      ? 0
-      : THREE.MathUtils.clamp(motion.velocity / previewTuning.fullScale, -1, 1) *
-        plate;
-
-    // Negated: the centre lags behind, so it trails the direction of travel.
-    previewUniforms.uPreviewBend.value =
-      -travel * previewTuning.bend * previewHeight;
-    previewUniforms.uPreviewSplit.value = travel * previewTuning.aberration;
   });
 
   return (
@@ -812,50 +452,30 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
 
-            <group ref={morphOrientRef}>
-              <group
-                ref={skullRotationGroupRef}
-                rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
-              >
-                <Center>
-                  <Clone
-                    ref={mesh}
-                    object={nodes.Sphere}
-                    scale={responsiveScale}
-                  >
-                    <MeshTransmissionMaterial
-                      ref={transmissionRef}
-                      clippingPlanes={FOLD_CLIP_PLANES}
-                      {...materialProps}
-                      resolution={
-                        isMobile
-                          ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
-                          : CONFIG.model.TRANSMISSION_RESOLUTION
-                      }
-                      samples={
-                        isMobile
-                          ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
-                          : CONFIG.model.TRANSMISSION_SAMPLES
-                      }
-                    />
-                  </Clone>
-                </Center>
-              </group>
+            <group
+              ref={skullRotationGroupRef}
+              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
+            >
+              <Center>
+                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
+                  <MeshTransmissionMaterial
+                    ref={transmissionRef}
+                    clippingPlanes={FOLD_CLIP_PLANES}
+                    {...materialProps}
+                    resolution={
+                      isMobile
+                        ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
+                        : CONFIG.model.TRANSMISSION_RESOLUTION
+                    }
+                    samples={
+                      isMobile
+                        ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
+                        : CONFIG.model.TRANSMISSION_SAMPLES
+                    }
+                  />
+                </Clone>
+              </Center>
             </group>
-
-            {!isMobile && (
-              <group ref={previewGroupRef} visible={false}>
-                <ProjectPreviewPlane
-                  texture={
-                    shownPreview ? (previewTextures[shownPreview] ?? null) : null
-                  }
-                  width={previewWidth}
-                  height={previewHeight}
-                  materialRef={previewMaterialRef}
-                  clippingPlanes={FOLD_CLIP_PLANES}
-                />
-              </group>
-            )}
           </group>
         </group>
       </group>

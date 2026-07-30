@@ -19,7 +19,6 @@ const BIO_SCHEMA = {
 };
 
 const PREVIEW_SCHEMA = {
-    mode: { value: D.projectPreview.mode, options: ["morph", "scale"] as const },
     sizeMult: { value: D.projectPreview.sizeMult, min: 0.5, max: 2.5, step: 0.05 },
     bendMult: { value: D.projectPreview.bendMult, min: 0, max: 0.6, step: 0.005 },
     aberrationMult: {
@@ -28,7 +27,6 @@ const PREVIEW_SCHEMA = {
         max: 0.2,
         step: 0.001,
     },
-    growStart: { value: D.projectPreview.growStart, min: 0, max: 0.95, step: 0.01 },
     velocityFullScale: {
         value: D.projectPreview.velocityFullScale,
         min: 0.2,
@@ -41,8 +39,25 @@ const PREVIEW_SCHEMA = {
         max: 30,
         step: 0.5,
     },
-    pinMorph: D.projectPreview.pinMorph,
-    pinnedMorph: { value: D.projectPreview.pinnedMorph, min: 0, max: 1, step: 0.01 },
+    glitchSlice: {
+        value: D.projectPreview.glitchSlice,
+        min: 0,
+        max: 0.3,
+        step: 0.005,
+    },
+    glitchSplit: {
+        value: D.projectPreview.glitchSplit,
+        min: 0,
+        max: 0.1,
+        step: 0.001,
+    },
+    pinGlitch: D.projectPreview.pinGlitch,
+    pinnedGlitch: {
+        value: D.projectPreview.pinnedGlitch,
+        min: 0,
+        max: 1,
+        step: 0.01,
+    },
 };
 
 const MATERIAL_SCHEMA = {
@@ -166,10 +181,7 @@ export default function DebugPanel({
     useEffect(() => {
         onChange({
             bio,
-            projectPreview: {
-                ...projectPreview,
-                mode: projectPreview.mode as DebugSettings["projectPreview"]["mode"],
-            },
+            projectPreview,
             material,
             skullRotation,
             curl,
