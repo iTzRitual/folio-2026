@@ -62,6 +62,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     grabAreaRadius: baseGrabAreaRadius,
     stickyAreaRadius: baseStickyAreaRadius,
     responsiveScale: baseResponsiveScale,
+    titleSettledBottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { progressRef, modelAnchorRef } = useHeroTransition();
@@ -275,6 +276,12 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     const teleported = !isMobile && stage !== previousStage.current;
     previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
+    const entryRamp = THREE.MathUtils.clamp(
+      (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
+        CONFIG.model.POPUP_RAMP_SPAN,
+      0,
+      1,
+    );
     // Layout-inducing on some engines, and the mobile branch below wants it
     // twice.
     const scrollY = isMobile ? window.scrollY : 0;
@@ -316,19 +323,24 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       }
     }
 
+    const modelViewport = state.viewport.getCurrentViewport(
+      state.camera,
+      modelDepth.current,
+    );
+    // The curl is authored against the details sheet at z≈0; the plate hangs a
+    // depth closer, so its world Y has to travel through this to land on the
+    // same screen height.
+    previewUniforms.uCurlDepthScale.value =
+      modelViewport.height / viewport.height;
+
     if (animGroupRef.current) {
       if (isMobile) {
-        const depthViewport = state.viewport.getCurrentViewport(
-          state.camera,
-          new THREE.Vector3(0, 0, 2),
-        );
-
         const scrolledScreens = scrollY / window.innerHeight;
         const mobileYOffset = 0.1;
         const targetY =
           CONFIG.model.BASE_MODEL_Y +
           mobileYOffset +
-          scrolledScreens * depthViewport.height;
+          scrolledScreens * modelViewport.height;
 
         animGroupRef.current.position.x = 0;
         animGroupRef.current.position.y = THREE.MathUtils.damp(
@@ -343,17 +355,35 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           scrollProgress *
             viewport.height *
             CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
-        const modelViewport = state.viewport.getCurrentViewport(
-          state.camera,
-          modelDepth.current,
-        );
         const detailsTargetY =
           modelAnchorRef.current.yFraction * modelViewport.height;
         const detailsTargetX =
           modelAnchorRef.current.xFraction * modelViewport.width;
 
         const targetX = inDetails ? detailsTargetX : 0;
-        const targetY = inDetails ? detailsTargetY : heroYCurrent;
+        let targetY = inDetails ? detailsTargetY : heroYCurrent;
+
+        const followingPointer = inDetails && previewActive;
+
+        if (followingPointer) {
+          const plateHalfHeight =
+            (previewHeight *
+              responsiveScale *
+              previewSizeMult *
+              CONFIG.model.DETAILS_POPUP_SCALE *
+              entryRamp) /
+            2;
+          const topLimit =
+            (titleSettledBottomY / viewport.height) * modelViewport.height -
+            plateHalfHeight;
+          const bottomLimit = -modelViewport.height / 2 + plateHalfHeight;
+
+          targetY = THREE.MathUtils.clamp(
+            (state.pointer.y * modelViewport.height) / 2,
+            bottomLimit,
+            Math.max(topLimit, bottomLimit),
+          );
+        }
 
         animGroupRef.current.position.x = teleported
           ? targetX
@@ -368,7 +398,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           : THREE.MathUtils.damp(
               animGroupRef.current.position.y,
               targetY,
-              10,
+              followingPointer ? CONFIG.projectPreview.HOVER_SMOOTHING : 10,
               dt,
             );
       }
@@ -398,14 +428,11 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           0,
           1,
         );
-        const entryRamp = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
-            CONFIG.model.POPUP_RAMP_SPAN,
-          0,
-          1,
-        );
+        const detailsScale = previewActive
+          ? CONFIG.model.DETAILS_POPUP_SCALE
+          : modelAnchorRef.current.scale;
         const targetScale = inDetails
-          ? modelAnchorRef.current.scale * entryRamp
+          ? detailsScale * entryRamp
           : 1 - scaleOutProgress;
 
         const currentScale = teleported
@@ -414,7 +441,9 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         const smoothScale = THREE.MathUtils.damp(
           currentScale,
           targetScale,
-          10,
+          inDetails && previewActive
+            ? CONFIG.projectPreview.HOVER_SMOOTHING
+            : 10,
           dt,
         );
         transitionScaleGroupRef.current.scale.setScalar(smoothScale);

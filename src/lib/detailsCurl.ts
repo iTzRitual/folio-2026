@@ -125,6 +125,89 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
     );
 }
 
+const PLATE_CURL_DEFS = /* glsl */ `
+uniform float uCurlFoldY;
+uniform float uCurlBottomY;
+uniform float uCurlRadius;
+uniform float uCurlMaxAngle;
+uniform float uCurlBend;
+uniform float uCurlFadeStart;
+uniform float uCurlFadeEndRise;
+uniform float uCurlFadeEndDrop;
+uniform float uCurlDepthScale;
+varying float vCurlFade;
+`;
+
+// The sheet's own curl adds world-space deltas straight onto the object-space
+// vertex, which only holds for an unrotated, unscaled group. The plate is
+// rotated by the morph and scaled by the popup, so it curls in world space and
+// projects itself, and its Y crosses into the sheet's frame to be measured.
+const PLATE_CURL_BODY = /* glsl */ `
+vec4 mvPosition;
+{
+  vec4 curlWorld = modelMatrix * vec4(transformed, 1.0);
+  float curlSheetY = curlWorld.y / uCurlDepthScale;
+  float curlRise = curlSheetY - uCurlFoldY;
+  float curlDrop = uCurlBottomY - curlSheetY;
+
+  if (curlRise > 0.0) {
+    float curlTheta = min(curlRise / uCurlRadius, uCurlMaxAngle);
+    curlWorld.y +=
+      (uCurlFoldY + uCurlRadius * sin(curlTheta) - curlSheetY) *
+      uCurlDepthScale * uCurlBend;
+    curlWorld.z +=
+      (uCurlRadius * cos(curlTheta) - uCurlRadius) * uCurlDepthScale * uCurlBend;
+  } else if (curlDrop > 0.0) {
+    float curlTheta = min(curlDrop / uCurlRadius, uCurlMaxAngle);
+    curlWorld.y +=
+      (uCurlBottomY - uCurlRadius * sin(curlTheta) - curlSheetY) *
+      uCurlDepthScale * uCurlBend;
+    curlWorld.z +=
+      (uCurlRadius - uCurlRadius * cos(curlTheta)) * uCurlDepthScale * uCurlBend;
+  }
+
+  float curlPast = max(curlRise, curlDrop);
+  float curlFadeEnd = curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
+  vCurlFade = 1.0 - smoothstep(uCurlFadeStart, curlFadeEnd, curlPast);
+
+  mvPosition = viewMatrix * curlWorld;
+  gl_Position = projectionMatrix * mvPosition;
+}
+`;
+
+/**
+ * Curls a plate that does not live on the details sheet, sharing the sheet's
+ * fold so the two can never drift. `depthScale` converts the plate's depth into
+ * the sheet's, and is the caller's to keep current.
+ */
+export function applyPlateCurlShader(
+    shader: WebGLProgramParametersWithUniforms,
+    depthScale: { value: number },
+) {
+    shader.uniforms.uCurlFoldY = curlUniforms.uCurlFoldY;
+    shader.uniforms.uCurlBottomY = curlUniforms.uCurlBottomY;
+    shader.uniforms.uCurlRadius = curlUniforms.uCurlRadius;
+    shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
+    shader.uniforms.uCurlBend = curlUniforms.uCurlBend;
+    shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
+    shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
+    shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
+    shader.uniforms.uCurlDepthScale = depthScale;
+    shader.uniforms.uCurlFadePower = { value: 1 };
+
+    shader.vertexShader = PLATE_CURL_DEFS + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+        "#include <project_vertex>",
+        PLATE_CURL_BODY,
+    );
+
+    shader.fragmentShader = CURL_SHADE_FRAGMENT_DEFS + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        CURL_SHADE_FRAGMENT_BODY,
+    );
+}
+
 const CURL_SHADE_FRAGMENT_DEFS = /* glsl */ `
 uniform float uCurlFadePower;
 varying float vCurlFade;

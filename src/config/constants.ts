@@ -148,8 +148,15 @@ export const CONFIG = {
         // before dropping the hover keeps the list one continuous region, so
         // sweeping down it swaps the screenshot instead of re-morphing.
         HOVER_GRACE_MS: 90,
+        // Damping the plate follows the pointer and grows to full size with,
+        // above the anchor's own so it keeps up with a sweep down the list and
+        // is up to size before the morph lands.
+        HOVER_SMOOTHING: 14,
         // Cross-plate segments the trailing-centre bend is sampled over.
         BEND_SEGMENTS: 48,
+        // Rows the plate is split into so it can roll around the details fold
+        // instead of tilting rigidly: it stands nearly three curl radii tall.
+        CURL_SEGMENTS: 24,
         // Peak lag of the plate's centre, as a fraction of its height.
         BEND_MULT: 0.275,
         // Peak per-channel UV split, in texture units.

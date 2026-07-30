@@ -9,6 +9,7 @@ import {
 } from "react";
 import * as THREE from "three";
 import { PROJECT_PREVIEW_SOURCES } from "@/data/content";
+import { applyPlateCurlShader } from "@/lib/detailsCurl";
 import { CONFIG } from "@/config/constants";
 
 /**
@@ -21,6 +22,8 @@ export const previewUniforms = {
     uPreviewBend: { value: 0 },
     /** Signed per-channel UV split. */
     uPreviewSplit: { value: 0 },
+    /** The plate's depth over the details sheet's, for the shared curl. */
+    uCurlDepthScale: { value: 1 },
 };
 
 const VERTEX_DEFS = /* glsl */ `
@@ -75,6 +78,8 @@ function previewShader(radiusUv: { value: THREE.Vector2 }) {
         shader.uniforms.uPreviewRadiusUv = radiusUv;
         shader.uniforms.uPreviewBend = previewUniforms.uPreviewBend;
         shader.uniforms.uPreviewSplit = previewUniforms.uPreviewSplit;
+
+        applyPlateCurlShader(shader, previewUniforms.uCurlDepthScale);
 
         shader.vertexShader = VERTEX_DEFS + shader.vertexShader;
         shader.vertexShader = shader.vertexShader
@@ -164,7 +169,7 @@ export function ProjectPreviewPlane({
                     width,
                     height,
                     CONFIG.projectPreview.BEND_SEGMENTS,
-                    1,
+                    CONFIG.projectPreview.CURL_SEGMENTS,
                 ]}
             />
             <meshBasicMaterial
