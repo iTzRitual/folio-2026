@@ -111,10 +111,11 @@ const FRAGMENT_ALPHA = /* glsl */ `
 
 function previewShader(radiusUv: { value: THREE.Vector2 }) {
     return (shader: THREE.WebGLProgramParametersWithUniforms) => {
-        // First, so the bend lands inside the curl's own begin_vertex and the
-        // rounded corners inside its opaque_fragment: the plate bends for the
-        // pointer, then that bent shape rolls around the sheet's fold.
-        applyCurlShader(shader);
+        // First, so the bend lands inside the curl's own begin_vertex: the
+        // plate bends for the pointer, then that bent shape rolls around the
+        // sheet's fold. Without the curl's fade — the gradient scrim already
+        // covers both ends, and the plate is meant to stay solid under it.
+        applyCurlShader(shader, false);
 
         shader.uniforms.uPreviewRadiusUv = radiusUv;
         shader.uniforms.uPreviewBend = previewUniforms.uPreviewBend;

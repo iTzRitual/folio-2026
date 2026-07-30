@@ -100,7 +100,14 @@ const CURL_BODY = /* glsl */ `
 }
 `;
 
-export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
+/**
+ * `fade` opts out of the alpha falloff the curl carries, for a plate that is
+ * covered by the gradient scrim instead of dissolving into it.
+ */
+export function applyCurlShader(
+    shader: WebGLProgramParametersWithUniforms,
+    fade = true,
+) {
     shader.uniforms.uCurlFoldY = curlUniforms.uCurlFoldY;
     shader.uniforms.uCurlBottomY = curlUniforms.uCurlBottomY;
     shader.uniforms.uCurlSheetZ = curlUniforms.uCurlSheetZ;
@@ -117,6 +124,8 @@ export function applyCurlShader(shader: WebGLProgramParametersWithUniforms) {
         "#include <begin_vertex>",
         CURL_BODY,
     );
+
+    if (!fade) return;
 
     shader.fragmentShader = CURL_SHADE_FRAGMENT_DEFS + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace(

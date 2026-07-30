@@ -165,8 +165,9 @@ export const CONFIG = {
         EXIT_GLITCH_DURATION: 0.12,
         EXIT_SCALE_TO: 0.97,
         SWAP_GLITCH_DURATION: 0.22,
-        // Above everything else in the scene; the plate covers the buttons.
-        RENDER_ORDER: 999,
+        // Over the details content, so the plate covers the buttons, but under
+        // the edge fade, which is what darkens it at both ends.
+        RENDER_ORDER: 15,
     },
     detailsLink: {
         ARROW_SIZE_MULT: 0.4,
