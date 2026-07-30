@@ -66,7 +66,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     titleSettledBottomY,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef, modelAnchorRef } = useHeroTransition();
+  const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
@@ -712,8 +712,13 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     const motion = plateMotion.current;
     // The plate lags the pointer, and while the morph runs in place it does not
     // move at all — so the bend reads off its own travel, normalised the way
-    // the pointer was so the tuning still means the same thing.
-    const motionY = (outerGroupY / modelViewport.height) * 2;
+    // the pointer was so the tuning still means the same thing. Measured
+    // against the page rather than the screen: held on a still cursor while the
+    // list scrolls past, the plate is travelling through the content, and bends
+    // for it exactly as if it had been dragged the same distance.
+    const motionY =
+      (outerGroupY / modelViewport.height) * 2 -
+      (detailsScrollRef.current / state.size.height) * 2;
 
     if (!motion.seeded || teleported) {
       motion.lastY = motionY;

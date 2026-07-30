@@ -62,6 +62,7 @@ export function Details({
   const { progressRef, detailsScrollRef, modelAnchorRef } = useHeroTransition();
   const fontsReady = useFontsReady();
   const rootGroupRef = useRef<Group>(null);
+  const lastPointerSyncY = useRef(Number.NEGATIVE_INFINITY);
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const revealedRef = useRef<Record<string, boolean>>({});
@@ -128,13 +129,25 @@ export function Details({
   const rightTitleX =
     rightX - viewport.width * CONFIG.detailsLayout.RIGHT_TITLE_OFFSET_MULT;
 
-  useFrame(() => {
+  useFrame((state) => {
     const baseY =
       -sectionTravel + (sectionTravel + targetBaseY) * progressRef.current;
     const groupY = baseY + detailsScrollRef.current * pxTo3DHeight;
 
     if (rootGroupRef.current) {
       rootGroupRef.current.position.y = groupY;
+    }
+
+    // A row sliding under a stationary cursor fires no pointer event of its
+    // own, so the hover would stay on whichever row happened to be there when
+    // the scroll started. Re-running the intersection is what R3F offers for
+    // exactly this; it is a no-op until the pointer has been seen once.
+    if (
+      Math.abs(groupY - lastPointerSyncY.current) >
+      pxTo3DHeight * CONFIG.detailsLayout.POINTER_SYNC_PX
+    ) {
+      lastPointerSyncY.current = groupY;
+      state.events.update?.();
     }
 
     const foldY = curlUniforms.uCurlFoldY.value;

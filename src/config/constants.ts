@@ -83,6 +83,9 @@ export const CONFIG = {
         BODY_LINE_HEIGHT_MULT: 1.5,
         PROJECT_ROW_PITCH_MULT: 2.25,
         LETTER_SPACING: -0.03,
+        // Pixels the sheet has to travel before the pointer intersection is
+        // re-run, so hover follows the content under a stationary cursor.
+        POINTER_SYNC_PX: 0.5,
         REVEAL_MARGIN_MULT: 0.04,
         BIO_IMAGE_WIDTH_MULT: 0.26,
         BIO_IMAGE_ASPECT: 2000 / 1500,

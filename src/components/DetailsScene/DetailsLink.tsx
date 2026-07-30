@@ -109,7 +109,10 @@ export function DetailsLink({
   const hitHalfHeightRef = useRef(0);
   const curlWorld = useRef(new THREE.Vector3());
   const syncHoverRef = useRef<() => void>(() => {});
-  const hoverSources = useRef({ twin: false, mesh: false });
+  // Only the hit plane reports the pointer. The twin used to report it too, but
+  // a transform sliding out from under a stationary cursor fires no DOM leave,
+  // so its answer went stale the moment the list scrolled.
+  const pointerInsideRef = useRef(false);
   const hoveredRef = useRef(false);
   const plateShownRef = useRef(false);
 
@@ -219,10 +222,10 @@ export function DetailsLink({
     [],
   );
 
-  // The twin is only as tall as its own line, so consecutive rows leave a
-  // strip of nothing between them — enough to drop the hover and bounce the
-  // model back mid-way to the next project. Half the leftover pitch above and
-  // below makes the rows tile exactly, without touching the layout.
+  // A row is only as tall as its own line, so consecutive rows leave a strip
+  // of nothing between them — enough to drop the hover and bounce the model
+  // back mid-way to the next project. Half the leftover pitch above and below
+  // makes the rows tile exactly, without touching the layout.
   const hitPadEm = rowPitchEm
     ? Math.max((rowPitchEm - lineHeight) / 2, 0)
     : 0;
@@ -237,18 +240,16 @@ export function DetailsLink({
   const reducedMotion = () => REDUCED_MOTION_QUERY.matches;
 
   const syncHover = () => {
-    const wanted =
-      (hoverSources.current.twin || hoverSources.current.mesh) &&
-      interactiveRef.current;
+    const wanted = pointerInsideRef.current && interactiveRef.current;
     if (wanted === hoveredRef.current) return;
     hoveredRef.current = wanted;
     if (wanted) handleEnter();
     else handleLeave();
   };
 
-  const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
+  const setPointerInside = (inside: boolean) => {
     if (!finePointer()) return;
-    hoverSources.current[source] = active;
+    pointerInsideRef.current = inside;
     syncHover();
   };
 
@@ -388,8 +389,8 @@ export function DetailsLink({
           <mesh
             ref={hitMeshRef}
             position={[hit.centerX, 0, 0]}
-            onPointerOver={() => setHoverSource("mesh", true)}
-            onPointerOut={() => setHoverSource("mesh", false)}
+            onPointerOver={() => setPointerInside(true)}
+            onPointerOut={() => setPointerInside(false)}
             onClick={(event) => {
               if (!interactiveRef.current) return;
               event.stopPropagation();
@@ -408,8 +409,6 @@ export function DetailsLink({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          onMouseEnter={() => setHoverSource("twin", true)}
-          onMouseLeave={() => setHoverSource("twin", false)}
           className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`}
           style={{
             fontSize: `${pixelFontSize}px`,
