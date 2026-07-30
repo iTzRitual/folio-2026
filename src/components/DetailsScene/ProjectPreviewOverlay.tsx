@@ -33,6 +33,7 @@ const previewUniforms = {
     uPreviewTime: { value: 0 },
     /** Bands, peak slice offset and peak glitch split. */
     uPreviewGlitchParams: { value: new THREE.Vector3() },
+    uPreviewTune: { value: new THREE.Vector3(1, 1, 1) },
 };
 
 const VERTEX_DEFS = /* glsl */ `
@@ -55,6 +56,7 @@ uniform float uPreviewGlitch;
 uniform float uPreviewReveal;
 uniform float uPreviewTime;
 uniform vec3 uPreviewGlitchParams;
+uniform vec3 uPreviewTune;
 varying vec2 vPreviewUv;
 
 float previewHash(vec2 p) {
@@ -99,6 +101,11 @@ const FRAGMENT_MAP = /* glsl */ `
 // so the plate snaps in and out strip by strip instead of fading.
 const FRAGMENT_ALPHA = /* glsl */ `
 {
+  float previewLum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  diffuseColor.rgb = mix(vec3(previewLum), diffuseColor.rgb, uPreviewTune.x);
+  diffuseColor.rgb = (diffuseColor.rgb - 0.5) * uPreviewTune.y + 0.5;
+  diffuseColor.rgb = max(diffuseColor.rgb * uPreviewTune.z, 0.0);
+
   vec2 corner =
     max(abs(vPreviewUv - 0.5) - (0.5 - uPreviewRadiusUv), 0.0) / uPreviewRadiusUv;
   float dist = length(corner) - 1.0;
@@ -125,6 +132,7 @@ function previewShader(radiusUv: { value: THREE.Vector2 }) {
         shader.uniforms.uPreviewTime = previewUniforms.uPreviewTime;
         shader.uniforms.uPreviewGlitchParams =
             previewUniforms.uPreviewGlitchParams;
+        shader.uniforms.uPreviewTune = previewUniforms.uPreviewTune;
 
         shader.vertexShader = VERTEX_DEFS + shader.vertexShader;
         shader.vertexShader = shader.vertexShader
@@ -179,7 +187,7 @@ export function ProjectPreviewOverlay() {
 
     const textures = useProjectPreviewTextures();
     const hoveredPreview = useHoveredPreview();
-    const { resetHoveredPreview } = useProjectHoverActions();
+    const { resetHoveredPreview, chargeRef } = useProjectHoverActions();
     // Keep the last hovered preview around so the plate can glitch back out
     // with the right screenshot still on it.
     const [shownPreview, setShownPreview] = useState<string | null>(null);
@@ -368,7 +376,10 @@ export function ProjectPreviewOverlay() {
             cfg.FOLLOW_SMOOTHING,
             dt,
         );
-        group.scale.setScalar(values.scale);
+
+        const charge = chargeRef.current;
+        const gain = prefersReducedMotion ? 0 : cfg.CHARGE_SCALE_GAIN * charge;
+        group.scale.setScalar(values.scale * (1 + gain));
 
         const rawX = (state.pointer.x - move.pointer.x) / Math.max(dt, 1e-4);
         const rawY = (state.pointer.y - move.pointer.y) / Math.max(dt, 1e-4);
@@ -411,13 +422,33 @@ export function ProjectPreviewOverlay() {
             -travelX * tuning.bendMult * width,
             -travelY * tuning.bendMult * height,
         );
+        const rest = 1 - charge;
+        const restGlitch = prefersReducedMotion ? 0 : rest * cfg.REST_GLITCH;
         previewUniforms.uPreviewSplit.value.set(
-            travelX * tuning.aberrationMult,
+            travelX * tuning.aberrationMult + rest * cfg.REST_ABERRATION,
             travelY * tuning.aberrationMult,
         );
+        previewUniforms.uPreviewTune.value.set(
+            THREE.MathUtils.lerp(
+                cfg.TUNE_SATURATION[0],
+                cfg.TUNE_SATURATION[1],
+                charge,
+            ),
+            THREE.MathUtils.lerp(
+                cfg.TUNE_CONTRAST[0],
+                cfg.TUNE_CONTRAST[1],
+                charge,
+            ),
+            THREE.MathUtils.lerp(
+                cfg.TUNE_BRIGHTNESS[0],
+                cfg.TUNE_BRIGHTNESS[1],
+                charge,
+            ),
+        );
         previewUniforms.uPreviewReveal.value = values.reveal;
-        previewUniforms.uPreviewGlitch.value =
-            tuning.pinGlitch ? tuning.pinnedGlitch : values.glitch;
+        previewUniforms.uPreviewGlitch.value = tuning.pinGlitch
+            ? tuning.pinnedGlitch
+            : Math.max(values.glitch, restGlitch);
         previewUniforms.uPreviewTime.value = state.clock.getElapsedTime();
 
         const texture = shownPreview ? (textures[shownPreview] ?? null) : null;

@@ -2,8 +2,15 @@
 
 import { Html, Text } from "@react-three/drei";
 import gsap from "gsap";
-import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
@@ -98,7 +105,17 @@ export function DetailsLink({
 
   const blockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
-  const { setHoveredPreview, clearHoveredPreview } = useProjectHoverActions();
+  const { setHoveredPreview, clearHoveredPreview, chargeRef, holdOwnerRef } =
+    useProjectHoverActions();
+  const holdId = useId();
+  const pressGroupRef = useRef<Group>(null);
+  const pressRef = useRef({
+    startedAt: null as number | null,
+    charge: 0,
+    rewindFrom: 0,
+    rewindAt: null as number | null,
+    opened: false,
+  });
   // A link stays in the scene well past both folds, curled and faded out.
   // Anything still legible stays clickable, and carries its preview with it —
   // the plate curls around the same fold, so it survives up there too.
@@ -135,7 +152,134 @@ export function DetailsLink({
   // own edges through it and spanning the chord between them keeps the hit area
   // under the glyphs, and keeps consecutive rows tiling: a rigid rotation about
   // each centre opened a crack on every boundary, and the hover fell through it.
+  const gesture = CONFIG.projectGesture;
+  const now = () => performance.now() / 1000;
+
+  const setPressScale = (to: number) => {
+    const group = pressGroupRef.current;
+    if (!group) return;
+    if (REDUCED_MOTION_QUERY.matches) {
+      group.scale.setScalar(to);
+      return;
+    }
+    gsap.to(group.scale, {
+      x: to,
+      y: to,
+      z: to,
+      duration: gesture.PRESS_DURATION,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  };
+
+  const detachRef = useRef<(() => void) | null>(null);
+  const detachPressWatchers = () => {
+    detachRef.current?.();
+    detachRef.current = null;
+  };
+
+  const endPress = () => {
+    const press = pressRef.current;
+    if (press.startedAt === null) return;
+    press.startedAt = null;
+    setPressScale(1);
+    detachPressWatchers();
+
+    if (press.opened) {
+      press.opened = false;
+      press.charge = 0;
+      chargeRef.current = 0;
+      if (holdOwnerRef.current === holdId) holdOwnerRef.current = null;
+      return;
+    }
+
+    press.rewindFrom = press.charge;
+    press.rewindAt = now();
+  };
+
+  const attachPressWatchers = () => {
+    detachPressWatchers();
+    const abort = () => endPress();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") endPress();
+    };
+    window.addEventListener("pointerup", abort);
+    window.addEventListener("pointercancel", abort);
+    window.addEventListener("blur", abort);
+    window.addEventListener("keydown", onKey);
+    detachRef.current = () => {
+      window.removeEventListener("pointerup", abort);
+      window.removeEventListener("pointercancel", abort);
+      window.removeEventListener("blur", abort);
+      window.removeEventListener("keydown", onKey);
+    };
+  };
+
+  const startPress = (event: ThreeEvent<PointerEvent>) => {
+    if (!interactiveRef.current || !FINE_POINTER_QUERY.matches) return;
+    if (event.button !== 0 || pressRef.current.startedAt !== null) return;
+    event.stopPropagation();
+
+    holdOwnerRef.current = holdId;
+    pressRef.current.startedAt = now();
+    pressRef.current.charge = 0;
+    pressRef.current.rewindAt = null;
+    pressRef.current.opened = false;
+    chargeRef.current = 0;
+    setPressScale(gesture.PRESS_SCALE);
+    attachPressWatchers();
+  };
+
+  const stepHold = () => {
+    const press = pressRef.current;
+    const owned = holdOwnerRef.current === holdId;
+
+    if (press.startedAt !== null) {
+      if (!owned) {
+        press.startedAt = null;
+        press.rewindAt = null;
+        setPressScale(1);
+        detachPressWatchers();
+        return;
+      }
+      press.charge = THREE.MathUtils.clamp(
+        (now() - press.startedAt - gesture.CHARGE_DELAY) /
+          gesture.CHARGE_DURATION,
+        0,
+        1,
+      );
+      chargeRef.current = press.charge;
+      if (press.charge >= 1 && !press.opened) {
+        press.opened = true;
+        twinRef.current?.click();
+      }
+      return;
+    }
+
+    if (press.rewindAt === null) return;
+    if (!owned) {
+      press.rewindAt = null;
+      return;
+    }
+
+    const t = THREE.MathUtils.clamp(
+      (now() - press.rewindAt) / gesture.REWIND_DURATION,
+      0,
+      1,
+    );
+    chargeRef.current = press.rewindFrom * (1 - t) ** 3;
+    if (t < 1) return;
+    press.rewindAt = null;
+    press.charge = 0;
+    chargeRef.current = 0;
+    if (holdOwnerRef.current === holdId) holdOwnerRef.current = null;
+  };
+
+  useEffect(() => detachPressWatchers, []);
+
   useFrame(() => {
+    stepHold();
+
     const curl = hitCurlRef.current;
     const group = groupRef.current;
     if (!curl || !group) return;
@@ -272,6 +416,7 @@ export function DetailsLink({
 
   const handleLeave = () => {
     document.body.style.cursor = "auto";
+    endPress();
     if (previewImage) clearHoveredPreview(previewImage);
     if (arrowMeshRef.current) {
       gsap.to(arrowMeshRef.current.position, {
@@ -323,6 +468,8 @@ export function DetailsLink({
 
   return (
     <group position={position} ref={groupRef}>
+      <group ref={pressGroupRef} position={[0, hitCenterY, 0]}>
+      <group position={[0, -hitCenterY, 0]}>
       <Text
         anchorX={anchorX}
         anchorY={anchorY}
@@ -360,14 +507,17 @@ export function DetailsLink({
       )}
 
       {buttonBounds && (
-        <>
-          <LinkButtonPlate
-            bounds={buttonBounds}
-            color={revealColor}
-            cornerRadius={buttonRadius}
-            materialRef={plateRef}
-          />
+        <LinkButtonPlate
+          bounds={buttonBounds}
+          color={revealColor}
+          cornerRadius={buttonRadius}
+          materialRef={plateRef}
+        />
+      )}
+      </group>
+      </group>
 
+      {buttonBounds && (
           <CurlRevealBlock
             bounds={buttonBounds}
             color={revealColor}
@@ -381,7 +531,6 @@ export function DetailsLink({
             segments={CONFIG.detailsReveal.BUTTON_SEGMENTS}
             renderOrder={1}
           />
-        </>
       )}
 
       {hit && (
@@ -391,11 +540,7 @@ export function DetailsLink({
             position={[hit.centerX, 0, 0]}
             onPointerOver={() => setPointerInside(true)}
             onPointerOut={() => setPointerInside(false)}
-            onClick={(event) => {
-              if (!interactiveRef.current) return;
-              event.stopPropagation();
-              twinRef.current?.click();
-            }}
+            onPointerDown={startPress}
           >
             <planeGeometry args={[hit.width, hit.height]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -409,6 +554,9 @@ export function DetailsLink({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(event) => {
+            if (event.detail > 0) event.preventDefault();
+          }}
           className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`}
           style={{
             fontSize: `${pixelFontSize}px`,

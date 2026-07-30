@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
 } from "react";
 import { CONFIG } from "@/config/constants";
@@ -17,6 +18,8 @@ interface ProjectHoverActions {
   clearHoveredPreview: (src: string) => void;
   /** Drops the hover outright, whichever link is holding it. */
   resetHoveredPreview: () => void;
+  chargeRef: MutableRefObject<number>;
+  holdOwnerRef: MutableRefObject<string | null>;
 }
 
 /** Preview texture of the project currently under the cursor, or null. */
@@ -28,6 +31,8 @@ const ProjectHoverActionsContext = createContext<ProjectHoverActions | null>(
 export function ProjectHoverProvider({ children }: { children: ReactNode }) {
   const [hoveredPreview, setPreview] = useState<string | null>(null);
   const pendingClear = useRef<number | null>(null);
+  const chargeRef = useRef(0);
+  const holdOwnerRef = useRef<string | null>(null);
 
   const cancelPendingClear = () => {
     if (pendingClear.current === null) return;
@@ -53,6 +58,8 @@ export function ProjectHoverProvider({ children }: { children: ReactNode }) {
 
   const resetHoveredPreview = useCallback(() => {
     cancelPendingClear();
+    holdOwnerRef.current = null;
+    chargeRef.current = 0;
     setPreview(null);
   }, []);
 
@@ -62,7 +69,13 @@ export function ProjectHoverProvider({ children }: { children: ReactNode }) {
   // are not re-rendered by their own hover. Each one carries an <Html> twin
   // whose React root re-renders along with it.
   const actions = useMemo(
-    () => ({ setHoveredPreview, clearHoveredPreview, resetHoveredPreview }),
+    () => ({
+      setHoveredPreview,
+      clearHoveredPreview,
+      resetHoveredPreview,
+      chargeRef,
+      holdOwnerRef,
+    }),
     [setHoveredPreview, clearHoveredPreview, resetHoveredPreview],
   );
 

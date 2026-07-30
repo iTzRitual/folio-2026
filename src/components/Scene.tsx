@@ -13,6 +13,7 @@ import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { ProjectPreviewOverlay } from "./DetailsScene/ProjectPreviewOverlay";
+import { HoldIndicator } from "./DetailsScene/HoldIndicator";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { Suspense } from "react";
@@ -57,6 +58,7 @@ function SceneContent({
         {!isMobile && <Details bioVariant={bioVariant} />}
         {!isMobile && <CurlEdgeFade />}
         {!isMobile && <ProjectPreviewOverlay />}
+        {!isMobile && <HoldIndicator />}
         {!isMobile && (
           <EffectComposer multisampling={0}>
             <>
