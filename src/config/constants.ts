@@ -152,6 +152,10 @@ export const CONFIG = {
         // above the anchor's own so it keeps up with a sweep down the list and
         // is up to size before the morph lands.
         HOVER_SMOOTHING: 14,
+        // Plate presence at which the model starts travelling to the pointer.
+        // The morph runs in place first, so the still-glassy skull — which has
+        // no curl of its own — never crosses the fold uncurled.
+        TRAVEL_START: 0.4,
         // Cross-plate segments the trailing-centre bend is sampled over.
         BEND_SEGMENTS: 48,
         // Rows the plate is split into so it can roll around the details fold
@@ -161,7 +165,7 @@ export const CONFIG = {
         BEND_MULT: 0.275,
         // Peak per-channel UV split, in texture units.
         ABERRATION_MULT: 0.06,
-        // Pointer speed (in normalised units per second) that saturates both.
+        // Plate speed (in normalised units per second) that saturates both.
         VELOCITY_FULL_SCALE: 2.6,
         VELOCITY_SMOOTHING: 11,
     },
@@ -170,7 +174,6 @@ export const CONFIG = {
         ARROW_GAP_MULT: 0.3,
         ARROW_NUDGE_FACTOR: 0.25,
         ARROW_DURATION: 0.2,
-        PREVIEW_MIN_OPACITY: 0.6,
         INTERACT_MIN_OPACITY: 0.05,
         BUTTON_TEXT_FADE_POWER: 0.5,
         BUTTON_PAD_X_EM: 0.8,

@@ -13,6 +13,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { curlRiseOpacity } from "@/lib/detailsCurl";
 import {
   useHoveredPreview,
   useProjectHoverActions,
@@ -139,7 +140,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     });
   }, [nodes.Sphere, flatTarget]);
 
-  const pointerTracking = useRef({ lastY: 0, velocity: 0, seeded: false });
+  const plateMotion = useRef({ lastY: 0, velocity: 0, seeded: false });
 
   // 0 = skull, 1 = fully revealed preview. `skull` only moves in "scale" mode.
   const previewProxy = useRef({ morph: 0, plate: 0, skull: 1 });
@@ -286,6 +287,25 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     // twice.
     const scrollY = isMobile ? window.scrollY : 0;
 
+    const preview = previewProxy.current;
+    if (pinnedMorph !== null) preview.morph = pinnedMorph;
+
+    // In morph mode the plate's reveal *is* its growth, read off the one
+    // timeline value. Scale mode moves the two independently, so it keeps the
+    // tweened proxy.
+    const plate =
+      previewMode === "morph"
+        ? THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1)
+        : THREE.MathUtils.clamp(preview.plate, 0, 1);
+    // Held at zero until the skull has finished becoming a plate, so the morph
+    // plays out where the skull already stood and only the finished plate — the
+    // one thing here that curls — travels up to the pointer.
+    const followBlend = THREE.MathUtils.smoothstep(
+      plate,
+      CONFIG.projectPreview.TRAVEL_START,
+      1,
+    );
+
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
       isInteractionLockedRef.current = shouldLockInteraction;
 
@@ -363,7 +383,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         const targetX = inDetails ? detailsTargetX : 0;
         let targetY = inDetails ? detailsTargetY : heroYCurrent;
 
-        const followingPointer = inDetails && previewActive;
+        const followingPointer = inDetails && followBlend > 0;
 
         if (followingPointer) {
           const plateHalfHeight =
@@ -378,11 +398,13 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
             plateHalfHeight;
           const bottomLimit = -modelViewport.height / 2 + plateHalfHeight;
 
-          targetY = THREE.MathUtils.clamp(
+          const pointerY = THREE.MathUtils.clamp(
             (state.pointer.y * modelViewport.height) / 2,
             bottomLimit,
             Math.max(topLimit, bottomLimit),
           );
+
+          targetY = THREE.MathUtils.lerp(targetY, pointerY, followBlend);
         }
 
         animGroupRef.current.position.x = teleported
@@ -544,18 +566,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     // outside Details may hold it.
     if (previewActive && !inDetails) resetHoveredPreview();
 
-    const preview = previewProxy.current;
     const skullMesh = skullMeshRef.current;
-
-    if (pinnedMorph !== null) preview.morph = pinnedMorph;
-
-    // In morph mode the plate's reveal *is* its growth, read off the one
-    // timeline value. Scale mode moves the two independently, so it keeps the
-    // tweened proxy.
-    const plate =
-      previewMode === "morph"
-        ? THREE.MathUtils.smoothstep(preview.morph, previewTuning.growStart, 1)
-        : THREE.MathUtils.clamp(preview.plate, 0, 1);
 
     if (skullMesh?.morphTargetInfluences) {
       skullMesh.morphTargetInfluences[0] = preview.morph;
@@ -567,7 +578,13 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     // fade, so the two cross over and it comes back on the way out.
     if (skullMesh) {
       const glass = skullMesh.material as THREE.Material;
-      const glassOpacity = 1 - plate;
+      // The glass carries no curl, so past the fold it would sit over the
+      // gradient as a hard-edged slab. Dissolve it on the sheet's own fade.
+      const foldFade =
+        !isMobile && inDetails
+          ? curlRiseOpacity(outerGroupY / previewUniforms.uCurlDepthScale.value)
+          : 1;
+      const glassOpacity = (1 - plate) * foldFade;
       const fading = glassOpacity < 1 - 1e-3;
 
       // Only bucket it with the transparent objects while it is actually
@@ -692,19 +709,24 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       previewMaterialRef.current.opacity = plate;
     }
 
-    const pointer = pointerTracking.current;
+    const motion = plateMotion.current;
+    // The plate lags the pointer, and while the morph runs in place it does not
+    // move at all — so the bend reads off its own travel, normalised the way
+    // the pointer was so the tuning still means the same thing.
+    const motionY = (outerGroupY / modelViewport.height) * 2;
 
-    if (!pointer.seeded) {
-      pointer.lastY = state.pointer.y;
-      pointer.seeded = true;
+    if (!motion.seeded || teleported) {
+      motion.lastY = motionY;
+      motion.velocity = 0;
+      motion.seeded = true;
     }
 
-    const rawVelocity = (state.pointer.y - pointer.lastY) / Math.max(dt, 1e-4);
-    pointer.lastY = state.pointer.y;
+    const rawVelocity = (motionY - motion.lastY) / Math.max(dt, 1e-4);
+    motion.lastY = motionY;
     // Chasing the raw reading rounds off the spikes on the way in and lets the
-    // plate spring back on its own once the pointer stops.
-    pointer.velocity = THREE.MathUtils.damp(
-      pointer.velocity,
+    // plate spring back on its own once it settles.
+    motion.velocity = THREE.MathUtils.damp(
+      motion.velocity,
       rawVelocity,
       previewTuning.smoothing,
       dt,
@@ -712,13 +734,10 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
 
     const travel = prefersReducedMotion
       ? 0
-      : THREE.MathUtils.clamp(
-          pointer.velocity / previewTuning.fullScale,
-          -1,
-          1,
-        ) * plate;
+      : THREE.MathUtils.clamp(motion.velocity / previewTuning.fullScale, -1, 1) *
+        plate;
 
-    // Negated: the centre lags behind, so it trails the pointer's direction.
+    // Negated: the centre lags behind, so it trails the direction of travel.
     previewUniforms.uPreviewBend.value =
       -travel * previewTuning.bend * previewHeight;
     previewUniforms.uPreviewSplit.value = travel * previewTuning.aberration;

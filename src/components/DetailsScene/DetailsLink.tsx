@@ -100,15 +100,15 @@ export function DetailsLink({
 
   const { setHoveredPreview, clearHoveredPreview } = useProjectHoverActions();
   // A link stays in the scene well past both folds, curled and faded out.
-  // Anything still legible stays clickable; the preview is held to a stricter
-  // threshold so a barely-there row does not swap the model out.
-  const visibleRef = useRef(false);
+  // Anything still legible stays clickable, and carries its preview with it —
+  // the plate curls around the same fold, so it survives up there too.
   const interactiveRef = useRef(false);
   const hitCurlRef = useRef<Group>(null);
   const hitMeshRef = useRef<Mesh>(null);
   const hitCenterYRef = useRef(0);
+  const hitHalfHeightRef = useRef(0);
   const curlWorld = useRef(new THREE.Vector3());
-  const forceLeaveRef = useRef<() => void>(() => {});
+  const syncHoverRef = useRef<() => void>(() => {});
   const hoverSources = useRef({ twin: false, mesh: false });
   const hoveredRef = useRef(false);
   const plateShownRef = useRef(false);
@@ -122,35 +122,39 @@ export function DetailsLink({
       if (blockMaterialRef.current) blockMaterialRef.current.opacity = 1;
 
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
-      if (interactive !== interactiveRef.current) {
-        interactiveRef.current = interactive;
-        if (!interactive) forceLeaveRef.current();
-      }
-
-      const visible = opacity > CONFIG.detailsLink.PREVIEW_MIN_OPACITY;
-      if (visible === visibleRef.current) return;
-      visibleRef.current = visible;
-      if (!previewImage) return;
-      if (!hoveredRef.current) return;
-      if (visible) setHoveredPreview(previewImage);
-      else clearHoveredPreview(previewImage);
+      if (interactive === interactiveRef.current) return;
+      interactiveRef.current = interactive;
+      syncHoverRef.current();
     },
   );
 
-  // The curl is a vertex shader, invisible to the raycaster. Rows are thin
-  // enough to follow it as a rigid body, which keeps the hit area under the
-  // glyphs on both folds.
+  // The curl is a vertex shader, invisible to the raycaster. Sending the row's
+  // own edges through it and spanning the chord between them keeps the hit area
+  // under the glyphs, and keeps consecutive rows tiling: a rigid rotation about
+  // each centre opened a crack on every boundary, and the hover fell through it.
   useFrame(() => {
     const curl = hitCurlRef.current;
     const group = groupRef.current;
     if (!curl || !group) return;
 
     const baseY = hitCenterYRef.current;
-    const baseWorldY = group.getWorldPosition(curlWorld.current).y + baseY;
-    const { dy, dz, angle } = curlRowTransform(baseWorldY);
-    curl.position.y = baseY + dy;
-    curl.position.z = dz;
-    curl.rotation.x = -angle;
+    const half = hitHalfHeightRef.current;
+    const groupWorldY = group.getWorldPosition(curlWorld.current).y;
+    const topWorldY = groupWorldY + baseY + half;
+    const bottomWorldY = groupWorldY + baseY - half;
+    const top = curlRowTransform(topWorldY);
+    const bottom = curlRowTransform(bottomWorldY);
+
+    const topY = topWorldY + top.dy;
+    const bottomY = bottomWorldY + bottom.dy;
+    const spanY = topY - bottomY;
+    const spanZ = top.dz - bottom.dz;
+    const span = Math.hypot(spanY, spanZ);
+
+    curl.position.y = (topY + bottomY) / 2 - groupWorldY;
+    curl.position.z = (top.dz + bottom.dz) / 2;
+    curl.rotation.x = Math.atan2(spanZ, spanY);
+    curl.scale.y = half > 1e-6 && span > 1e-6 ? span / (half * 2) : 1;
   });
 
   const [textDimensions, setTextDimensions] = useState({
@@ -232,9 +236,7 @@ export function DetailsLink({
   const finePointer = () => FINE_POINTER_QUERY.matches;
   const reducedMotion = () => REDUCED_MOTION_QUERY.matches;
 
-  const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
-    if (!finePointer()) return;
-    hoverSources.current[source] = active;
+  const syncHover = () => {
     const wanted =
       (hoverSources.current.twin || hoverSources.current.mesh) &&
       interactiveRef.current;
@@ -244,9 +246,15 @@ export function DetailsLink({
     else handleLeave();
   };
 
+  const setHoverSource = (source: "twin" | "mesh", active: boolean) => {
+    if (!finePointer()) return;
+    hoverSources.current[source] = active;
+    syncHover();
+  };
+
   const handleEnter = () => {
     document.body.style.cursor = "pointer";
-    if (previewImage && visibleRef.current) setHoveredPreview(previewImage);
+    if (previewImage) setHoveredPreview(previewImage);
     if (reducedMotion()) return;
 
     if (arrowMeshRef.current) {
@@ -276,12 +284,7 @@ export function DetailsLink({
   };
 
   useEffect(() => {
-    forceLeaveRef.current = () => {
-      if (previewImage) clearHoveredPreview(previewImage);
-      if (!hoveredRef.current) return;
-      hoveredRef.current = false;
-      handleLeave();
-    };
+    syncHoverRef.current = syncHover;
   });
 
   const padX = calculatedFontSize * CONFIG.detailsLink.BUTTON_PAD_X_EM;
@@ -311,9 +314,11 @@ export function DetailsLink({
       centerY: (revealBounds.minY + revealBounds.maxY) / 2,
     };
   const hitCenterY = hit ? hit.centerY : 0;
+  const hitHalfHeight = hit ? hit.height / 2 : 0;
   useEffect(() => {
     hitCenterYRef.current = hitCenterY;
-  }, [hitCenterY]);
+    hitHalfHeightRef.current = hitHalfHeight;
+  }, [hitCenterY, hitHalfHeight]);
 
   return (
     <group position={position} ref={groupRef}>

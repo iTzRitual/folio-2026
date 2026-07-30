@@ -13,7 +13,7 @@ import { applyPlateCurlShader } from "@/lib/detailsCurl";
 import { CONFIG } from "@/config/constants";
 
 /**
- * Written every frame from the pointer's vertical speed. Module scope because
+ * Written every frame from the plate's vertical speed. Module scope because
  * there is exactly one preview plate, matching how the details curl shares its
  * uniforms.
  */
