@@ -47,9 +47,6 @@ export const CONFIG = {
         MODEL_UP_TRAVEL_FACTOR: 0.25,
         SCALE_OUT_START: 0.2,
         SCALE_OUT_END: 0.9,
-        // The skull's own reach, in units of its scale: what it bounces off the
-        // viewport edges with, and how far above its centre the curl sees it.
-        COLLISION_RADIUS_MULT: 1.2,
         RETURN_TO_CENTER_SMOOTHNESS: 8,
         RETURN_VELOCITY_DAMPING: 10,
         RETURN_SNAP_EPSILON: 0.0025,

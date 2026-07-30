@@ -133,6 +133,7 @@ interface ProjectPreviewPlaneProps {
     width: number;
     height: number;
     materialRef: RefObject<THREE.MeshBasicMaterial | null>;
+    clippingPlanes: THREE.Plane[];
 }
 
 export function ProjectPreviewPlane({
@@ -140,6 +141,7 @@ export function ProjectPreviewPlane({
     width,
     height,
     materialRef,
+    clippingPlanes,
 }: ProjectPreviewPlaneProps) {
     const radiusUv = useMemo(() => ({ value: new THREE.Vector2(1, 1) }), []);
     const applyShader = useMemo(() => previewShader(radiusUv), [radiusUv]);
@@ -174,6 +176,7 @@ export function ProjectPreviewPlane({
             />
             <meshBasicMaterial
                 ref={materialRef}
+                clippingPlanes={clippingPlanes}
                 map={texture}
                 toneMapped={false}
                 transparent

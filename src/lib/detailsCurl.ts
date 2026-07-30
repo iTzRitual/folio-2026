@@ -11,14 +11,9 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFadeStart: { value: 0 },
     uCurlFadeEndRise: { value: 1 },
     uCurlFadeEndDrop: { value: 1 },
-    // The model is one bright rectangle where the sheet is a line of glyphs, so
-    // it cannot share the sheet's leisurely fade: it goes out over the span the
-    // top scrim needs to reach full cover, and is gone wherever that scrim is.
-    uCurlModelFadeStart: { value: 0 },
-    uCurlModelFadeEnd: { value: 1 },
 };
 
-const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1, modelEnd: 1 };
+const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1 };
 
 export interface CurlSettings {
     foldOffsetMult: number;
@@ -57,19 +52,12 @@ export function applyCurlSettings(
     const fadeEndRise = Math.max(settings.fadeAngleEnd * radius, fadeStart + 1e-4);
     const fadeEndDrop = Math.max(settings.maxAngle * radius, fadeStart + 1e-4);
 
-    const modelFadeEnd = Math.max(
-        radius * CONFIG.detailsCurl.EDGE_FADE_TOP_MULT,
-        1e-4,
-    );
-
     curlUniforms.uCurlFadeStart.value = fadeStart;
     curlUniforms.uCurlFadeEndRise.value = fadeEndRise;
     curlUniforms.uCurlFadeEndDrop.value = fadeEndDrop;
-    curlUniforms.uCurlModelFadeEnd.value = modelFadeEnd;
     curlFadeSpans.start = fadeStart;
     curlFadeSpans.endRise = fadeEndRise;
     curlFadeSpans.endDrop = fadeEndDrop;
-    curlFadeSpans.modelEnd = modelFadeEnd;
 }
 
 const CURL_DEFS = /* glsl */ `
@@ -144,9 +132,8 @@ uniform float uCurlRadius;
 uniform float uCurlMaxAngle;
 uniform float uCurlBend;
 uniform float uCurlFadeStart;
+uniform float uCurlFadeEndRise;
 uniform float uCurlFadeEndDrop;
-uniform float uCurlModelFadeStart;
-uniform float uCurlModelFadeEnd;
 uniform float uCurlDepthScale;
 varying float vCurlFade;
 `;
@@ -180,10 +167,8 @@ vec4 mvPosition;
   }
 
   float curlPast = max(curlRise, curlDrop);
-  bool curlRising = curlRise > 0.0;
-  float curlFadeStart = curlRising ? uCurlModelFadeStart : uCurlFadeStart;
-  float curlFadeEnd = curlRising ? uCurlModelFadeEnd : uCurlFadeEndDrop;
-  vCurlFade = 1.0 - smoothstep(curlFadeStart, curlFadeEnd, curlPast);
+  float curlFadeEnd = curlRise > 0.0 ? uCurlFadeEndRise : uCurlFadeEndDrop;
+  vCurlFade = 1.0 - smoothstep(uCurlFadeStart, curlFadeEnd, curlPast);
 
   mvPosition = viewMatrix * curlWorld;
   gl_Position = projectionMatrix * mvPosition;
@@ -205,9 +190,8 @@ export function applyPlateCurlShader(
     shader.uniforms.uCurlMaxAngle = curlUniforms.uCurlMaxAngle;
     shader.uniforms.uCurlBend = curlUniforms.uCurlBend;
     shader.uniforms.uCurlFadeStart = curlUniforms.uCurlFadeStart;
+    shader.uniforms.uCurlFadeEndRise = curlUniforms.uCurlFadeEndRise;
     shader.uniforms.uCurlFadeEndDrop = curlUniforms.uCurlFadeEndDrop;
-    shader.uniforms.uCurlModelFadeStart = curlUniforms.uCurlModelFadeStart;
-    shader.uniforms.uCurlModelFadeEnd = curlUniforms.uCurlModelFadeEnd;
     shader.uniforms.uCurlDepthScale = depthScale;
     shader.uniforms.uCurlFadePower = { value: 1 };
 
@@ -296,12 +280,16 @@ export function curlRiseOpacity(worldY: number) {
     return fadeOverSpan(rise, curlFadeSpans.endRise);
 }
 
-/** The plate's own fade, for whatever has to match it from the CPU side. */
-export function curlModelRiseOpacity(worldY: number) {
-    const rise = worldY - curlUniforms.uCurlFoldY.value;
-    if (rise <= 0) return 1;
-    if (rise >= curlFadeSpans.modelEnd) return 0;
-    return 1 - rise / curlFadeSpans.modelEnd;
+/**
+ * Height at which the top edge fade reaches full cover. Anything drawn above it
+ * is hidden by the gradient anyway, so it is where the model can be cut without
+ * the cut showing.
+ */
+export function curlScrimCoverY() {
+    return (
+        curlUniforms.uCurlFoldY.value +
+        curlUniforms.uCurlRadius.value * CONFIG.detailsCurl.EDGE_FADE_TOP_MULT
+    );
 }
 
 export function curlDropOpacity(worldY: number) {

@@ -106,6 +106,9 @@ export default function Scene({
           antialias: false,
           powerPreference: "high-performance",
         }}
+        onCreated={(state) => {
+          state.gl.localClippingEnabled = true;
+        }}
       >
         <PerformanceMonitor
           bounds={() => [45, 55]}

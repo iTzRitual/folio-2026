@@ -13,7 +13,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { curlModelRiseOpacity } from "@/lib/detailsCurl";
+import { curlScrimCoverY } from "@/lib/detailsCurl";
 import {
   useHoveredPreview,
   useProjectHoverActions,
@@ -39,6 +39,13 @@ const PLATE_IMAGE_FACING = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(Math.PI / 2, 0, 0),
 );
 const IDENTITY_QUATERNION = new THREE.Quaternion();
+// Nothing of the model may show above the details gradient. Cutting it there
+// rather than fading it keeps the model's own opacity out of it: the cut edge
+// lands where the gradient is already at full cover, so it never shows. Module
+// scope like the curl's own uniforms, for the one model in the scene.
+const CLIP_DISABLED = 1e6;
+const FOLD_CLIP = new THREE.Plane(new THREE.Vector3(0, -1, 0), CLIP_DISABLED);
+const FOLD_CLIP_PLANES = [FOLD_CLIP];
 
 useGLTF.setDecoderPath("/draco/");
 
@@ -305,6 +312,12 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       CONFIG.projectPreview.TRAVEL_START,
       1,
     );
+    // Full popup size the moment a project is hovered, whatever the model had
+    // shrunk to. The entry ramp and the anchor's fold fade both describe the
+    // model at rest, and a preview is not the model at rest.
+    const detailsScale = previewActive
+      ? CONFIG.model.DETAILS_POPUP_SCALE
+      : modelAnchorRef.current.scale * entryRamp;
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
       isInteractionLockedRef.current = shouldLockInteraction;
@@ -353,6 +366,11 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     previewUniforms.uCurlDepthScale.value =
       modelViewport.height / viewport.height;
 
+    FOLD_CLIP.constant =
+      !isMobile && inDetails
+        ? curlScrimCoverY() * previewUniforms.uCurlDepthScale.value
+        : CLIP_DISABLED;
+
     if (animGroupRef.current) {
       if (isMobile) {
         const scrolledScreens = scrollY / window.innerHeight;
@@ -387,11 +405,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
 
         if (followingPointer) {
           const plateHalfHeight =
-            (previewHeight *
-              responsiveScale *
-              previewSizeMult *
-              CONFIG.model.DETAILS_POPUP_SCALE *
-              entryRamp) /
+            (previewHeight * responsiveScale * previewSizeMult * detailsScale) /
             2;
           const topLimit =
             (titleSettledBottomY / viewport.height) * modelViewport.height -
@@ -450,12 +464,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
           0,
           1,
         );
-        const detailsScale = previewActive
-          ? CONFIG.model.DETAILS_POPUP_SCALE
-          : modelAnchorRef.current.scale;
-        const targetScale = inDetails
-          ? detailsScale * entryRamp
-          : 1 - scaleOutProgress;
+        const targetScale = inDetails ? detailsScale : 1 - scaleOutProgress;
 
         const currentScale = teleported
           ? 0
@@ -498,8 +507,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         pos.current.x += vel.current.x * dt;
         pos.current.y += vel.current.y * dt;
 
-        const collisionRadius =
-          responsiveScale * CONFIG.model.COLLISION_RADIUS_MULT;
+        const collisionRadius = responsiveScale * 1.2;
         const limitX = currentViewport.width / 2 - collisionRadius;
         const limitTop =
           currentViewport.height / 2 - outerGroupY - collisionRadius;
@@ -579,22 +587,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     // fade, so the two cross over and it comes back on the way out.
     if (skullMesh) {
       const glass = skullMesh.material as THREE.Material;
-      // The glass carries no curl, so past the fold it would sit over the
-      // gradient as a hard-edged slab. Dissolve it on the plate's fade, read at
-      // its top: nothing may still be there once the gradient has closed, and
-      // the bigger it grows the sooner that is.
-      const glassTopY =
-        outerGroupY +
-        responsiveScale *
-          CONFIG.model.COLLISION_RADIUS_MULT *
-          (transitionScaleGroupRef.current?.scale.x ?? 1);
-      const foldFade =
-        !isMobile && inDetails
-          ? curlModelRiseOpacity(
-              glassTopY / previewUniforms.uCurlDepthScale.value,
-            )
-          : 1;
-      const glassOpacity = (1 - plate) * foldFade;
+      const glassOpacity = 1 - plate;
       const fading = glassOpacity < 1 - 1e-3;
 
       // Only bucket it with the transparent objects while it is actually
@@ -832,6 +825,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                   >
                     <MeshTransmissionMaterial
                       ref={transmissionRef}
+                      clippingPlanes={FOLD_CLIP_PLANES}
                       {...materialProps}
                       resolution={
                         isMobile
@@ -858,6 +852,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                   width={previewWidth}
                   height={previewHeight}
                   materialRef={previewMaterialRef}
+                  clippingPlanes={FOLD_CLIP_PLANES}
                 />
               </group>
             )}
