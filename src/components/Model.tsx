@@ -13,7 +13,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { curlRiseOpacity } from "@/lib/detailsCurl";
+import { curlModelRiseOpacity } from "@/lib/detailsCurl";
 import {
   useHoveredPreview,
   useProjectHoverActions,
@@ -498,7 +498,8 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         pos.current.x += vel.current.x * dt;
         pos.current.y += vel.current.y * dt;
 
-        const collisionRadius = responsiveScale * 1.2;
+        const collisionRadius =
+          responsiveScale * CONFIG.model.COLLISION_RADIUS_MULT;
         const limitX = currentViewport.width / 2 - collisionRadius;
         const limitTop =
           currentViewport.height / 2 - outerGroupY - collisionRadius;
@@ -579,10 +580,19 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     if (skullMesh) {
       const glass = skullMesh.material as THREE.Material;
       // The glass carries no curl, so past the fold it would sit over the
-      // gradient as a hard-edged slab. Dissolve it on the sheet's own fade.
+      // gradient as a hard-edged slab. Dissolve it on the plate's fade, read at
+      // its top: nothing may still be there once the gradient has closed, and
+      // the bigger it grows the sooner that is.
+      const glassTopY =
+        outerGroupY +
+        responsiveScale *
+          CONFIG.model.COLLISION_RADIUS_MULT *
+          (transitionScaleGroupRef.current?.scale.x ?? 1);
       const foldFade =
         !isMobile && inDetails
-          ? curlRiseOpacity(outerGroupY / previewUniforms.uCurlDepthScale.value)
+          ? curlModelRiseOpacity(
+              glassTopY / previewUniforms.uCurlDepthScale.value,
+            )
           : 1;
       const glassOpacity = (1 - plate) * foldFade;
       const fading = glassOpacity < 1 - 1e-3;
