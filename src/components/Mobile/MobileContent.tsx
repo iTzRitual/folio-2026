@@ -7,6 +7,7 @@ import {
   experienceData,
   projectsData,
   educationData,
+  coursesData,
   bioData,
   bioImage,
 } from "@/data/content";
@@ -74,6 +75,17 @@ export const MobileContent = () => {
             className="text-(--text-primary) font-karla text-left w-full text-lg"
           >
             - {item.degree} in {item.field} from {item.institution}
+          </li>
+        ))}
+      </Section>
+
+      <Section title="Courses & Certifications" delay={0.7}>
+        {coursesData.map((item, index) => (
+          <li
+            key={index}
+            className="text-(--text-primary) font-karla text-left w-full text-lg"
+          >
+            - {item.title} @ {item.issuer} ({item.date})
           </li>
         ))}
       </Section>

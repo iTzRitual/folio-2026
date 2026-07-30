@@ -3,6 +3,7 @@ import {
     bioData,
     bioImage,
     educationData,
+    coursesData,
     experienceData,
     projectsData,
 } from "@/data/content";
@@ -63,6 +64,22 @@ export function NoJsDetails() {
                         >
                             - {item.degree} in {item.field} from{" "}
                             {item.institution}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
+                    Courses & Certifications
+                </h3>
+                <ul className="mt-4 space-y-3">
+                    {coursesData.map((item) => (
+                        <li
+                            key={`${item.title}-${item.issuer}`}
+                            className="text-left text-lg leading-relaxed font-karla text-(--text-body)"
+                        >
+                            - {item.title} @ {item.issuer} ({item.date})
                         </li>
                     ))}
                 </ul>

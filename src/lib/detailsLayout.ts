@@ -3,6 +3,7 @@ import {
     experienceData,
     projectsData,
     educationData,
+    coursesData,
     skillsData,
     bioVariants,
     DEFAULT_BIO_VARIANT,
@@ -50,11 +51,17 @@ export const SECTION_HEADINGS = {
     experience: "Experience",
     projects: "Featured Projects",
     education: "Education",
+    courses: "Courses & Certifications",
     bio: "About me",
     skills: "Skills",
 } as const;
 
-const STACKED_SECTIONS = ["experience", "projects", "education"] as const;
+const STACKED_SECTIONS = [
+    "experience",
+    "projects",
+    "education",
+    "courses",
+] as const;
 
 export const DETAILS_SECTION_KEYS = [
     ...STACKED_SECTIONS,
@@ -151,6 +158,7 @@ export function calculateDetailsLayout({
         experience: experienceData.length,
         projects: projectsData.length,
         education: educationData.length,
+        courses: coursesData.length,
         skills: skillsData.length,
     };
 
@@ -158,6 +166,7 @@ export function calculateDetailsLayout({
         experience: bodyLineHeight,
         projects: projectLineHeight,
         education: bodyLineHeight,
+        courses: bodyLineHeight,
         skills: bodyLineHeight,
     };
 

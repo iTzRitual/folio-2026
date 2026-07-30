@@ -18,6 +18,7 @@ import {
   experienceData,
   projectsData,
   educationData,
+  coursesData,
   skillsData,
   DEFAULT_BIO_VARIANT,
   type BioVariant,
@@ -70,6 +71,7 @@ export function Details({
   const experienceHeadingRef = useRef<Group>(null);
   const projectsHeadingRef = useRef<Group>(null);
   const educationHeadingRef = useRef<Group>(null);
+  const coursesHeadingRef = useRef<Group>(null);
   const layout = useMemo(
     () =>
       calculateDetailsLayout({
@@ -172,6 +174,7 @@ export function Details({
     stickHeading(experienceHeadingRef.current, "experience");
     stickHeading(projectsHeadingRef.current, "projects");
     stickHeading(educationHeadingRef.current, "education");
+    stickHeading(coursesHeadingRef.current, "courses");
 
     const projects = layout.sections.projects;
     const projectsCenter =
@@ -237,6 +240,14 @@ export function Details({
     [],
   );
 
+  const coursesItems: DetailsSectionItem[] = useMemo(
+    () =>
+      coursesData.map((course) => ({
+        text: `${course.date} / ${course.title} @ ${course.issuer}`,
+      })),
+    [],
+  );
+
   const skillItems: DetailsSectionItem[] = useMemo(
     () => skillsData.map((skill) => ({ text: skill })),
     [],
@@ -296,6 +307,21 @@ export function Details({
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.education}
         headingGroupRef={educationHeadingRef}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        {...shared}
+      />
+
+      <DetailsSection
+        heading={SECTION_HEADINGS.courses}
+        items={coursesItems}
+        headingX={leftX}
+        headingY={sectionY("courses").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("courses").bodyY}
+        bodyAnchorX="left"
+        direction="leftToRight"
+        startTrigger={startTrigger && !!revealed.courses}
+        headingGroupRef={coursesHeadingRef}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
       />

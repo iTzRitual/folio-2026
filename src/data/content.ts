@@ -108,6 +108,35 @@ export const educationData = [
         field: "Computer Science",
     },
 ] as const;
+
+export const coursesData = [
+    {
+        title: "Animations on the Web - Advanced Interactions",
+        issuer: "Emil Kowalski",
+        date: "In progress",
+    },
+    {
+        title: "Three.js Journey – Creative 3D Web Development",
+        issuer: "Bruno Simon",
+        date: "In progress",
+    },
+    {
+        title: "Enterprise React & Architecture",
+        issuer: "zrozumiecreact.pl",
+        date: "2026",
+    },
+    {
+        title: "Front-End & Business – Corporate Workflows",
+        issuer: "Accenture",
+        date: "2024",
+    },
+    {
+        title: "Web Penetration Testing – Security Audit & Pentesting",
+        issuer: "EY",
+        date: "2023",
+    },
+] as const;
+
 export const bioVariants = {
     narrative: [
         "My tech journey started early—entering the e-commerce space at 17, which quickly evolved into a passion for frontend engineering, UI design in Figma, and fullstack architecture. Driven by a long-standing fascination with Awwwards-level interactive design, I shifted my focus toward creative technology, blending performance with rich visual aesthetics.",
