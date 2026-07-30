@@ -1,7 +1,7 @@
 let context: CanvasRenderingContext2D | null = null;
 let fontFamily = "";
 
-function getFontFamily(): string {
+export function getFontFamily(): string {
     if (fontFamily) return fontFamily;
 
     const probe = document.createElement("span");

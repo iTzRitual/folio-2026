@@ -174,6 +174,17 @@ export const CONFIG = {
         TUNE_CONTRAST: [0.82, 1.1] as [number, number],
         TUNE_BRIGHTNESS: [0.82, 1.12] as [number, number],
         CHARGE_SCALE_GAIN: 0.02,
+        // The caption is its own mesh, sharing the plate's geometry so it bends
+        // and curls identically, but skipping the glitch so it stays readable.
+        // Fractions of the plate, which keeps it resolution-independent.
+        CAPTION_TEXTURE_WIDTH: 1024,
+        CAPTION_FONT_FRACTION: 13 / 360,
+        CAPTION_PAD_X_FRACTION: 16 / 360,
+        CAPTION_BASELINE_FRACTION: 0.17,
+        CAPTION_BAR_FRACTION: 2 / 225,
+        CAPTION_BAR_GAP_FRACTION: 6 / 225,
+        CAPTION_LEAD: "Click for case study",
+        CAPTION_TRAIL: "Hold for live site",
     },
     projectGesture: {
         PRESS_SCALE: 0.97,
@@ -181,23 +192,6 @@ export const CONFIG = {
         CHARGE_DELAY: 0.15,
         CHARGE_DURATION: 0.5,
         REWIND_DURATION: 0.18,
-    },
-    holdIndicator: {
-        RING_DIAMETER_PX: 46,
-        RING_THICKNESS_PX: 2,
-        RING_TRACK_OPACITY: 0.16,
-        RING_HALO_PX: 2.5,
-        RING_HALO_OPACITY: 0.55,
-        LABEL_OUTLINE_EM: 0.18,
-        LABEL_OUTLINE_BLUR_EM: 0.7,
-        LABEL_OUTLINE_OPACITY: 0.8,
-        RING_SCALE: [0.9, 1.04] as [number, number],
-        LABEL_OFFSET_PX: [30, 12] as [number, number],
-        LABEL_FONT_PX: 10,
-        LABEL_LINE_PX: 18,
-        LABEL_LETTER_SPACING: 0.16,
-        FADE_DURATION: 0.15,
-        RENDER_ORDER: 31,
     },
     detailsLink: {
         ARROW_SIZE_MULT: 0.4,

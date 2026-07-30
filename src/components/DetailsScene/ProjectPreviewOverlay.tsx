@@ -7,6 +7,9 @@ import { useGSAP } from "@gsap/react";
 import * as THREE from "three";
 import { PROJECT_PREVIEW_SOURCES } from "@/data/content";
 import { applyCurlShader } from "@/lib/detailsCurl";
+import { drawCaptionTexture } from "@/lib/projectCaption";
+import { useFontsReady } from "@/hooks/useFontsReady";
+import { getFontFamily } from "@/lib/textMetrics";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import {
@@ -34,6 +37,16 @@ const previewUniforms = {
     /** Bands, peak slice offset and peak glitch split. */
     uPreviewGlitchParams: { value: new THREE.Vector3() },
     uPreviewTune: { value: new THREE.Vector3(1, 1, 1) },
+};
+
+/** Module scope for the same reason, and it shares the plate's bend. */
+const captionUniforms = {
+    uCaptionMap: { value: null as THREE.Texture | null },
+    /** Trail label extent in plate UV: x0, x1, y0, y1. */
+    uCaptionBar: { value: new THREE.Vector4() },
+    uCaptionCharge: { value: 0 },
+    uCaptionOpacity: { value: 0 },
+    uPreviewBend: previewUniforms.uPreviewBend,
 };
 
 const VERTEX_DEFS = /* glsl */ `
@@ -179,11 +192,61 @@ function useProjectPreviewTextures() {
     return textures;
 }
 
+// Deliberately goes through begin_vertex: the curl replaces that include, and
+// the bend is injected back inside it, so the caption lands on exactly the same
+// surface as the plate.
+const CAPTION_VERTEX = /* glsl */ `
+uniform vec2 uPreviewBend;
+varying vec2 vCaptionUv;
+
+void main() {
+  vCaptionUv = uv;
+  #include <begin_vertex>
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`;
+
+function captionShader(shader: THREE.WebGLProgramParametersWithUniforms) {
+    applyCurlShader(shader, false);
+    shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        VERTEX_BEND,
+    );
+}
+
+const CAPTION_FRAGMENT = /* glsl */ `
+uniform sampler2D uCaptionMap;
+uniform vec4 uCaptionBar;
+uniform float uCaptionCharge;
+uniform float uCaptionOpacity;
+varying vec2 vCaptionUv;
+
+void main() {
+  float mask = texture2D(uCaptionMap, vCaptionUv).r;
+
+  float bar =
+    step(uCaptionBar.x, vCaptionUv.x) *
+    step(vCaptionUv.x, mix(uCaptionBar.x, uCaptionBar.y, uCaptionCharge)) *
+    step(uCaptionBar.z, vCaptionUv.y) *
+    step(vCaptionUv.y, uCaptionBar.w);
+
+  float ink = clamp(mask + bar, 0.0, 1.0) * uCaptionOpacity;
+  gl_FragColor = vec4(vec3(ink), 1.0);
+}
+`;
+
 export function ProjectPreviewOverlay() {
     const { viewport } = useThree();
     const { progressRef } = useHeroTransition();
     const prefersReducedMotion = usePrefersReducedMotion();
     const debug = useDebugSettings();
+    const fontsReady = useFontsReady();
+    // Resolved only once the webfont has landed: getFontFamily caches its first
+    // answer, so asking early would pin the fallback for the whole session.
+    const fontFamily = useMemo(
+        () => (fontsReady ? getFontFamily() : "sans-serif"),
+        [fontsReady],
+    );
 
     const textures = useProjectPreviewTextures();
     const hoveredPreview = useHoveredPreview();
@@ -218,6 +281,44 @@ export function ProjectPreviewOverlay() {
             Math.max(radius / height, 1e-4),
         );
     }, [radiusUv, radius, width, height]);
+
+    const caption = useMemo(
+        () =>
+            drawCaptionTexture({
+                width: cfg.CAPTION_TEXTURE_WIDTH,
+                aspect: cfg.ASPECT,
+                lead: cfg.CAPTION_LEAD,
+                trail: cfg.CAPTION_TRAIL,
+                fontFraction: cfg.CAPTION_FONT_FRACTION,
+                padXFraction: cfg.CAPTION_PAD_X_FRACTION,
+                baselineFraction: cfg.CAPTION_BASELINE_FRACTION,
+                barFraction: cfg.CAPTION_BAR_FRACTION,
+                barGapFraction: cfg.CAPTION_BAR_GAP_FRACTION,
+                fontFamily,
+            }),
+        [cfg, fontFamily],
+    );
+
+
+    useLayoutEffect(() => {
+        if (!caption) return;
+
+        const texture = new THREE.CanvasTexture(caption.canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
+        captionUniforms.uCaptionMap.value = texture;
+        captionUniforms.uCaptionBar.value.set(
+            caption.barX[0],
+            caption.barX[1],
+            caption.barY[0],
+            caption.barY[1],
+        );
+
+        return () => {
+            texture.dispose();
+        };
+    }, [caption]);
 
     useLayoutEffect(() => {
         previewUniforms.uPreviewGlitchParams.value.set(
@@ -451,6 +552,11 @@ export function ProjectPreviewOverlay() {
             : Math.max(values.glitch, restGlitch);
         previewUniforms.uPreviewTime.value = state.clock.getElapsedTime();
 
+        captionUniforms.uCaptionCharge.value = prefersReducedMotion
+            ? Math.round(charge * 5) / 5
+            : charge;
+        captionUniforms.uCaptionOpacity.value = values.opacity;
+
         const texture = shownPreview ? (textures[shownPreview] ?? null) : null;
         group.visible = values.opacity > 1e-3 && texture !== null;
         if (materialRef.current) materialRef.current.opacity = values.opacity;
@@ -480,6 +586,37 @@ export function ProjectPreviewOverlay() {
                     depthTest={false}
                     depthWrite={false}
                     onBeforeCompile={applyShader}
+                />
+            </mesh>
+
+            {/*
+              Its own mesh so the glitch never reaches it, on the plate's
+              geometry so the bend and the curl still do. The blend factors
+              make every glyph the exact inverse of the pixels beneath it,
+              while the black around them leaves the plate untouched.
+            */}
+            <mesh renderOrder={cfg.RENDER_ORDER + 1} raycast={() => null}>
+                <planeGeometry
+                    args={[
+                        width,
+                        height,
+                        cfg.BEND_SEGMENTS_X,
+                        cfg.BEND_SEGMENTS_Y,
+                    ]}
+                />
+                <shaderMaterial
+                    vertexShader={CAPTION_VERTEX}
+                    fragmentShader={CAPTION_FRAGMENT}
+                    uniforms={captionUniforms}
+                    onBeforeCompile={captionShader}
+                    transparent
+                    blending={THREE.CustomBlending}
+                    blendEquation={THREE.AddEquation}
+                    blendSrc={THREE.OneMinusDstColorFactor}
+                    blendDst={THREE.OneMinusSrcColorFactor}
+                    depthTest={false}
+                    depthWrite={false}
+                    toneMapped={false}
                 />
             </mesh>
         </group>
