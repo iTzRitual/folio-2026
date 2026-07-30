@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import * as THREE from "three";
 import { PROJECT_PREVIEW_SOURCES } from "@/data/content";
+import { applyCurlShader } from "@/lib/detailsCurl";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import {
@@ -110,6 +111,11 @@ const FRAGMENT_ALPHA = /* glsl */ `
 
 function previewShader(radiusUv: { value: THREE.Vector2 }) {
     return (shader: THREE.WebGLProgramParametersWithUniforms) => {
+        // First, so the bend lands inside the curl's own begin_vertex and the
+        // rounded corners inside its opaque_fragment: the plate bends for the
+        // pointer, then that bent shape rolls around the sheet's fold.
+        applyCurlShader(shader);
+
         shader.uniforms.uPreviewRadiusUv = radiusUv;
         shader.uniforms.uPreviewBend = previewUniforms.uPreviewBend;
         shader.uniforms.uPreviewSplit = previewUniforms.uPreviewSplit;
@@ -218,6 +224,9 @@ export function ProjectPreviewOverlay() {
     }, [shownPreview]);
 
     const proxy = useRef({ reveal: 0, glitch: 0, opacity: 0, scale: 1 });
+    const plateDepth = useRef(
+        new THREE.Vector3(0, 0, CONFIG.scene.DETAILS_GROUP_Z),
+    );
     const motion = useRef({
         pointer: new THREE.Vector2(),
         velocity: new THREE.Vector2(),
@@ -330,12 +339,18 @@ export function ProjectPreviewOverlay() {
             resetHoveredPreview();
         }
 
-        const targetX = (state.pointer.x * viewport.width) / 2;
-        const targetY = (state.pointer.y * viewport.height) / 2;
+        // The plate sits on the details sheet's own plane, so the curl treats
+        // it as part of the sheet rather than as something lifted off it.
+        const plateViewport = state.viewport.getCurrentViewport(
+            state.camera,
+            plateDepth.current,
+        );
+        const targetX = (state.pointer.x * plateViewport.width) / 2;
+        const targetY = (state.pointer.y * plateViewport.height) / 2;
 
         const move = motion.current;
         if (!move.seeded) {
-            group.position.set(targetX, targetY, 0);
+            group.position.set(targetX, targetY, CONFIG.scene.DETAILS_GROUP_Z);
             move.pointer.set(state.pointer.x, state.pointer.y);
             move.seeded = true;
         }
@@ -410,7 +425,11 @@ export function ProjectPreviewOverlay() {
     });
 
     return (
-        <group ref={groupRef} visible={false}>
+        <group
+            ref={groupRef}
+            position={[0, 0, CONFIG.scene.DETAILS_GROUP_Z]}
+            visible={false}
+        >
             <mesh renderOrder={cfg.RENDER_ORDER} raycast={() => null}>
                 <planeGeometry
                     args={[

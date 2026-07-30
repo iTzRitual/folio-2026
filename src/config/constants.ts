@@ -139,7 +139,9 @@ export const CONFIG = {
         FOLLOW_SMOOTHING: 22,
         // Grid the two-axis trailing-centre bend is sampled over.
         BEND_SEGMENTS_X: 32,
-        BEND_SEGMENTS_Y: 20,
+        // Also what the fold is rolled over, so the plate needs rows the way
+        // the details sheet does.
+        BEND_SEGMENTS_Y: 28,
         // Peak lag of the plate's centre, as a fraction of its own span.
         BEND_MULT: 0.275,
         // Peak per-channel UV split, in texture units.
