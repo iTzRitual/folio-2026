@@ -290,7 +290,7 @@ export function ProjectPreviewOverlay() {
                     },
                     0,
                 )
-                .set(state, { opacity: 0, glitch: 0 });
+                .set(state, { opacity: 0, glitch: 0 }, cfg.EXIT_REVEAL_DURATION);
         },
         // Keyed on whether *any* project is hovered, not on which one — sweeping
         // down the list swaps the screenshot without replaying the entrance.
@@ -375,7 +375,8 @@ export function ProjectPreviewOverlay() {
             ),
         );
 
-        const presence = prefersReducedMotion ? 0 : values.reveal;
+        // Not the reveal: that one steps, and the bend would step with it.
+        const presence = prefersReducedMotion ? 0 : values.opacity;
         const travelX =
             THREE.MathUtils.clamp(
                 move.velocity.x / tuning.velocityFullScale,
