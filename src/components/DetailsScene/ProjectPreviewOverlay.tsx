@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import * as THREE from "three";
-import { PROJECT_PREVIEW_SOURCES } from "@/data/content";
+import { PROJECT_LOOP_SOURCES, PROJECT_PREVIEW_SOURCES } from "@/data/content";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { drawCaptionTexture } from "@/lib/projectCaption";
 import { useFontsReady } from "@/hooks/useFontsReady";
@@ -192,6 +192,70 @@ function useProjectPreviewTextures() {
     return textures;
 }
 
+let loopVideo: HTMLVideoElement | null = null;
+let loopVideoTexture: THREE.VideoTexture | null = null;
+
+function ensureLoopVideo() {
+    if (loopVideo) return loopVideo;
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "none";
+
+    const texture = new THREE.VideoTexture(video);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+
+    loopVideo = video;
+    loopVideoTexture = texture;
+    return video;
+}
+
+/**
+ * One shared <video>, repointed at whichever loop the hovered project owns.
+ * Returns null until the element actually holds a frame: `play()` needs a few
+ * hundred milliseconds to decode one, which lands inside the plate's own
+ * entrance, and the still has to cover that gap.
+ */
+function useProjectLoopTexture(preview: string | null, enabled: boolean) {
+    // Which source has a frame on the texture, rather than a ready flag: the
+    // answer is then derived per render, so switching projects un-readies the
+    // loop without anything having to write the flag back.
+    const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+    const src = enabled && preview ? PROJECT_LOOP_SOURCES[preview] : undefined;
+
+    useEffect(() => {
+        if (!src) {
+            loopVideo?.pause();
+            return;
+        }
+
+        const video = ensureLoopVideo();
+        const onReady = () => setLoadedSrc(src);
+        video.addEventListener("loadeddata", onReady);
+        // Re-entering an already decoded loop fires no load event, only this.
+        video.addEventListener("playing", onReady);
+
+        if (video.src !== new URL(src, window.location.href).href) {
+            video.src = src;
+        }
+        video.currentTime = 0;
+        void video.play().catch(() => {});
+
+        return () => {
+            video.removeEventListener("loadeddata", onReady);
+            video.removeEventListener("playing", onReady);
+            video.pause();
+        };
+    }, [src]);
+
+    return src !== undefined && loadedSrc === src ? loopVideoTexture : null;
+}
+
 // Deliberately goes through begin_vertex: the curl replaces that include, and
 // the bend is injected back inside it, so the caption lands on exactly the same
 // surface as the plate.
@@ -258,6 +322,15 @@ export function ProjectPreviewOverlay() {
         setShownPreview(hoveredPreview);
     }
     const active = hoveredPreview !== null;
+
+    // Dropped as soon as the hover ends: the exit glitch covers the plate
+    // falling back to the still, and nothing is left decoding off screen.
+    const loopTexture = useProjectLoopTexture(
+        active ? shownPreview : null,
+        !prefersReducedMotion,
+    );
+    const stillTexture = shownPreview ? (textures[shownPreview] ?? null) : null;
+    const plateTexture = loopTexture ?? stillTexture;
 
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -331,7 +404,7 @@ export function ProjectPreviewOverlay() {
     // Swapping the map in and out of null changes the program.
     useLayoutEffect(() => {
         if (materialRef.current) materialRef.current.needsUpdate = true;
-    }, [shownPreview]);
+    }, [plateTexture]);
 
     const proxy = useRef({ reveal: 0, glitch: 0, opacity: 0, scale: 1 });
     const plateDepth = useRef(
@@ -416,8 +489,9 @@ export function ProjectPreviewOverlay() {
         { dependencies: [active, prefersReducedMotion] },
     );
 
-    // The screenshot changing under a plate that is already up gets its own
-    // short burst, so the swap happens inside the noise rather than as a cut.
+    // The image changing under a plate that is already up gets its own short
+    // burst, so the swap happens inside the noise rather than as a cut. The
+    // loop taking over from its own still is exactly that kind of swap.
     useGSAP(
         () => {
             if (!active || prefersReducedMotion) return;
@@ -432,7 +506,7 @@ export function ProjectPreviewOverlay() {
                 },
             );
         },
-        { dependencies: [shownPreview] },
+        { dependencies: [shownPreview, loopTexture] },
     );
 
     useFrame((state, delta) => {
@@ -557,8 +631,7 @@ export function ProjectPreviewOverlay() {
             : charge;
         captionUniforms.uCaptionOpacity.value = values.opacity;
 
-        const texture = shownPreview ? (textures[shownPreview] ?? null) : null;
-        group.visible = values.opacity > 1e-3 && texture !== null;
+        group.visible = values.opacity > 1e-3 && plateTexture !== null;
         if (materialRef.current) materialRef.current.opacity = values.opacity;
     });
 
@@ -579,7 +652,7 @@ export function ProjectPreviewOverlay() {
                 />
                 <meshBasicMaterial
                     ref={materialRef}
-                    map={shownPreview ? (textures[shownPreview] ?? null) : null}
+                    map={plateTexture}
                     toneMapped={false}
                     transparent
                     opacity={0}

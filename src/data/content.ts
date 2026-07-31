@@ -47,55 +47,64 @@ export const experienceData = [
         duration: "2018 - 2020",
     },
 ] as const;
-// `preview` is the image the skull morphs into on hover. The files in
-// /images/projects are placeholders — drop real screenshots in with the same
-// names (any format three's TextureLoader accepts) to replace them.
+// Every project owns a folder under /media/projects/<slug>/. `preview` is the
+// still the plate shows the moment a row is hovered, authored at 1280x800 to
+// match CONFIG.projectPreview.ASPECT; `loop` is an optional muted video that
+// takes the plate over once it has a frame to show. The remaining .svg files
+// are placeholders — drop a teaser.webp in beside them to replace one.
 export const projectsData = [
     {
         name: "Folio 2026 - Github",
         link: "https://github.com/iTzRitual/folio-2026",
-        preview: "/images/projects/folio-2026.svg",
+        preview: "/media/projects/folio-2026/teaser.svg",
     },
     {
         name: "Controller Configurator - Github",
         link: "https://github.com/iTzRitual/r3f-controller-configurator-2025",
-        preview: "/images/projects/controller-configurator.svg",
+        preview: "/media/projects/controller-configurator/teaser.webp",
+        loop: "/media/projects/controller-configurator/teaser.mp4",
     },
     {
         name: "Commercial Portfolio - Github",
         link: "https://github.com/iTzRitual/commercial-portfolio",
-        preview: "/images/projects/commercial-portfolio.svg",
+        preview: "/media/projects/commercial-portfolio/teaser.svg",
     },
     {
         name: "Realtime Fluid Simulation - Github",
         link: "https://github.com/iTzRitual",
-        preview: "/images/projects/fluid-simulation.svg",
+        preview: "/media/projects/fluid-simulation/teaser.svg",
     },
     {
         name: "WebGPU Particle System - Github",
         link: "https://github.com/iTzRitual",
-        preview: "/images/projects/webgpu-particles.svg",
+        preview: "/media/projects/webgpu-particles/teaser.svg",
     },
     {
         name: "Procedural Terrain Generator - Github",
         link: "https://github.com/iTzRitual",
-        preview: "/images/projects/procedural-terrain.svg",
+        preview: "/media/projects/procedural-terrain/teaser.svg",
     },
     {
         name: "Shader Playground - Github",
         link: "https://github.com/iTzRitual",
-        preview: "/images/projects/shader-playground.svg",
+        preview: "/media/projects/shader-playground/teaser.svg",
     },
     {
         name: "Motion Design System - Github",
         link: "https://github.com/iTzRitual",
-        preview: "/images/projects/motion-design-system.svg",
+        preview: "/media/projects/motion-design-system/teaser.svg",
     },
 ] as const;
 
 export const PROJECT_PREVIEW_SOURCES = projectsData.map(
     (project) => project.preview,
 );
+
+export const PROJECT_LOOP_SOURCES = Object.fromEntries(
+    projectsData.flatMap((project) =>
+        "loop" in project ? [[project.preview, project.loop] as const] : [],
+    ),
+) as Record<string, string | undefined>;
 export const educationData = [
     {
         institution: "DSW University of Lower Silesia",
