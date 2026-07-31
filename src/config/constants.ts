@@ -194,6 +194,70 @@ export const CONFIG = {
         CAPTION_LEAD: "Click for case study",
         CAPTION_TRAIL: "Hold for live site",
     },
+    caseStudy: {
+        // Where R3F parks its default camera, and the only place anything else
+        // in the scene expects it to be. Every distance below is measured from
+        // here, so the flight has to end by putting it back.
+        CAMERA_REST_Z: 5,
+        // Fraction of the landed frame's width the plate spans. Below ~0.8 the
+        // frame still reads as a page with margins rather than as a fullscreen
+        // image, which is what keeps the copy underneath feeling attached.
+        FILL: 0.72,
+        // How far above the landed frame's centre the plate settles, in frame
+        // heights. Just enough that the gap under it does not look like an
+        // accident before the copy arrives in it.
+        PLATE_OFFSET: 0.03,
+        FLIGHT_DURATION: 0.95,
+        // Shorter on the way out: the list is a place the viewer already knows,
+        // so returning to it does not have to be shown at the same length.
+        CLOSE_DURATION: 0.71,
+        // The list is what the camera flies past, so it has to be gone before
+        // the frame is small enough to show how magnified it has become.
+        LIST_DIM_START: 0.2,
+        LIST_DIM_SPAN: 0.35,
+        // The model hangs at CONFIG.model.DEPTH_Z, in front of the sheet and so
+        // in front of the plate — the camera flies straight through it. It has
+        // to leave faster than the list does: its magnification climbs as the
+        // camera closes on it, and only a ramp this short outruns that.
+        MODEL_EXIT_SPAN: 0.25,
+        // The copy only starts once the frame has almost stopped moving; a
+        // stagger read against a travelling camera reads as drift.
+        COPY_START: 0.72,
+        COPY_RAMP: 0.28,
+        COPY_REVEAL_SPAN: 0.5,
+        COPY_REVEAL_STAGGER: 0.12,
+        // Rise per line before it lands, in that line's own em.
+        COPY_REVEAL_RISE: 0.6,
+        // Body size and measure, as fractions of the landed frame's width.
+        EM_MULT: 0.019,
+        TEXT_WIDTH_MULT: 0.62,
+        // Gap between the plate's bottom edge and the first line, in frame
+        // heights.
+        COPY_GAP_MULT: 0.085,
+        TITLE_SIZE_EM: 2.3,
+        TITLE_LINE_HEIGHT: 1.08,
+        META_SIZE_EM: 0.78,
+        META_LINE_HEIGHT: 1.4,
+        // The metadata line is one breath, so it is allowed past the measure
+        // the prose is set to rather than wrapping in the middle of a stack.
+        META_WIDTH_MULT: 1.4,
+        LEDE_SIZE_EM: 1.28,
+        LEDE_LINE_HEIGHT: 1.35,
+        BODY_LINE_HEIGHT: 1.62,
+        GAP_AFTER_TITLE_EM: 0.55,
+        GAP_AFTER_META_EM: 1.5,
+        GAP_AFTER_LEDE_EM: 1.1,
+        GAP_AFTER_PARAGRAPH_EM: 0.9,
+        // Wheel travel is read in frame heights so a flick moves the copy the
+        // same distance whatever the window is.
+        SCROLL_DAMPING: 9,
+        // Room past the last line, so it does not end flush with the frame's
+        // bottom edge.
+        SCROLL_OVERSHOOT_MULT: 0.15,
+        // Above the edge fade, which is faded out from under the case study
+        // rather than drawn over it.
+        RENDER_ORDER: 40,
+    },
     projectGesture: {
         PRESS_SCALE: 0.97,
         PRESS_DURATION: 0.12,
