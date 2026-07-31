@@ -145,12 +145,14 @@ export function CaseStudyScene() {
             layout.height + frameHeight * cfg.SCROLL_OVERSHOOT_MULT,
             0,
         );
-        // Capture phase: the page's smooth-scroll runner listens on window as
-        // it bubbles, and stopping the event before it gets there is the only
-        // way to keep the wheel to ourselves without tearing that runner down.
+        // Capture phase, and stopped for good: the page's smooth-scroll runner
+        // listens on window and scrolls the document itself, which `overflow:
+        // hidden` does nothing about. Taking the event before it reaches anyone
+        // is the only way to keep the wheel without tearing that runner down.
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
             event.stopPropagation();
+            event.stopImmediatePropagation();
             scrollTarget.current = THREE.MathUtils.clamp(
                 scrollTarget.current + (event.deltaY / size.height) * frameHeight,
                 0,

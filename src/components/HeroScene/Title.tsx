@@ -9,6 +9,7 @@ import { CONFIG, FONTS } from "../../config/constants";
 import { useSweptColor } from "@/context/ThemeContext";
 import type { OutlinedText } from "@/lib/troikaText";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
 interface TitleProps {
@@ -53,6 +54,7 @@ export function Title({
   const isFirstRun = useRef(true);
 
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const titleShownRef = useRef(false);
 
   const titleTextRef = useRef<THREE.Mesh>(null);
   const scrollTextMeshRef = useRef<THREE.Mesh>(null);
@@ -216,6 +218,15 @@ export function Title({
   }, [startTrigger, textWidth3D, viewportWidth, marginX, prefersReducedMotion]);
 
   useFrame(() => {
+    // The title stays pinned above the details sheet, drawn over everything on
+    // it. A case study flies the camera into that sheet, and at the distance it
+    // lands one letter of this fills the frame's top edge, so it leaves with
+    // the list it is standing over.
+    const present = 1 - caseStudyStage.dim;
+    if (materialRef.current) {
+      materialRef.current.opacity = titleShownRef.current ? present : 0;
+    }
+
     const hasStartedScroll =
       scrollProgressRef.current >
       Math.max(HINT_SCROLL_HIDE_EPSILON, transitionStart * 0.5);
@@ -316,11 +327,11 @@ export function Title({
     }
 
     if (stackedTopRef.current) {
-      stackedTopRef.current.opacity = stackedProgress;
+      stackedTopRef.current.opacity = stackedProgress * present;
     }
 
     if (stackedBottomRef.current) {
-      stackedBottomRef.current.opacity = stackedProgress;
+      stackedBottomRef.current.opacity = stackedProgress * present;
     }
   });
 
@@ -370,7 +381,7 @@ export function Title({
                 delay={0}
                 startTrigger={startTrigger}
                 onReveal={() => {
-                  if (materialRef.current) materialRef.current.opacity = 1;
+                  titleShownRef.current = true;
                 }}
               >
                 <h1 className="m-0">
