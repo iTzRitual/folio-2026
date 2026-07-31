@@ -14,6 +14,7 @@ export interface DebugSettings {
         velocitySmoothing: number;
         glitchSlice: number;
         glitchSplit: number;
+        glitchHz: number;
         pinGlitch: boolean;
         pinnedGlitch: number;
     };
@@ -68,6 +69,7 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         velocitySmoothing: CONFIG.projectPreview.VELOCITY_SMOOTHING,
         glitchSlice: CONFIG.projectPreview.GLITCH_SLICE,
         glitchSplit: CONFIG.projectPreview.GLITCH_SPLIT,
+        glitchHz: CONFIG.projectPreview.GLITCH_HZ,
         pinGlitch: false,
         pinnedGlitch: 0,
     },

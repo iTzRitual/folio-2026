@@ -152,11 +152,19 @@ export const CONFIG = {
         // Horizontal bands the glitch slices the plate into, and reveals it in.
         GLITCH_BANDS: 18,
         // Peak horizontal slice offset, in texture units.
-        GLITCH_SLICE: 0.05,
+        GLITCH_SLICE: 0.07,
+        // Spare plate past each edge, as a fraction of the plate's own span. A
+        // sliced band carries the plate's edge with it and the channel split
+        // carries it further, and this is the room they have to land outside
+        // the frame in. Wider than tall: only the slice travels sideways.
+        GLITCH_BLEED: [0.22, 0.09] as [number, number],
+        // How far into that room a torn band stays solid before it dissolves,
+        // so nothing is ever cut square at the mesh's own edge.
+        GLITCH_BLEED_SOLID: 0.25,
         // Peak channel split the glitch adds on top of the travel's own.
         GLITCH_SPLIT: 0.018,
-        // Times a second the slice pattern reshuffles. Baked into the shader.
-        GLITCH_HZ: 24,
+        // Times a second the slice pattern reshuffles.
+        GLITCH_HZ: 12,
         ENTER_REVEAL_DURATION: 0.26,
         ENTER_GLITCH_DURATION: 0.42,
         ENTER_SCALE_FROM: 0.94,

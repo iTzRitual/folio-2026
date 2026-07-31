@@ -51,6 +51,12 @@ const PREVIEW_SCHEMA = {
         max: 0.1,
         step: 0.001,
     },
+    glitchHz: {
+        value: D.projectPreview.glitchHz,
+        min: 1,
+        max: 40,
+        step: 1,
+    },
     pinGlitch: D.projectPreview.pinGlitch,
     pinnedGlitch: {
         value: D.projectPreview.pinnedGlitch,

@@ -12,6 +12,7 @@ import { useFontsReady } from "@/hooks/useFontsReady";
 import { getFontFamily } from "@/lib/textMetrics";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useTheme } from "@/context/ThemeContext";
 import {
     useHoveredPreview,
     useProjectHoverActions,
@@ -34,9 +35,15 @@ const previewUniforms = {
     /** How much of the band pattern has snapped in, 0→1. */
     uPreviewReveal: { value: 0 },
     uPreviewTime: { value: 0 },
-    /** Bands, peak slice offset and peak glitch split. */
-    uPreviewGlitchParams: { value: new THREE.Vector3() },
+    /** Bands, peak slice offset, peak glitch split and reshuffle rate. */
+    uPreviewGlitchParams: { value: new THREE.Vector4() },
     uPreviewTune: { value: new THREE.Vector3(1, 1, 1) },
+    /** Tear room past each edge, in plate spans. */
+    uPreviewBleed: {
+        value: new THREE.Vector2(...CONFIG.projectPreview.GLITCH_BLEED),
+    },
+    /** What the plate is composited over, which the channel fringes stand on. */
+    uPreviewBg: { value: new THREE.Color() },
 };
 
 /** Module scope for the same reason, and it shares the plate's bend. */
@@ -47,57 +54,104 @@ const captionUniforms = {
     uCaptionCharge: { value: 0 },
     uCaptionOpacity: { value: 0 },
     uPreviewBend: previewUniforms.uPreviewBend,
+    uPreviewBleed: { value: new THREE.Vector2() },
 };
 
-const VERTEX_DEFS = /* glsl */ `
-uniform vec2 uPreviewBend;
-varying vec2 vPreviewUv;
+// The plate is larger than the frame it draws, so everything is expressed in
+// the frame's own 0→1, which the caption's mesh already is.
+const PREVIEW_WIN = /* glsl */ `
+uniform vec2 uPreviewBleed;
+
+vec2 previewWin(vec2 plateUv) {
+  return plateUv * (1.0 + 2.0 * uPreviewBleed) - uPreviewBleed;
+}
 `;
+
+const VERTEX_DEFS =
+    /* glsl */ `
+uniform vec2 uPreviewBend;
+varying vec2 vPreviewWin;
+` + PREVIEW_WIN;
 
 // The edges lead and the middle trails on both axes, so the plate bows against
-// the pointer instead of sliding rigidly.
+// the pointer instead of sliding rigidly. The sine carries on past the frame
+// rather than being clamped there, so a torn band leaves along the bowed
+// surface's own tangent instead of lying flat off a curved plate.
 const VERTEX_BEND = /* glsl */ `
 #include <begin_vertex>
-transformed.y += uPreviewBend.y * sin(uv.x * 3.141592653589793);
-transformed.x += uPreviewBend.x * sin(uv.y * 3.141592653589793);
+{
+  vec2 bendUv = previewWin(uv);
+  transformed.y += uPreviewBend.y * sin(bendUv.x * 3.141592653589793);
+  transformed.x += uPreviewBend.x * sin(bendUv.y * 3.141592653589793);
+}
 `;
 
-const FRAGMENT_DEFS = /* glsl */ `
+const FRAGMENT_DEFS =
+    /* glsl */ `
 uniform vec2 uPreviewRadiusUv;
 uniform vec2 uPreviewSplit;
 uniform float uPreviewGlitch;
 uniform float uPreviewReveal;
 uniform float uPreviewTime;
-uniform vec3 uPreviewGlitchParams;
+uniform vec4 uPreviewGlitchParams;
 uniform vec3 uPreviewTune;
-varying vec2 vPreviewUv;
+uniform vec3 uPreviewBg;
+varying vec2 vPreviewWin;
+
+// Where each channel's own copy of the frame reaches, and their union. Nothing
+// is drawn without a map, so an untextured plate stays off.
+vec3 previewMask = vec3(0.0);
+float previewCover = 0.0;
 
 float previewHash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
 float previewBand() {
-  return floor(vPreviewUv.y * uPreviewGlitchParams.x);
+  return floor(clamp(vPreviewWin.y, 0.0, 0.999) * uPreviewGlitchParams.x);
 }
-`;
+
+float previewSlice() {
+  float band = previewBand();
+  float tick = floor(uPreviewTime * uPreviewGlitchParams.w);
+  float gate = step(0.55, previewHash(vec2(band + 13.0, tick)));
+  float jitter = previewHash(vec2(band, tick)) * 2.0 - 1.0;
+  return jitter * gate * uPreviewGlitch * uPreviewGlitchParams.y;
+}
+
+// Antialiased off the unsliced coordinate: fwidth of the sliced one would pick
+// up the whole band step at every boundary and blur the edges that matter.
+float previewWindow(vec2 p) {
+  vec2 corner =
+    max(abs(p - 0.5) - (0.5 - uPreviewRadiusUv), 0.0) / uPreviewRadiusUv;
+  float dist = length(corner) - 1.0;
+  vec2 aa = fwidth(vPreviewWin) / uPreviewRadiusUv;
+  float edge = clamp(max(aa.x, aa.y), 1e-5, 0.5);
+  return 1.0 - smoothstep(-edge, edge, dist);
+}
+` + PREVIEW_WIN;
 
 // Channels smear along the direction of travel, strongest where the plate is
 // bending hardest; the glitch cuts the image into bands and slides them apart.
+// Each channel is masked by the frame it was sampled through, so the split
+// carries the frame's edge with it and fringes past it rather than stopping.
 const FRAGMENT_MAP = /* glsl */ `
 #ifdef USE_MAP
 {
-  float band = previewBand();
-  float tick = floor(uPreviewTime * ${CONFIG.projectPreview.GLITCH_HZ.toFixed(1)});
-  float gate = step(0.55, previewHash(vec2(band + 13.0, tick)));
-  float jitter = previewHash(vec2(band, tick)) * 2.0 - 1.0;
-  float slice = jitter * gate * uPreviewGlitch * uPreviewGlitchParams.y;
-
-  vec2 uv = vMapUv + vec2(slice, 0.0);
+  vec2 uv = vPreviewWin - vec2(previewSlice(), 0.0);
+  vec2 profile = clamp(uv, 0.0, 1.0);
   vec2 offset = vec2(
-    uPreviewSplit.x * sin(vPreviewUv.y * 3.141592653589793)
+    uPreviewSplit.x * sin(profile.y * 3.141592653589793)
       + uPreviewGlitch * uPreviewGlitchParams.z,
-    uPreviewSplit.y * sin(vPreviewUv.x * 3.141592653589793)
+    uPreviewSplit.y * sin(profile.x * 3.141592653589793)
   );
+
+  previewMask = vec3(
+    previewWindow(uv + offset),
+    previewWindow(uv),
+    previewWindow(uv - offset)
+  );
+  previewCover = max(previewMask.r, max(previewMask.g, previewMask.b));
 
   vec4 centerSample = texture2D(map, uv);
   diffuseColor *= vec4(
@@ -110,8 +164,12 @@ const FRAGMENT_MAP = /* glsl */ `
 #endif
 `;
 
-// Rounded corners, then the band reveal: every band carries its own threshold,
-// so the plate snaps in and out strip by strip instead of fading.
+// A channel the union covers but its own frame does not falls back to what the
+// plate is standing on, which is the fringe. Alpha follows how many channels
+// are actually there rather than the union, so a fringe stays translucent and
+// what is really behind it survives instead of being replaced by the guess.
+// Then the band reveal: every band carries its own threshold, so the plate
+// snaps in and out strip by strip instead of fading.
 const FRAGMENT_ALPHA = /* glsl */ `
 {
   float previewLum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -119,11 +177,19 @@ const FRAGMENT_ALPHA = /* glsl */ `
   diffuseColor.rgb = (diffuseColor.rgb - 0.5) * uPreviewTune.y + 0.5;
   diffuseColor.rgb = max(diffuseColor.rgb * uPreviewTune.z, 0.0);
 
-  vec2 corner =
-    max(abs(vPreviewUv - 0.5) - (0.5 - uPreviewRadiusUv), 0.0) / uPreviewRadiusUv;
-  float dist = length(corner) - 1.0;
-  float edge = clamp(fwidth(dist), 1e-5, 0.5);
-  diffuseColor.a *= 1.0 - smoothstep(-edge, edge, dist);
+  diffuseColor.rgb = mix(
+    uPreviewBg,
+    diffuseColor.rgb,
+    previewMask / max(previewCover, 1e-4)
+  );
+  diffuseColor.a *= dot(previewMask, vec3(1.0 / 3.0));
+
+  vec2 past = (abs(vPreviewWin - 0.5) - 0.5) / max(uPreviewBleed, vec2(1e-4));
+  diffuseColor.a *= 1.0 - smoothstep(
+    ${CONFIG.projectPreview.GLITCH_BLEED_SOLID.toFixed(2)},
+    1.0,
+    max(past.x, past.y)
+  );
   diffuseColor.a *= step(previewHash(vec2(previewBand(), 7.13)) * 0.9, uPreviewReveal);
 }
 #include <opaque_fragment>
@@ -146,10 +212,15 @@ function previewShader(radiusUv: { value: THREE.Vector2 }) {
         shader.uniforms.uPreviewGlitchParams =
             previewUniforms.uPreviewGlitchParams;
         shader.uniforms.uPreviewTune = previewUniforms.uPreviewTune;
+        shader.uniforms.uPreviewBleed = previewUniforms.uPreviewBleed;
+        shader.uniforms.uPreviewBg = previewUniforms.uPreviewBg;
 
         shader.vertexShader = VERTEX_DEFS + shader.vertexShader;
         shader.vertexShader = shader.vertexShader
-            .replace("void main() {", "void main() {\n  vPreviewUv = uv;")
+            .replace(
+                "void main() {",
+                "void main() {\n  vPreviewWin = previewWin(uv);",
+            )
             .replace("#include <begin_vertex>", VERTEX_BEND);
 
         shader.fragmentShader = FRAGMENT_DEFS + shader.fragmentShader;
@@ -259,10 +330,13 @@ function useProjectLoopTexture(preview: string | null, enabled: boolean) {
 // Deliberately goes through begin_vertex: the curl replaces that include, and
 // the bend is injected back inside it, so the caption lands on exactly the same
 // surface as the plate.
-const CAPTION_VERTEX = /* glsl */ `
+const CAPTION_VERTEX =
+    /* glsl */ `
 uniform vec2 uPreviewBend;
 varying vec2 vCaptionUv;
-
+` +
+    PREVIEW_WIN +
+    /* glsl */ `
 void main() {
   vCaptionUv = uv;
   #include <begin_vertex>
@@ -301,6 +375,7 @@ void main() {
 
 export function ProjectPreviewOverlay() {
     const { viewport } = useThree();
+    const { palette } = useTheme();
     const { progressRef } = useHeroTransition();
     const prefersReducedMotion = usePrefersReducedMotion();
     const debug = useDebugSettings();
@@ -342,6 +417,12 @@ export function ProjectPreviewOverlay() {
 
     const width = viewport.width * cfg.WIDTH_FRACTION * tuning.sizeMult;
     const height = width / cfg.ASPECT;
+    const bleedSpanX = 1 + 2 * cfg.GLITCH_BLEED[0];
+    const bleedSpanY = 1 + 2 * cfg.GLITCH_BLEED[1];
+    const plateWidth = width * bleedSpanX;
+    const plateHeight = height * bleedSpanY;
+    const plateSegmentsX = Math.round(cfg.BEND_SEGMENTS_X * bleedSpanX);
+    const plateSegmentsY = Math.round(cfg.BEND_SEGMENTS_Y * bleedSpanY);
     const radius = Math.min(
         height * cfg.CORNER_RADIUS_MULT,
         width / 2,
@@ -398,8 +479,18 @@ export function ProjectPreviewOverlay() {
             cfg.GLITCH_BANDS,
             tuning.glitchSlice,
             tuning.glitchSplit,
+            tuning.glitchHz,
         );
-    }, [cfg.GLITCH_BANDS, tuning.glitchSlice, tuning.glitchSplit]);
+    }, [
+        cfg.GLITCH_BANDS,
+        tuning.glitchSlice,
+        tuning.glitchSplit,
+        tuning.glitchHz,
+    ]);
+
+    useLayoutEffect(() => {
+        previewUniforms.uPreviewBg.value.set(palette.bg);
+    }, [palette.bg]);
 
     // Swapping the map in and out of null changes the program.
     useLayoutEffect(() => {
@@ -413,6 +504,7 @@ export function ProjectPreviewOverlay() {
     const motion = useRef({
         pointer: new THREE.Vector2(),
         velocity: new THREE.Vector2(),
+        scrollY: 0,
         seeded: false,
     });
 
@@ -533,9 +625,11 @@ export function ProjectPreviewOverlay() {
         const targetY = (state.pointer.y * plateViewport.height) / 2;
 
         const move = motion.current;
+        const scrollY = window.scrollY;
         if (!move.seeded) {
             group.position.set(targetX, targetY, CONFIG.scene.DETAILS_GROUP_Z);
             move.pointer.set(state.pointer.x, state.pointer.y);
+            move.scrollY = scrollY;
             move.seeded = true;
         }
 
@@ -556,9 +650,13 @@ export function ProjectPreviewOverlay() {
         const gain = prefersReducedMotion ? 0 : cfg.CHARGE_SCALE_GAIN * charge;
         group.scale.setScalar(values.scale * (1 + gain));
 
+        const sheetTravel = (2 * (scrollY - move.scrollY)) / state.size.height;
         const rawX = (state.pointer.x - move.pointer.x) / Math.max(dt, 1e-4);
-        const rawY = (state.pointer.y - move.pointer.y) / Math.max(dt, 1e-4);
+        const rawY =
+            (state.pointer.y - move.pointer.y + sheetTravel) /
+            Math.max(dt, 1e-4);
         move.pointer.set(state.pointer.x, state.pointer.y);
+        move.scrollY = scrollY;
 
         // Chasing the raw reading rounds off the spikes on the way in and lets
         // the plate spring back on its own once the pointer settles.
@@ -644,10 +742,10 @@ export function ProjectPreviewOverlay() {
             <mesh renderOrder={cfg.RENDER_ORDER} raycast={() => null}>
                 <planeGeometry
                     args={[
-                        width,
-                        height,
-                        cfg.BEND_SEGMENTS_X,
-                        cfg.BEND_SEGMENTS_Y,
+                        plateWidth,
+                        plateHeight,
+                        plateSegmentsX,
+                        plateSegmentsY,
                     ]}
                 />
                 <meshBasicMaterial
@@ -663,8 +761,8 @@ export function ProjectPreviewOverlay() {
             </mesh>
 
             {/*
-              Its own mesh so the glitch never reaches it, on the plate's
-              geometry so the bend and the curl still do. The blend factors
+              Its own mesh so the glitch never reaches it, on the frame's own
+              plane so the bend and the curl still do. The blend factors
               make every glyph the exact inverse of the pixels beneath it,
               while the black around them leaves the plate untouched.
             */}
