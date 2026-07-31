@@ -2,8 +2,8 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
-import { Vector3 } from "three";
-import { CONFIG } from "@/config/constants";
+import { Color, Vector3 } from "three";
+import { CONFIG, THEMES } from "@/config/constants";
 import { useTheme, type ThemeRole } from "@/context/ThemeContext";
 import { mixHex } from "@/lib/oklab";
 import {
@@ -49,6 +49,7 @@ export function ThemeSweep() {
   const { camera, viewport } = useThree();
   const { runRef, targetsRef } = useTheme().sweep;
   const projected = useRef(new Vector3());
+  const backdrop = useRef<Color>(null);
 
   useFrame((_, delta) => {
     const run = runRef.current;
@@ -84,6 +85,8 @@ export function ThemeSweep() {
     }
 
     const centre = sweepProgress(front, sweepCoord(0.5, 0.5));
+    backdrop.current?.set(mixHex(run.from.bg, run.to.bg, centre));
+
     const { style } = document.documentElement;
     for (const [role, name] of CSS_VARS) {
       if (finished) style.removeProperty(name);
@@ -101,17 +104,20 @@ export function ThemeSweep() {
   const plane = viewport.getCurrentViewport(camera, PLANE_DEPTH);
 
   return (
-    <mesh
-      position={[0, 0, CONFIG.themeSweep.PLANE_Z]}
-      scale={[plane.width, plane.height, 1]}
-    >
-      <planeGeometry />
-      <shaderMaterial
-        uniforms={sweepUniforms}
-        vertexShader={VERTEX}
-        fragmentShader={FRAGMENT}
-        toneMapped={false}
-      />
-    </mesh>
+    <>
+      <color attach="background" ref={backdrop} args={[THEMES.Dark.bg]} />
+      <mesh
+        position={[0, 0, CONFIG.themeSweep.PLANE_Z]}
+        scale={[plane.width, plane.height, 1]}
+      >
+        <planeGeometry />
+        <shaderMaterial
+          uniforms={sweepUniforms}
+          vertexShader={VERTEX}
+          fragmentShader={FRAGMENT}
+          toneMapped={false}
+        />
+      </mesh>
+    </>
   );
 }
