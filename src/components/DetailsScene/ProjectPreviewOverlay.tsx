@@ -687,6 +687,9 @@ export function ProjectPreviewOverlay() {
                     blendEquation={THREE.AddEquation}
                     blendSrc={THREE.OneMinusDstColorFactor}
                     blendDst={THREE.OneMinusSrcColorFactor}
+                    blendEquationAlpha={THREE.AddEquation}
+                    blendSrcAlpha={THREE.ZeroFactor}
+                    blendDstAlpha={THREE.OneFactor}
                     depthTest={false}
                     depthWrite={false}
                     toneMapped={false}
