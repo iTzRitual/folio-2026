@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useStore, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
@@ -147,26 +147,40 @@ export function CaseStudyScene() {
         root.style.overflow = "hidden";
     }, [openIndex]);
 
-    // R3F re-derives its viewport from wherever the camera happens to be, so a
-    // resize taken mid-flight would leave the whole scene — the sheet, the hero,
-    // the model — measured against the landing distance, and it would stay that
-    // way until the next resize. The study hands back on the spot, camera first,
-    // which is also the honest answer: it was authored into the frame it was
-    // opened in, and that frame no longer exists.
-    useEffect(() => {
-        if (openIndex === null) return;
+    // R3F derives the world size of a screen from the camera's live distance to
+    // the origin, and re-derives it whenever the canvas is measured — a resize,
+    // a scroll, anything. Measured mid-flight it would hand the whole scene —
+    // the sheet, the hero, the model — a viewport half the size of the one they
+    // are laid out against, and leave it that way until the next resize. So any
+    // measurement taken while the camera is away is redone from where the rest
+    // of the site believes it is.
+    const store = useStore();
+    useEffect(
+        () =>
+            store.subscribe((state) => {
+                const at = camera.position;
+                if (at.x === 0 && at.y === 0 && at.z === cfg.CAMERA_REST_Z) {
+                    return;
+                }
 
-        const onResize = () => {
-            gsap.killTweensOf(caseStudyStage);
-            caseStudyStage.progress = 0;
-            camera.position.set(0, 0, cfg.CAMERA_REST_Z);
-            camera.updateMatrixWorld();
-            close();
-        };
-
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
-    }, [openIndex, close, camera]);
+                const x = at.x;
+                const y = at.y;
+                const z = at.z;
+                camera.position.set(0, 0, cfg.CAMERA_REST_Z);
+                camera.updateMatrixWorld();
+                // Re-entrant, but only once: the camera is at rest for this
+                // call, so the pass it triggers takes the branch above.
+                state.setSize(
+                    state.size.width,
+                    state.size.height,
+                    state.size.top,
+                    state.size.left,
+                );
+                camera.position.set(x, y, z);
+                camera.updateMatrixWorld();
+            }),
+        [store, camera],
+    );
 
     // Nothing else owns the camera, the bend or the lock, so going away
     // mid-flight would leave the scene wherever the flight had got to.
