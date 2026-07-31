@@ -1,13 +1,15 @@
 "use client";
 
 import { Html, Text } from "@react-three/drei";
-import { useEffect, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useCallback, useEffect, useRef } from "react";
 import gsap from "gsap";
 import * as THREE from "three";
 import type { Mesh } from "three";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import { CONFIG, FONTS } from "@/config/constants";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor } from "@/context/ThemeContext";
+import { mixHex } from "@/lib/oklab";
 import { HEADER_LAYER } from "../Effects/HeaderExclusionEffect";
 
 interface HeaderItemProps {
@@ -40,9 +42,44 @@ export function HeaderItem({
   onMeasure,
 }: HeaderItemProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const revealedRef = useRef(false);
-  const { palette } = useTheme();
   const hoveredRef = useRef(false);
+  const restHex = useRef("");
+  const hoverHex = useRef("");
+  const hoverCursor = useRef(0);
+
+  const restColor = useSweptColor(
+    "textSecondary",
+    groupRef,
+    useCallback((hex: string) => {
+      restHex.current = hex;
+    }, []),
+  );
+  useSweptColor(
+    "hover",
+    groupRef,
+    useCallback((hex: string) => {
+      hoverHex.current = hex;
+    }, []),
+  );
+
+  useFrame((_, delta) => {
+    const material = materialRef.current;
+    if (!material || !restHex.current) return;
+
+    const wanted = hoveredRef.current ? 1 : 0;
+    const step = delta / CONFIG.header.HOVER_DURATION;
+    hoverCursor.current =
+      wanted > hoverCursor.current
+        ? Math.min(wanted, hoverCursor.current + step)
+        : Math.max(wanted, hoverCursor.current - step);
+
+    const t = hoverCursor.current;
+    material.color.set(
+      mixHex(restHex.current, hoverHex.current, t * t * (3 - 2 * t)),
+    );
+  });
 
   const font = bold ? FONTS.karlaExtraBold : FONTS.karlaLight;
   const weightClass = bold ? "font-extrabold" : "font-light";
@@ -75,35 +112,16 @@ export function HeaderItem({
     if (box) onMeasure(box.max.x - box.min.x);
   };
 
-  const tintTo = (color: string) => {
-    if (!materialRef.current) return;
-    gsap.to(materialRef.current.color, {
-      ...new THREE.Color(color),
-      duration: CONFIG.header.HOVER_DURATION,
-      ease: "power2.out",
-      overwrite: true,
-    });
-  };
-
   const handleEnter = () => {
     if (!revealedRef.current) return;
     hoveredRef.current = true;
     document.body.style.cursor = "pointer";
-    tintTo(palette.hover);
   };
 
   const handleLeave = () => {
     hoveredRef.current = false;
     document.body.style.cursor = "auto";
-    tintTo(palette.textSecondary);
   };
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.color.set(
-      hoveredRef.current ? palette.hover : palette.textSecondary,
-    );
-  }, [palette]);
 
   const twinClass = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${weightClass} leading-none block no-underline outline-none ${
     anchorX === "right" ? "-translate-x-full" : "left-0"
@@ -150,7 +168,7 @@ export function HeaderItem({
     );
 
   return (
-    <group position={position}>
+    <group position={position} ref={groupRef}>
       <Text
         anchorX={anchorX}
         anchorY="middle"
@@ -165,7 +183,7 @@ export function HeaderItem({
           ref={materialRef}
           transparent
           opacity={0}
-          color={palette.textSecondary}
+          color={restColor}
         />
       </Text>
 

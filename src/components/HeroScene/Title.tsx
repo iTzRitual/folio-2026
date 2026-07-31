@@ -1,12 +1,13 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { AnimatedRevealText } from "../AnimatedRevealText";
-import { useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CONFIG, FONTS } from "../../config/constants";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor } from "@/context/ThemeContext";
+import type { OutlinedText } from "@/lib/troikaText";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
@@ -53,10 +54,39 @@ export function Title({
 
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
+  const titleTextRef = useRef<THREE.Mesh>(null);
+  const scrollTextMeshRef = useRef<THREE.Mesh>(null);
+
   const [textWidth3D, setTextWidth3D] = useState(0);
   const [isScrollHintReady, setIsScrollHintReady] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { palette } = useTheme();
+
+  const titleColor = useSweptColor(
+    "textPrimary",
+    textGroupRef,
+    useCallback((hex: string) => {
+      materialRef.current?.color.set(hex);
+      const text = titleTextRef.current as OutlinedText | null;
+      if (text) text.outlineColor = hex;
+    }, []),
+  );
+
+  const hintColor = useSweptColor(
+    "textHint",
+    scrollTextMeshRef,
+    useCallback((hex: string) => {
+      scrollTextRef.current?.color.set(hex);
+    }, []),
+  );
+
+  const stackedColor = useSweptColor(
+    "textStacked",
+    stackedGroupRef,
+    useCallback((hex: string) => {
+      stackedTopRef.current?.color.set(hex);
+      stackedBottomRef.current?.color.set(hex);
+    }, []),
+  );
 
   const {
     TARGET_SCALE: targetScale,
@@ -298,6 +328,7 @@ export function Title({
     <group position={[0, y, 0]} ref={groupRef}>
       <group ref={textGroupRef}>
         <Text
+          ref={titleTextRef}
           renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
           anchorX="center"
           anchorY="top"
@@ -305,7 +336,7 @@ export function Title({
           font={FONTS.karlaExtraBold}
           lineHeight={1}
           outlineWidth={0.005}
-          outlineColor={palette.textPrimary}
+          outlineColor={titleColor}
           letterSpacing={-0.03}
           onSync={(textMesh) => {
             textMesh.geometry.computeBoundingBox();
@@ -321,7 +352,7 @@ export function Title({
             ref={materialRef}
             transparent
             opacity={0}
-            color={palette.textPrimary}
+            color={titleColor}
           />
         </Text>
 
@@ -359,6 +390,7 @@ export function Title({
         ]}
       >
         <Text
+          ref={scrollTextMeshRef}
           renderOrder={CONFIG.detailsCurl.ABOVE_EDGE_FADE_RENDER_ORDER}
           anchorX="right"
           anchorY="middle"
@@ -372,7 +404,7 @@ export function Title({
             ref={scrollTextRef}
             transparent
             opacity={0}
-            color={palette.textHint}
+            color={hintColor}
           />
         </Text>
 
@@ -385,7 +417,6 @@ export function Title({
             font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color={palette.textStacked}
             position={[0, stackedFontSize * 0.1, 0]}
           >
             Frontend Engineer
@@ -393,7 +424,7 @@ export function Title({
               ref={stackedTopRef}
               transparent
               opacity={0}
-              color={palette.textStacked}
+              color={stackedColor}
             />
           </Text>
 
@@ -405,7 +436,6 @@ export function Title({
             font={FONTS.karlaLight}
             lineHeight={1}
             letterSpacing={-0.02}
-            color={palette.textStacked}
             position={[0, -stackedFontSize * 0.1, 0]}
           >
             Creative Technologist
@@ -413,7 +443,7 @@ export function Title({
               ref={stackedBottomRef}
               transparent
               opacity={0}
-              color={palette.textStacked}
+              color={stackedColor}
             />
           </Text>
         </group>

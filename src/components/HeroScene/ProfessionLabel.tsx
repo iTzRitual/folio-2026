@@ -1,11 +1,11 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { useCallback, useMemo, useRef, type MutableRefObject } from "react";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor } from "@/context/ThemeContext";
 
 interface ProfessionLabelProps {
   children: React.ReactNode;
@@ -53,7 +53,6 @@ export function ProfessionLabel({
   const htmlOpacityRef = useRef<HTMLDivElement>(null);
   const textRevealedRef = useRef(false);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { palette } = useTheme();
 
   const elapsed = useRef(0);
 
@@ -159,9 +158,24 @@ export function ProfessionLabel({
     });
   }, [isLeft]);
 
-  useEffect(() => {
-    shaderMaterial.uniforms.uColor.value.set(palette.textStacked);
-  }, [shaderMaterial, palette.textStacked]);
+  const color = useSweptColor(
+    "textStacked",
+    labelGroupRef,
+    useCallback((hex: string) => {
+      textMaterialRef.current?.color.set(hex);
+    }, []),
+  );
+
+  useSweptColor(
+    "textStacked",
+    lineMeshRef,
+    useCallback(
+      (hex: string) => {
+        shaderMaterial.uniforms.uColor.value.set(hex);
+      },
+      [shaderMaterial],
+    ),
+  );
 
   return (
     <group>
@@ -179,7 +193,7 @@ export function ProfessionLabel({
             ref={textMaterialRef}
             transparent
             opacity={0}
-            color={palette.textStacked}
+            color={color}
           />
         </Text>
 

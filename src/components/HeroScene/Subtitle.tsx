@@ -1,9 +1,10 @@
 import { Text, Html } from "@react-three/drei";
 import { AnimatedRevealText } from "../AnimatedRevealText";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor } from "@/context/ThemeContext";
+import type { OutlinedText } from "@/lib/troikaText";
 
 interface SubtitleProps {
   children: React.ReactNode;
@@ -21,18 +22,29 @@ export function Subtitle({
   pixelFontSize,
 }: SubtitleProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const { palette } = useTheme();
+  const textRef = useRef<THREE.Mesh>(null);
+
+  const color = useSweptColor(
+    "textSecondary",
+    textRef,
+    useCallback((hex: string) => {
+      materialRef.current?.color.set(hex);
+      const text = textRef.current as OutlinedText | null;
+      if (text) text.outlineColor = hex;
+    }, []),
+  );
 
   return (
     <group position={[0, y, 0]}>
       <Text
+        ref={textRef}
         anchorX="center"
         anchorY="bottom"
         fontSize={calculatedFontSize}
         font="fonts/Karla-ExtraBold.ttf"
         lineHeight={1}
         outlineWidth={CONFIG.subtitle.OUTLINE_WIDTH}
-        outlineColor={palette.textSecondary}
+        outlineColor={color}
         letterSpacing={CONFIG.subtitle.LETTER_SPACING}
       >
         {children}
@@ -40,7 +52,7 @@ export function Subtitle({
           ref={materialRef}
           transparent
           opacity={0}
-          color={palette.textSecondary}
+          color={color}
         />
       </Text>
 
