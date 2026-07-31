@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -123,20 +123,65 @@ export function CaseStudyScene() {
     }, [openIndex, close]);
 
     // The page scroll drives the details sheet, so leaving it live would slide
-    // the sheet out from under a camera that is no longer looking at it.
+    // the sheet out from under a camera that is no longer looking at it. Handed
+    // back from the frame loop rather than from this effect's cleanup: the
+    // cleanup runs when the close *starts*, and the sheet has to hold still all
+    // the way through the return flight.
+    const scrollLock = useRef<{ scrollY: number; overflow: string } | null>(null);
+
+    const releaseScroll = useCallback(() => {
+        const lock = scrollLock.current;
+        if (!lock) return;
+        scrollLock.current = null;
+        document.documentElement.style.overflow = lock.overflow;
+        window.scrollTo(0, lock.scrollY);
+    }, []);
+
+    useEffect(() => {
+        if (openIndex === null) return;
+        const root = document.documentElement;
+        scrollLock.current ??= {
+            scrollY: window.scrollY,
+            overflow: root.style.overflow,
+        };
+        root.style.overflow = "hidden";
+    }, [openIndex]);
+
+    // R3F re-derives its viewport from wherever the camera happens to be, so a
+    // resize taken mid-flight would leave the whole scene — the sheet, the hero,
+    // the model — measured against the landing distance, and it would stay that
+    // way until the next resize. The study hands back on the spot, camera first,
+    // which is also the honest answer: it was authored into the frame it was
+    // opened in, and that frame no longer exists.
     useEffect(() => {
         if (openIndex === null) return;
 
-        const root = document.documentElement;
-        const restoreOverflow = root.style.overflow;
-        const restoreScrollY = window.scrollY;
-        root.style.overflow = "hidden";
-
-        return () => {
-            root.style.overflow = restoreOverflow;
-            window.scrollTo(0, restoreScrollY);
+        const onResize = () => {
+            gsap.killTweensOf(caseStudyStage);
+            caseStudyStage.progress = 0;
+            camera.position.set(0, 0, cfg.CAMERA_REST_Z);
+            camera.updateMatrixWorld();
+            close();
         };
-    }, [openIndex]);
+
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, [openIndex, close, camera]);
+
+    // Nothing else owns the camera, the bend or the lock, so going away
+    // mid-flight would leave the scene wherever the flight had got to.
+    useEffect(
+        () => () => {
+            gsap.killTweensOf(caseStudyStage);
+            caseStudyStage.progress = 0;
+            caseStudyStage.dim = 0;
+            caseStudyStage.plate.mode = "cursor";
+            caseStudyStage.plate.follow = 1;
+            curlUniforms.uCurlDim.value = 0;
+            releaseScroll();
+        },
+        [releaseScroll],
+    );
 
     useEffect(() => {
         if (openIndex === null) return;
@@ -202,6 +247,7 @@ export function CaseStudyScene() {
             control.mode = "cursor";
             control.follow = 1;
             control.width = 0;
+            releaseScroll();
         } else {
             control.mode = "placed";
             // Ramped rather than cut, so the plate's hover grade and resting
