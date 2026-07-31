@@ -5,7 +5,7 @@ import type { Group } from "three";
 import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
 import { CONFIG, FONTS } from "@/config/constants";
-import { useTheme } from "@/context/ThemeContext";
+import type { ThemeRole } from "@/context/ThemeContext";
 import { headingLines } from "@/lib/detailsLayout";
 
 export interface DetailsSectionItem {
@@ -49,8 +49,6 @@ export function DetailsSection({
     staggerStep,
     headingGroupRef,
 }: DetailsSectionProps) {
-    const { palette } = useTheme();
-
     return (
         <>
             <group ref={headingGroupRef}>
@@ -72,8 +70,7 @@ export function DetailsSection({
                         pixelFontSize={headingFontSize / pxTo3DWidth}
                         font={FONTS.karlaLight}
                         fontWeightClass="font-light"
-                        color={palette.textPrimary}
-                        blockColor={palette.textPrimary}
+                        role="textPrimary"
                         startTrigger={startTrigger}
                         delay={CONFIG.detailsTimings.HEADING_DELAY}
                         direction={direction}
@@ -97,8 +94,10 @@ export function DetailsSection({
                     pixelFontSize: bodyFontSize / pxTo3DWidth,
                     font: FONTS.karlaLight,
                     fontWeightClass: "font-light" as const,
-                    color: item.href ? palette.bg : palette.textBody,
-                    blockColor: item.href ? palette.textPrimary : palette.textBody,
+                    role: (item.href ? "bg" : "textBody") as ThemeRole,
+                    blockRole: (item.href
+                        ? "textPrimary"
+                        : "textBody") as ThemeRole,
                     startTrigger,
                     delay: CONFIG.detailsTimings.BODY_DELAY + index * staggerStep,
                     direction,

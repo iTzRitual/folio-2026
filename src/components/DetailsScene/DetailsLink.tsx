@@ -14,6 +14,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
+import { useSweptColor, type ThemeRole } from "@/context/ThemeContext";
 import { curlFadePowerShader, curlRowTransform } from "@/lib/detailsCurl";
 import {
   readTextBounds,
@@ -63,7 +64,7 @@ interface DetailsLinkProps {
   pixelFontSize: number;
   font: string;
   fontWeightClass: "font-light" | "font-black" | string;
-  color: string;
+  role: ThemeRole;
   startTrigger: boolean;
   delay?: number;
   direction?: "leftToRight" | "rightToLeft";
@@ -72,7 +73,7 @@ interface DetailsLinkProps {
   htmlLetterSpacingOffset?: number;
   /** Row-to-row spacing in em, used to close the dead space between links. */
   rowPitchEm?: number;
-  blockColor?: string;
+  blockRole?: ThemeRole;
   onSync?: (mesh: Mesh) => void;
 }
 
@@ -87,7 +88,7 @@ export function DetailsLink({
   pixelFontSize,
   font,
   fontWeightClass,
-  color,
+  role,
   startTrigger,
   delay = 0,
   direction = "leftToRight",
@@ -95,7 +96,7 @@ export function DetailsLink({
   letterSpacing = -0.03,
   htmlLetterSpacingOffset = -0.004,
   rowPitchEm,
-  blockColor,
+  blockRole,
   onSync,
 }: DetailsLinkProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -312,6 +313,24 @@ export function DetailsLink({
   const [arrowTex, setArrowTex] = useState<THREE.Texture | null>(arrowTexture);
   const [revealBounds, setRevealBounds] = useState<TextBounds | null>(null);
 
+  const color = useSweptColor(
+    role,
+    groupRef,
+    useCallback((hex: string) => {
+      materialRef.current?.color.set(hex);
+      arrowRef.current?.color.set(hex);
+    }, []),
+  );
+
+  const revealColor = useSweptColor(
+    blockRole ?? role,
+    groupRef,
+    useCallback((hex: string) => {
+      plateRef.current?.color.set(hex);
+      blockMaterialRef.current?.color.set(hex);
+    }, []),
+  );
+
   const handleHalfway = useCallback(() => {
     revealedRef.current = true;
     plateShownRef.current = true;
@@ -358,8 +377,6 @@ export function DetailsLink({
     }
     if (onSync) onSync(mesh);
   };
-
-  const revealColor = blockColor ?? color;
 
   const inkShader = useMemo(
     () => curlFadePowerShader(CONFIG.detailsLink.BUTTON_TEXT_FADE_POWER),

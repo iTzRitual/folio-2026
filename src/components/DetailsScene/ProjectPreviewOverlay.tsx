@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -12,7 +19,7 @@ import { useFontsReady } from "@/hooks/useFontsReady";
 import { getFontFamily } from "@/lib/textMetrics";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor } from "@/context/ThemeContext";
 import {
     useHoveredPreview,
     useProjectHoverActions,
@@ -375,7 +382,6 @@ void main() {
 
 export function ProjectPreviewOverlay() {
     const { viewport } = useThree();
-    const { palette } = useTheme();
     const { progressRef } = useHeroTransition();
     const prefersReducedMotion = usePrefersReducedMotion();
     const debug = useDebugSettings();
@@ -488,14 +494,18 @@ export function ProjectPreviewOverlay() {
         tuning.glitchHz,
     ]);
 
-    useLayoutEffect(() => {
-        previewUniforms.uPreviewBg.value.set(palette.bg);
-    }, [palette.bg]);
-
     // Swapping the map in and out of null changes the program.
     useLayoutEffect(() => {
         if (materialRef.current) materialRef.current.needsUpdate = true;
     }, [plateTexture]);
+
+    useSweptColor(
+        "bg",
+        groupRef,
+        useCallback((hex: string) => {
+            previewUniforms.uPreviewBg.value.set(hex);
+        }, []),
+    );
 
     const proxy = useRef({ reveal: 0, glitch: 0, opacity: 0, scale: 1 });
     const plateDepth = useRef(

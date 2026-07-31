@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
+import { useSweptColor, type ThemeRole } from "@/context/ThemeContext";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { readTextBounds, sameTextBounds, type TextBounds } from "@/lib/textBounds";
 import { CurlRevealBlock } from "./CurlRevealBlock";
@@ -19,14 +20,14 @@ interface DetailsTextProps {
   pixelFontSize: number;
   font: string;
   fontWeightClass: "font-light" | "font-black";
-  color: string;
+  role: ThemeRole;
   startTrigger: boolean;
   delay?: number;
   direction?: "leftToRight" | "rightToLeft";
   lineHeight?: number;
   letterSpacing?: number;
   htmlLetterSpacingOffset?: number;
-  blockColor?: string;
+  blockRole?: ThemeRole;
   onSync?: (mesh: Mesh) => void;
 }
 
@@ -39,14 +40,14 @@ export function DetailsText({
   pixelFontSize,
   font,
   fontWeightClass,
-  color,
+  role,
   startTrigger,
   delay = 0,
   direction = "leftToRight",
   lineHeight = 1,
   letterSpacing = -0.03,
   htmlLetterSpacingOffset = -0.004,
-  blockColor,
+  blockRole,
   onSync,
 }: DetailsTextProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -71,6 +72,22 @@ export function DetailsText({
     onSync?.(mesh);
   };
 
+  const color = useSweptColor(
+    role,
+    groupRef,
+    useCallback((hex: string) => {
+      materialRef.current?.color.set(hex);
+    }, []),
+  );
+
+  const revealColor = useSweptColor(
+    blockRole ?? role,
+    groupRef,
+    useCallback((hex: string) => {
+      blockMaterialRef.current?.color.set(hex);
+    }, []),
+  );
+
   const handleHalfway = useCallback(() => {
     revealedRef.current = true;
     shownRef.current = true;
@@ -88,7 +105,6 @@ export function DetailsText({
     return "-translate-y-1/2";
   }, [anchorY]);
 
-  const revealColor = blockColor ?? color;
   return (
     <group position={position} ref={groupRef}>
       <Text

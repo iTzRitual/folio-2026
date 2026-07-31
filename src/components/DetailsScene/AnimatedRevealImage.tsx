@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useTexture } from "@react-three/drei";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -11,7 +11,7 @@ import {
     type MeshBasicMaterial,
 } from "three";
 import { CONFIG } from "@/config/constants";
-import { useTheme } from "@/context/ThemeContext";
+import { useSweptColor, type ThemeRole } from "@/context/ThemeContext";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { roundedCurlShader } from "@/lib/revealBlockShader";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -27,7 +27,7 @@ interface AnimatedRevealImageProps {
     delay?: number;
     stagger?: number;
     duration?: number;
-    blockColor?: string;
+    blockRole?: ThemeRole;
     startTrigger: boolean;
 }
 
@@ -41,11 +41,9 @@ export function AnimatedRevealImage({
     delay = 0,
     stagger = CONFIG.copy.STAGGER,
     duration = CONFIG.copy.DURATION,
-    blockColor,
+    blockRole = "textStacked",
     startTrigger,
 }: AnimatedRevealImageProps) {
-    const { palette } = useTheme();
-    const revealColor = blockColor ?? palette.textStacked;
     const texture = useTexture(src);
     const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -82,6 +80,16 @@ export function AnimatedRevealImage({
             if (material) material.opacity = 1;
         }
     });
+
+    const revealColor = useSweptColor(
+        blockRole,
+        groupRef,
+        useCallback((hex: string) => {
+            for (const material of blockMaterialRefs.current) {
+                material?.color.set(hex);
+            }
+        }, []),
+    );
 
     useEffect(() => {
         revealedRef.current = true;

@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { DetailsText } from "./DetailsText";
 import { AnimatedRevealImage } from "./AnimatedRevealImage";
 import { CONFIG, FONTS } from "@/config/constants";
-import { useTheme } from "@/context/ThemeContext";
 import { bioImage } from "@/data/content";
 
 interface BioSectionProps {
@@ -38,8 +37,6 @@ export function BioSection({
     pxTo3DWidth,
     startTrigger,
 }: BioSectionProps) {
-    const { palette } = useTheme();
-
     return (
         <>
             <DetailsText
@@ -51,8 +48,7 @@ export function BioSection({
                 pixelFontSize={headingFontSize / pxTo3DWidth}
                 font={FONTS.karlaLight}
                 fontWeightClass="font-light"
-                color={palette.textPrimary}
-                blockColor={palette.textPrimary}
+                role="textPrimary"
                 startTrigger={startTrigger}
                 delay={CONFIG.detailsTimings.HEADING_DELAY}
                 direction="leftToRight"
@@ -88,8 +84,7 @@ export function BioSection({
                         pixelFontSize={bodyFontSize / pxTo3DWidth}
                         font={FONTS.karlaLight}
                         fontWeightClass="font-light"
-                        color={palette.textBody}
-                        blockColor={palette.textBody}
+                        role="textBody"
                         startTrigger={startTrigger}
                         delay={
                             CONFIG.detailsTimings.BODY_DELAY +
