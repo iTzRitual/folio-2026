@@ -56,7 +56,7 @@ export function HeaderItem({
       restHex.current = hex;
     }, []),
   );
-  useSweptColor(
+  const hoverColor = useSweptColor(
     "hover",
     groupRef,
     useCallback((hex: string) => {
@@ -66,7 +66,7 @@ export function HeaderItem({
 
   useFrame((_, delta) => {
     const material = materialRef.current;
-    if (!material || !restHex.current) return;
+    if (!material) return;
 
     const wanted = hoveredRef.current ? 1 : 0;
     const step = delta / CONFIG.header.HOVER_DURATION;
@@ -77,7 +77,11 @@ export function HeaderItem({
 
     const t = hoverCursor.current;
     material.color.set(
-      mixHex(restHex.current, hoverHex.current, t * t * (3 - 2 * t)),
+      mixHex(
+        restHex.current || restColor,
+        hoverHex.current || hoverColor,
+        t * t * (3 - 2 * t),
+      ),
     );
   });
 
