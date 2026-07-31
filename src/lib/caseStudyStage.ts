@@ -1,3 +1,5 @@
+import { Vector3 } from "three";
+
 /** What the case study asks of the preview plate while it owns it. */
 export interface PlateControl {
     /** "cursor" hands the plate back to its own hover follow. */
@@ -38,6 +40,13 @@ export const caseStudyStage = {
      * small enough to show how magnified it has become.
      */
     dim: 0,
+    /**
+     * Where the plate actually is this frame, written by the plate itself. The
+     * flight launches from it rather than from the pointer: the plate trails
+     * the cursor by design, and starting anywhere else would show as a jump on
+     * the click.
+     */
+    pose: new Vector3(),
     plate: {
         mode: "cursor",
         x: 0,

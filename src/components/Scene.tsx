@@ -15,6 +15,7 @@ import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { ProjectPreviewOverlay } from "./DetailsScene/ProjectPreviewOverlay";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
+import { CaseStudyProvider } from "../context/CaseStudyContext";
 import { ThemeSweep } from "./ThemeSweep";
 import { Suspense } from "react";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -40,6 +41,7 @@ function SceneContent({
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <ProjectHoverProvider>
+        <CaseStudyProvider>
         <ThemeSweep />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment files="/hdri/city.hdr" />
@@ -61,6 +63,7 @@ function SceneContent({
             </>
           </EffectComposer>
         )}
+        </CaseStudyProvider>
         </ProjectHoverProvider>
       </HeroTransitionProvider>
     </HeroLayoutProvider>

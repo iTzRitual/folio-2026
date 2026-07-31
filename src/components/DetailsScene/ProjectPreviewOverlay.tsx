@@ -12,13 +12,19 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import * as THREE from "three";
-import { PROJECT_LOOP_SOURCES, PROJECT_PREVIEW_SOURCES } from "@/data/content";
+import {
+    PROJECT_LOOP_SOURCES,
+    PROJECT_PREVIEW_SOURCES,
+    projectsData,
+} from "@/data/content";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { drawCaptionTexture } from "@/lib/projectCaption";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { getFontFamily } from "@/lib/textMetrics";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useOpenCaseStudy } from "@/context/CaseStudyContext";
 import { useSweptColor } from "@/context/ThemeContext";
 import {
     useHoveredPreview,
@@ -395,14 +401,21 @@ export function ProjectPreviewOverlay() {
 
     const textures = useProjectPreviewTextures();
     const hoveredPreview = useHoveredPreview();
+    const openIndex = useOpenCaseStudy();
     const { resetHoveredPreview, chargeRef } = useProjectHoverActions();
+    // An open case study outranks the hover on both counts: the plate is its
+    // opening image whatever the pointer wanders over behind it, and it has to
+    // stay on screen once the pointer has left the row it was opened from.
+    const openPreview =
+        openIndex !== null ? projectsData[openIndex].preview : null;
     // Keep the last hovered preview around so the plate can glitch back out
     // with the right screenshot still on it.
     const [shownPreview, setShownPreview] = useState<string | null>(null);
-    if (hoveredPreview && hoveredPreview !== shownPreview) {
-        setShownPreview(hoveredPreview);
+    const wantedPreview = openPreview ?? hoveredPreview;
+    if (wantedPreview && wantedPreview !== shownPreview) {
+        setShownPreview(wantedPreview);
     }
-    const active = hoveredPreview !== null;
+    const active = wantedPreview !== null;
 
     // Dropped as soon as the hover ends: the exit glitch covers the plate
     // falling back to the still, and nothing is left decoding off screen.
@@ -617,6 +630,8 @@ export function ProjectPreviewOverlay() {
 
         const dt = Math.min(delta, 1 / 30);
         const values = proxy.current;
+        const control = caseStudyStage.plate;
+        const placed = control.mode === "placed";
 
         // The rows are transform-positioned, so one sliding out from under a
         // stationary cursor can leave the hover held past the list. Nothing
@@ -643,22 +658,36 @@ export function ProjectPreviewOverlay() {
             move.seeded = true;
         }
 
-        group.position.x = THREE.MathUtils.damp(
-            group.position.x,
-            targetX,
-            cfg.FOLLOW_SMOOTHING,
-            dt,
-        );
-        group.position.y = THREE.MathUtils.damp(
-            group.position.y,
-            targetY,
-            cfg.FOLLOW_SMOOTHING,
-            dt,
-        );
+        // A placed plate is driven by the case study's own tween, so it takes
+        // whatever that wrote; only the hover follow is damped.
+        if (placed) {
+            group.position.set(control.x, control.y, control.z);
+        } else {
+            group.position.x = THREE.MathUtils.damp(
+                group.position.x,
+                targetX,
+                cfg.FOLLOW_SMOOTHING,
+                dt,
+            );
+            group.position.y = THREE.MathUtils.damp(
+                group.position.y,
+                targetY,
+                cfg.FOLLOW_SMOOTHING,
+                dt,
+            );
+        }
+        caseStudyStage.pose.copy(group.position);
 
         const charge = chargeRef.current;
-        const gain = prefersReducedMotion ? 0 : cfg.CHARGE_SCALE_GAIN * charge;
-        group.scale.setScalar(values.scale * (1 + gain));
+        const gain =
+            prefersReducedMotion
+                ? 0
+                : cfg.CHARGE_SCALE_GAIN * charge * control.follow;
+        group.scale.setScalar(
+            control.width > 0
+                ? control.width / width
+                : values.scale * (1 + gain),
+        );
 
         const sheetTravel = (2 * (scrollY - move.scrollY)) / state.size.height;
         const rawX = (state.pointer.x - move.pointer.x) / Math.max(dt, 1e-4);
@@ -686,7 +715,9 @@ export function ProjectPreviewOverlay() {
         );
 
         // Not the reveal: that one steps, and the bend would step with it.
-        const presence = prefersReducedMotion ? 0 : values.opacity;
+        const presence = prefersReducedMotion
+            ? 0
+            : values.opacity * control.follow;
         const travelX =
             THREE.MathUtils.clamp(
                 move.velocity.x / tuning.velocityFullScale,
@@ -705,27 +736,33 @@ export function ProjectPreviewOverlay() {
             -travelX * tuning.bendMult * width,
             -travelY * tuning.bendMult * height,
         );
-        const rest = 1 - charge;
+        // Both resting terms belong to the plate only while it rides the
+        // cursor. Placed, it is being read.
+        const rest = (1 - charge) * control.follow;
         const restGlitch = prefersReducedMotion ? 0 : rest * cfg.REST_GLITCH;
         previewUniforms.uPreviewSplit.value.set(
             travelX * tuning.aberrationMult + rest * cfg.REST_ABERRATION,
             travelY * tuning.aberrationMult,
         );
+        // A hovered plate is a dimmed thumbnail and a charged one is on its way
+        // to the live site; a placed one is the case study's opening frame, so
+        // it comes up to the same full grade over the flight.
+        const graded = Math.max(charge, 1 - control.follow);
         previewUniforms.uPreviewTune.value.set(
             THREE.MathUtils.lerp(
                 cfg.TUNE_SATURATION[0],
                 cfg.TUNE_SATURATION[1],
-                charge,
+                graded,
             ),
             THREE.MathUtils.lerp(
                 cfg.TUNE_CONTRAST[0],
                 cfg.TUNE_CONTRAST[1],
-                charge,
+                graded,
             ),
             THREE.MathUtils.lerp(
                 cfg.TUNE_BRIGHTNESS[0],
                 cfg.TUNE_BRIGHTNESS[1],
-                charge,
+                graded,
             ),
         );
         previewUniforms.uPreviewReveal.value = values.reveal;
@@ -737,7 +774,10 @@ export function ProjectPreviewOverlay() {
         captionUniforms.uCaptionCharge.value = prefersReducedMotion
             ? Math.round(charge * 5) / 5
             : charge;
-        captionUniforms.uCaptionOpacity.value = values.opacity;
+        // The caption promises what a click and a hold do. Once the click has
+        // been taken it is answered, and it would otherwise be baked into the
+        // opening image at full size.
+        captionUniforms.uCaptionOpacity.value = values.opacity * control.follow;
 
         group.visible = values.opacity > 1e-3 && plateTexture !== null;
         if (materialRef.current) materialRef.current.opacity = values.opacity;
