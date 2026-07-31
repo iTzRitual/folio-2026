@@ -23,10 +23,6 @@ const smoothstep = (edge0: number, edge1: number, x: number) => {
     return t * t * (3 - 2 * t);
 };
 
-/**
- * Position along the sweep axis, normalised so the corner the front starts from
- * reads 0 and the opposite corner reads 1. Takes screen uv, y up.
- */
 export function sweepCoord(u: number, v: number) {
     return (u * NX + v * NY - D_MIN) / (D_MAX - D_MIN);
 }
@@ -39,10 +35,6 @@ export function sweepProgress(front: number, coord: number) {
     return 1 - smoothstep(front - SOFTNESS, front + SOFTNESS, coord);
 }
 
-/**
- * One instance shared by every surface that paints the background colour per
- * pixel, so the plane and the edge fade can never disagree mid-sweep.
- */
 export const sweepUniforms = {
     uSweepBefore: { value: new Color(THEMES.Dark.bg) },
     uSweepAfter: { value: new Color(THEMES.Dark.bg) },

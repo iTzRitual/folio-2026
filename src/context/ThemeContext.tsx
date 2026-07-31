@@ -103,8 +103,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return () => query.removeEventListener("change", sync);
     }, []);
 
-    // Runs before the browser can paint the committed palette, so the driver
-    // owns every colour from the first frame of the change onwards.
     useLayoutEffect(() => {
         const previous = playedThemeRef.current;
         if (previous === theme) return;
@@ -160,11 +158,6 @@ export function useTheme() {
     return context;
 }
 
-/**
- * Hands the sweep driver one material to repaint, anchored to `object` so the
- * front can be sampled where that object sits on screen this frame. Returns the
- * settled colour for the first render.
- */
 export function useSweptColor(
     role: ThemeRole,
     object: RefObject<Object3D | null>,

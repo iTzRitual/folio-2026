@@ -14,8 +14,6 @@ import {
   sweepUniforms,
 } from "@/lib/themeSweep";
 
-// Written from one canonical progress, never from the per-element loop: several
-// elements share a role and hold different progress at the same instant.
 const CSS_VARS: [ThemeRole, string][] = [
   ["bg", "--bg"],
   ["textPrimary", "--text-primary"],
