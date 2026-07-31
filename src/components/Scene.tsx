@@ -13,6 +13,7 @@ import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { ProjectPreviewOverlay } from "./DetailsScene/ProjectPreviewOverlay";
+import { CaseStudyScene } from "./DetailsScene/CaseStudyScene";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { CaseStudyProvider } from "../context/CaseStudyContext";
@@ -55,6 +56,7 @@ function SceneContent({
         {!isMobile && <Details bioVariant={bioVariant} />}
         {!isMobile && <CurlEdgeFade />}
         {!isMobile && <ProjectPreviewOverlay />}
+        {!isMobile && <CaseStudyScene />}
         {!isMobile && (
           <EffectComposer multisampling={0}>
             <>

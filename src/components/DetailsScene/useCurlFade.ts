@@ -3,6 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import { Group, Vector3 } from "three";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import {
     curlAngle,
     curlDropOpacity,
@@ -30,7 +31,11 @@ export function useCurlFade<T extends HTMLElement = HTMLDivElement>(
         );
         applyOpacity(revealedRef.current ? fade : 0);
 
-        const hidden = angle > 0;
+        // A case study flies the camera off the sheet, which lands these twins
+        // over copy they have nothing to do with — still selectable, and in a
+        // link's case still openable. Hidden rather than unmounted: the reveal
+        // would rebuild the accessibility tree on every open and close.
+        const hidden = angle > 0 || caseStudyStage.progress > 1e-3;
         if (hidden !== twinHiddenRef.current) {
             twinHiddenRef.current = hidden;
             const twin = twinRef.current;

@@ -22,9 +22,11 @@ export const THEMES = {
 export type Palette = (typeof THEMES)[keyof typeof THEMES];
 
 
+// Rooted, not relative: troika resolves these against the document, and a case
+// study rewrites the URL to /projects/<slug> while the scene stays up.
 export const FONTS = {
-    karlaLight: "fonts/Karla-Light.ttf",
-    karlaExtraBold: "fonts/Karla-ExtraBold.ttf",
+    karlaLight: "/fonts/Karla-Light.ttf",
+    karlaExtraBold: "/fonts/Karla-ExtraBold.ttf",
 } as const;
 
 const SCROLL_TIMELINE_VIEWPORTS = 1.5;

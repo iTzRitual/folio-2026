@@ -11,6 +11,10 @@ export const curlUniforms: Record<string, { value: number }> = {
     uCurlFadeStart: { value: 0 },
     uCurlFadeEndRise: { value: 1 },
     uCurlFadeEndDrop: { value: 1 },
+    // 0 → 1 over everything riding the sheet. The case study's flight raises it
+    // to clear the list out of a frame it is about to magnify; the preview
+    // plate opts out of the fade and so is never touched by it.
+    uCurlDim: { value: 0 },
 };
 
 const curlFadeSpans = { start: 0, endRise: 1, endDrop: 1 };
@@ -127,6 +131,7 @@ export function applyCurlShader(
 
     if (!fade) return;
 
+    shader.uniforms.uCurlDim = curlUniforms.uCurlDim;
     shader.fragmentShader = CURL_SHADE_FRAGMENT_DEFS + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace(
         "#include <opaque_fragment>",
@@ -136,11 +141,12 @@ export function applyCurlShader(
 
 const CURL_SHADE_FRAGMENT_DEFS = /* glsl */ `
 uniform float uCurlFadePower;
+uniform float uCurlDim;
 varying float vCurlFade;
 `;
 
 const CURL_SHADE_FRAGMENT_BODY = /* glsl */ `
-diffuseColor.a *= pow(max(vCurlFade, 0.0), uCurlFadePower);
+diffuseColor.a *= pow(max(vCurlFade, 0.0), uCurlFadePower) * (1.0 - uCurlDim);
 #include <opaque_fragment>
 `;
 

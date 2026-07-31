@@ -6,6 +6,7 @@ import { ShaderMaterial } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { curlUniforms } from "@/lib/detailsCurl";
 import { SWEEP_GLSL, sweepUniforms } from "@/lib/themeSweep";
 import { CONFIG } from "@/config/constants";
@@ -32,6 +33,7 @@ uniform float uTopCutSpan;
 uniform float uBottomY;
 uniform float uBottomSpan;
 uniform float uTopStrength;
+uniform float uPresence;
 varying float vWorldY;
 varying vec2 vUv;
 
@@ -40,7 +42,7 @@ void main() {
     smoothstep(uTopY, uTopY + uTopSpan, vWorldY) *
     (1.0 - smoothstep(uTopCutY, uTopCutY + uTopCutSpan, vWorldY));
   float bottom = 1.0 - smoothstep(uBottomY, uBottomY + uBottomSpan, vWorldY);
-  float alpha = clamp(max(top * uTopStrength, bottom), 0.0, 1.0);
+  float alpha = clamp(max(top * uTopStrength, bottom), 0.0, 1.0) * uPresence;
   gl_FragColor = vec4(themeSweptColor(vUv), alpha);
   #include <colorspace_fragment>
 }
@@ -62,6 +64,7 @@ export function CurlEdgeFade() {
       uBottomY: { value: 0 },
       uBottomSpan: { value: 1 },
       uTopStrength: { value: 0 },
+      uPresence: { value: 1 },
     }),
     [],
   );
@@ -80,6 +83,10 @@ export function CurlEdgeFade() {
     material.uniforms.uBottomY.value = -viewport.height / 2;
     material.uniforms.uBottomSpan.value = viewport.height * bottomSpanMult;
     material.uniforms.uTopStrength.value = progressRef.current;
+    // Both scrims are authored against the sheet's world Y. Once the camera has
+    // left the sheet they are two bands lying across the case study, so they go
+    // out with the rest of the list.
+    material.uniforms.uPresence.value = 1 - caseStudyStage.dim;
   });
 
   return (

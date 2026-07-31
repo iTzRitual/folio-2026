@@ -29,6 +29,7 @@ import {
   headingBlockHeight,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { applyCurlSettings, curlUniforms } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
 
@@ -194,10 +195,21 @@ export function Details({
     const foldFade =
       1 - MathUtils.clamp((gapY - fadeEnd) / anchorCfg.foldFadeSpan + 1, 0, 1);
 
+    // The model hangs a depth in front of the sheet, so a case study's camera
+    // flies straight through it. It has to shrink faster than the list fades:
+    // its magnification climbs as the camera closes on it, and only a ramp this
+    // short outruns that.
+    const modelExit = MathUtils.clamp(
+      caseStudyStage.progress / CONFIG.caseStudy.MODEL_EXIT_SPAN,
+      0,
+      1,
+    );
+
     const anchor = modelAnchorRef.current;
     anchor.xFraction = gapX;
     anchor.yFraction = gapY;
-    anchor.scale = CONFIG.model.DETAILS_POPUP_SCALE * foldFade;
+    anchor.scale =
+      CONFIG.model.DETAILS_POPUP_SCALE * foldFade * (1 - modelExit);
 
     const revealEdge =
       -viewport.height / 2 +
@@ -229,10 +241,11 @@ export function Details({
 
   const projectItems: DetailsSectionItem[] = useMemo(
     () =>
-      projectsData.map((project) => ({
+      projectsData.map((project, index) => ({
         text: project.name,
         href: project.link,
         previewImage: project.preview,
+        caseStudyIndex: index,
       })),
     [],
   );

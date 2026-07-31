@@ -12,6 +12,8 @@ export interface DetailsSectionItem {
     text: string;
     href?: string;
     previewImage?: string;
+    /** Index into projectsData of the case study a click opens. */
+    caseStudyIndex?: number;
 }
 
 interface DetailsSectionProps {
@@ -110,6 +112,7 @@ export function DetailsSection({
                         key={item.text}
                         href={item.href}
                         previewImage={item.previewImage}
+                        caseStudyIndex={item.caseStudyIndex}
                         rowPitchEm={bodyLineHeight / bodyFontSize}
                         {...shared}
                     />

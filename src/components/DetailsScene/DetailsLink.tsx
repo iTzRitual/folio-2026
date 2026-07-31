@@ -15,6 +15,7 @@ import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import { CONFIG } from "../../config/constants";
 import { useSweptColor, type ThemeRole } from "@/context/ThemeContext";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { curlFadePowerShader, curlRowTransform } from "@/lib/detailsCurl";
 import {
   readTextBounds,
@@ -25,6 +26,7 @@ import { CurlRevealBlock } from "./CurlRevealBlock";
 import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
 import { useProjectHoverActions } from "@/context/ProjectHoverContext";
+import { useCaseStudyActions } from "@/context/CaseStudyContext";
 
 // Built once instead of on every hover enter and leave.
 const FINE_POINTER_QUERY =
@@ -57,6 +59,8 @@ interface DetailsLinkProps {
   text: string;
   href: string;
   previewImage?: string;
+  /** Index into projectsData of the case study a plain click opens. */
+  caseStudyIndex?: number;
   position: [number, number, number];
   anchorX: "left" | "center" | "right";
   anchorY: "top" | "middle" | "bottom";
@@ -81,6 +85,7 @@ export function DetailsLink({
   text,
   href,
   previewImage,
+  caseStudyIndex,
   position,
   anchorX,
   anchorY,
@@ -108,6 +113,7 @@ export function DetailsLink({
 
   const { setHoveredPreview, clearHoveredPreview, chargeRef, holdOwnerRef } =
     useProjectHoverActions();
+  const { open: openCaseStudy } = useCaseStudyActions();
   const holdId = useId();
   const pressGroupRef = useRef<Group>(null);
   const pressRef = useRef({
@@ -218,6 +224,10 @@ export function DetailsLink({
 
   const startPress = (event: ThreeEvent<PointerEvent>) => {
     if (!interactiveRef.current || !FINE_POINTER_QUERY.matches) return;
+    // The rows are still in the scene behind an open case study, and the camera
+    // now looks at them from a hand's width away — a press landing on one is
+    // the pointer's, never the reader's.
+    if (caseStudyStage.open) return;
     if (event.button !== 0 || pressRef.current.startedAt !== null) return;
     event.stopPropagation();
 
@@ -229,6 +239,18 @@ export function DetailsLink({
     chargeRef.current = 0;
     setPressScale(gesture.PRESS_SCALE);
     attachPressWatchers();
+  };
+
+  // The caption promises the split: a click reads the case study, a hold opens
+  // the live site. A press that never charged all the way is the click half —
+  // and a press that left the row was already ended by the leave, so reaching
+  // here at all means the pointer stayed.
+  const finishPress = (event: ThreeEvent<PointerEvent>) => {
+    const press = pressRef.current;
+    if (press.startedAt === null || press.opened) return;
+    if (event.button !== 0 || caseStudyIndex === undefined) return;
+    event.stopPropagation();
+    openCaseStudy(caseStudyIndex);
   };
 
   const stepHold = () => {
@@ -558,6 +580,7 @@ export function DetailsLink({
             onPointerOver={() => setPointerInside(true)}
             onPointerOut={() => setPointerInside(false)}
             onPointerDown={startPress}
+            onPointerUp={finishPress}
           >
             <planeGeometry args={[hit.width, hit.height]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
