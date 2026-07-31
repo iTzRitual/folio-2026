@@ -15,13 +15,10 @@ import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { ProjectPreviewOverlay } from "./DetailsScene/ProjectPreviewOverlay";
 import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
+import { ThemeSweep } from "./ThemeSweep";
 import { Suspense } from "react";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import {
-  ThemeBridge,
-  useTheme,
-  type ThemeContextValue,
-} from "@/context/ThemeContext";
+import { ThemeBridge, type ThemeContextValue } from "@/context/ThemeContext";
 import {
   DebugSettingsBridge,
   type DebugSettings,
@@ -38,13 +35,12 @@ function SceneContent({
   bioVariant: BioVariant;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { palette } = useTheme();
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <ProjectHoverProvider>
-        <color attach="background" args={[palette.bg]} />
+        <ThemeSweep />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment files="/hdri/city.hdr" />
 

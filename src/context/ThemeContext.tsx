@@ -5,18 +5,46 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useLayoutEffect,
     useMemo,
+    useRef,
     useState,
+    type RefObject,
 } from "react";
-import { THEMES, type Palette } from "@/config/constants";
+import type { Object3D } from "three";
+import { CONFIG, THEMES, type Palette } from "@/config/constants";
 import type { ThemeOption } from "@/data/content";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 export const THEME_STORAGE_KEY = "folio-theme";
+
+export type ThemeRole = keyof Palette;
+
+export interface SweepTarget {
+    role: ThemeRole;
+    object: RefObject<Object3D | null>;
+    apply: (hex: string) => void;
+}
+
+export interface SweepRun {
+    from: Palette;
+    to: Palette;
+    elapsed: number;
+    active: boolean;
+    settled: boolean;
+}
+
+export interface ThemeSweepController {
+    runRef: RefObject<SweepRun>;
+    targetsRef: RefObject<Set<SweepTarget>>;
+    register: (target: SweepTarget) => () => void;
+}
 
 export interface ThemeContextValue {
     theme: ThemeOption;
     palette: Palette;
     setTheme: (theme: ThemeOption) => void;
+    sweep: ThemeSweepController;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -40,6 +68,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<ThemeOption>(() =>
         typeof window === "undefined" ? "Dark" : readStoredTheme() ?? systemTheme(),
     );
+    const prefersReducedMotion = usePrefersReducedMotion();
+
+    const runRef = useRef<SweepRun>({
+        from: THEMES[theme],
+        to: THEMES[theme],
+        elapsed: CONFIG.themeSweep.DURATION,
+        active: false,
+        settled: false,
+    });
+    const targetsRef = useRef<Set<SweepTarget>>(new Set());
+    const playedThemeRef = useRef<ThemeOption>(theme);
+
+    const register = useCallback((target: SweepTarget) => {
+        const targets = targetsRef.current;
+        targets.add(target);
+        return () => {
+            targets.delete(target);
+        };
+    }, []);
+
+    const sweep = useMemo(
+        () => ({ runRef, targetsRef, register }),
+        [register],
+    );
 
     useEffect(() => {
         const query = window.matchMedia("(prefers-color-scheme: light)");
@@ -50,6 +102,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         query.addEventListener("change", sync);
         return () => query.removeEventListener("change", sync);
     }, []);
+
+    // Runs before the browser can paint the committed palette, so the driver
+    // owns every colour from the first frame of the change onwards.
+    useLayoutEffect(() => {
+        const previous = playedThemeRef.current;
+        if (previous === theme) return;
+        playedThemeRef.current = theme;
+
+        runRef.current = {
+            from: THEMES[previous],
+            to: THEMES[theme],
+            elapsed: prefersReducedMotion ? CONFIG.themeSweep.DURATION : 0,
+            active: !prefersReducedMotion,
+            settled: false,
+        };
+    }, [theme, prefersReducedMotion]);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme.toLowerCase();
@@ -63,8 +131,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const value = useMemo(
-        () => ({ theme, palette: THEMES[theme], setTheme }),
-        [theme, setTheme],
+        () => ({ theme, palette: THEMES[theme], setTheme, sweep }),
+        [theme, setTheme, sweep],
     );
 
     return (
@@ -90,4 +158,31 @@ export function useTheme() {
         throw new Error("useTheme must be used within a ThemeProvider");
     }
     return context;
+}
+
+/**
+ * Hands the sweep driver one material to repaint, anchored to `object` so the
+ * front can be sampled where that object sits on screen this frame. Returns the
+ * settled colour for the first render.
+ */
+export function useSweptColor(
+    role: ThemeRole,
+    object: RefObject<Object3D | null>,
+    apply: (hex: string) => void,
+): string {
+    const { palette, sweep } = useTheme();
+    const targetRef = useRef<SweepTarget | null>(null);
+    targetRef.current ??= { role, object, apply };
+
+    useLayoutEffect(() => {
+        const target = targetRef.current!;
+        target.role = role;
+        target.object = object;
+        target.apply = apply;
+    });
+
+    const { register } = sweep;
+    useEffect(() => register(targetRef.current!), [register]);
+
+    return palette[role];
 }

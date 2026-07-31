@@ -1,27 +1,30 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
-import { Color, ShaderMaterial } from "three";
+import { useMemo, useRef } from "react";
+import { ShaderMaterial } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
-import { useTheme } from "@/context/ThemeContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { curlUniforms } from "@/lib/detailsCurl";
+import { SWEEP_GLSL, sweepUniforms } from "@/lib/themeSweep";
 import { CONFIG } from "@/config/constants";
 
 const VERTEX = /* glsl */ `
 varying float vWorldY;
+varying vec2 vUv;
 
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   vWorldY = worldPosition.y;
+  vUv = uv;
   gl_Position = projectionMatrix * viewMatrix * worldPosition;
 }
 `;
 
-const FRAGMENT = /* glsl */ `
-uniform vec3 uColor;
+const FRAGMENT =
+  SWEEP_GLSL +
+  /* glsl */ `
 uniform float uTopY;
 uniform float uTopSpan;
 uniform float uTopCutY;
@@ -30,6 +33,7 @@ uniform float uBottomY;
 uniform float uBottomSpan;
 uniform float uTopStrength;
 varying float vWorldY;
+varying vec2 vUv;
 
 void main() {
   float top =
@@ -37,7 +41,7 @@ void main() {
     (1.0 - smoothstep(uTopCutY, uTopCutY + uTopCutSpan, vWorldY));
   float bottom = 1.0 - smoothstep(uBottomY, uBottomY + uBottomSpan, vWorldY);
   float alpha = clamp(max(top * uTopStrength, bottom), 0.0, 1.0);
-  gl_FragColor = vec4(uColor, alpha);
+  gl_FragColor = vec4(themeSweptColor(vUv), alpha);
   #include <colorspace_fragment>
 }
 `;
@@ -45,13 +49,12 @@ void main() {
 export function CurlEdgeFade() {
   const { topSpanMult, bottomSpanMult } = useDebugSettings().edgeFade;
   const { viewport } = useHeroLayout();
-  const { palette } = useTheme();
   const { progressRef } = useHeroTransition();
   const materialRef = useRef<ShaderMaterial>(null);
 
   const uniforms = useMemo(
     () => ({
-      uColor: { value: new Color() },
+      ...sweepUniforms,
       uTopY: { value: 0 },
       uTopSpan: { value: 1 },
       uTopCutY: { value: 0 },
@@ -62,10 +65,6 @@ export function CurlEdgeFade() {
     }),
     [],
   );
-
-  useEffect(() => {
-    materialRef.current?.uniforms.uColor.value.set(palette.bg);
-  }, [palette.bg]);
 
   useFrame(() => {
     const material = materialRef.current;

@@ -306,4 +306,10 @@ export const CONFIG = {
         DURATION: 0.75,
         LINE_THRESHOLD: 0.1,
     },
+    themeSweep: {
+        DURATION: 0.62,
+        AXIS: [-0.85, -0.53] as [number, number],
+        SOFTNESS: 0.19,
+        PLANE_Z: -4,
+    },
 } as const;
