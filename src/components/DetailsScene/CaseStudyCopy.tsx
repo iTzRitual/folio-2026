@@ -30,7 +30,7 @@ export interface CaseStudyLayout {
     height: number;
 }
 
-export const EMPTY_CASE_STUDY_LAYOUT: CaseStudyLayout = { lines: [], height: 0 };
+const EMPTY_LAYOUT: CaseStudyLayout = { lines: [], height: 0 };
 
 const cfg = CONFIG.caseStudy;
 const LETTER_SPACING = CONFIG.detailsLayout.LETTER_SPACING;
@@ -52,7 +52,7 @@ export function useCaseStudyLayout(
     const fontsReady = useFontsReady();
 
     return useMemo(() => {
-        if (!study || em <= 0) return EMPTY_CASE_STUDY_LAYOUT;
+        if (!study || em <= 0) return EMPTY_LAYOUT;
 
         const lines: CaseStudyLine[] = [];
         let cursor = 0;

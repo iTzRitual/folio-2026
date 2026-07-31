@@ -14,11 +14,7 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { curlUniforms } from "@/lib/detailsCurl";
-import {
-    CaseStudyCopy,
-    EMPTY_CASE_STUDY_LAYOUT,
-    useCaseStudyLayout,
-} from "./CaseStudyCopy";
+import { CaseStudyCopy, useCaseStudyLayout } from "./CaseStudyCopy";
 
 const cfg = CONFIG.caseStudy;
 
@@ -34,7 +30,7 @@ export function CaseStudyScene() {
     const { close } = useCaseStudyActions();
     const { camera, viewport, size } = useThree();
     const prefersReducedMotion = usePrefersReducedMotion();
-    const preview = useDebugSettings().projectPreview;
+    const tuning = useDebugSettings().projectPreview;
 
     // Kept past the close, so the copy fading out is still the copy that was
     // opened and its measured height stops moving under the exit.
@@ -54,9 +50,10 @@ export function CaseStudyScene() {
     // against: the plate stays the same size in world units the whole way, so
     // the frame is only ever a matter of how close the camera gets to it.
     const plateWidth =
-        viewport.width * CONFIG.projectPreview.WIDTH_FRACTION * preview.sizeMult;
+        viewport.width * CONFIG.projectPreview.WIDTH_FRACTION * tuning.sizeMult;
     const plateHeight = plateWidth / CONFIG.projectPreview.ASPECT;
-    const distance = (cfg.CAMERA_REST_Z * plateWidth) / (cfg.FILL * viewport.width);
+    const distance =
+        (cfg.CAMERA_REST_Z * plateWidth) / (cfg.FILL * viewport.width);
     const frameWidth = plateWidth / cfg.FILL;
     const frameHeight = frameWidth / (viewport.width / viewport.height);
     const em = frameWidth * cfg.EM_MULT;
@@ -97,7 +94,8 @@ export function CaseStudyScene() {
     useEffect(() => {
         if (openIndex === null) return;
 
-        window.history.pushState(null, "", `/projects/${projectsData[openIndex].slug}`);
+        const { slug } = projectsData[openIndex];
+        window.history.pushState(null, "", `/projects/${slug}`);
         pushedHistory.current = true;
 
         const onKey = (event: KeyboardEvent) => {
@@ -158,14 +156,9 @@ export function CaseStudyScene() {
     useEffect(
         () =>
             store.subscribe((state) => {
-                const at = camera.position;
-                if (at.x === 0 && at.y === 0 && at.z === cfg.CAMERA_REST_Z) {
-                    return;
-                }
+                if (state.viewport.distance === cfg.CAMERA_REST_Z) return;
 
-                const x = at.x;
-                const y = at.y;
-                const z = at.z;
+                const { x, y, z } = camera.position;
                 camera.position.set(0, 0, cfg.CAMERA_REST_Z);
                 camera.updateMatrixWorld();
                 // Re-entrant, but only once: the camera is at rest for this
@@ -303,7 +296,7 @@ export function CaseStudyScene() {
 
     return (
         <group ref={contentRef} visible={false}>
-            {layout !== EMPTY_CASE_STUDY_LAYOUT && (
+            {study && (
                 <CaseStudyCopy
                     layout={layout}
                     progressRef={reveal}
