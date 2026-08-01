@@ -408,10 +408,37 @@ export function ProjectPreviewOverlay() {
     // stay on screen once the pointer has left the row it was opened from.
     const openPreview =
         openIndex !== null ? projectsData[openIndex].preview : null;
+
+    // A study hands the plate back to the pointer as it closes. If the pointer
+    // is still on the row it was opened from, the return flight puts the plate
+    // where it belongs and there is nothing to cover. If it has moved to
+    // another row, riding the flight back and then cutting across to the new
+    // one reads as a jump, so the plate is released instead: it finishes the
+    // study's exit where it is, and the row under the pointer is picked up as a
+    // fresh hover once the camera is home.
+    const [openedFrom, setOpenedFrom] = useState<string | null>(null);
+    const [released, setReleased] = useState(false);
+    // Answered again here rather than read back off the state alone: the state
+    // set below only lands on the next render, and the swap this has to head
+    // off happens in this one.
+    const releasing =
+        openPreview === null &&
+        openedFrom !== null &&
+        hoveredPreview !== null &&
+        hoveredPreview !== openedFrom;
+    if (openPreview !== openedFrom) {
+        setOpenedFrom(openPreview);
+        if (openPreview === null) setReleased(releasing);
+    }
+
     // Keep the last hovered preview around so the plate can glitch back out
     // with the right screenshot still on it.
     const [shownPreview, setShownPreview] = useState<string | null>(null);
-    const wantedPreview = openPreview ?? hoveredPreview;
+    // A released plate deliberately ignores the hover: adopting the new row now
+    // would swap the screenshot out from under an exit that belongs to the one
+    // being left, and spend the entrance the re-acquire is going to want.
+    const wantedPreview =
+        openPreview ?? (released || releasing ? null : hoveredPreview);
     if (wantedPreview && wantedPreview !== shownPreview) {
         setShownPreview(wantedPreview);
     }
@@ -632,6 +659,10 @@ export function ProjectPreviewOverlay() {
         const values = proxy.current;
         const control = caseStudyStage.plate;
         const placed = control.mode === "placed";
+
+        // The study lets go of the plate the frame its camera reaches rest,
+        // which is the frame the pointer is allowed to have it back.
+        if (released && !placed) setReleased(false);
 
         // The rows are transform-positioned, so one sliding out from under a
         // stationary cursor can leave the hover held past the list. Nothing
