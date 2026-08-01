@@ -28,15 +28,31 @@ export interface CaseStudyLayout {
     lines: CaseStudyLine[];
     /** Total height of the block, so a scroller knows where the copy ends. */
     height: number;
+    /** Index of the last block, which is what sets the stagger's length. */
+    blocks: number;
 }
 
-const EMPTY_LAYOUT: CaseStudyLayout = { lines: [], height: 0 };
+const EMPTY_LAYOUT: CaseStudyLayout = { lines: [], height: 0, blocks: 0 };
 
 const cfg = CONFIG.caseStudy;
 const LETTER_SPACING = CONFIG.detailsLayout.LETTER_SPACING;
-// Troika and the browser disagree slightly on tracking; the details twins carry
-// the same correction so the selection sits on top of the glyphs.
-const HTML_LETTER_SPACING_OFFSET = -0.004;
+
+/**
+ * How far the block at `index` has arrived, off the copy's single 0→1 reveal.
+ * The window is normalised against the whole stagger, so a 1 always finishes
+ * every block however long the tail has grown — and anything else that has to
+ * land on the same beat as a given block can ask for it here.
+ */
+export function blockReveal(progress: number, index: number, blocks: number) {
+    const total = blocks * cfg.COPY_REVEAL_STAGGER + cfg.COPY_REVEAL_SPAN;
+    const t = THREE.MathUtils.clamp(
+        (progress * total - index * cfg.COPY_REVEAL_STAGGER) /
+            cfg.COPY_REVEAL_SPAN,
+        0,
+        1,
+    );
+    return 1 - Math.pow(1 - t, 3);
+}
 
 /**
  * Wraps through the site's own measurer rather than troika's maxWidth, so the
@@ -121,7 +137,7 @@ export function useCaseStudyLayout(
             gap(cfg.GAP_AFTER_PARAGRAPH_EM);
         }
 
-        return { lines, height: -cursor };
+        return { lines, height: -cursor, blocks: Math.max(block - 1, 0) };
     }, [study, em, maxWidth, pxPerUnit, fontsReady]);
 }
 
@@ -180,24 +196,13 @@ export function CaseStudyCopy({
         textBody: bodyColor,
     };
 
-    // Normalised, so a 0→1 progress always finishes every block however long
-    // the stagger tail has grown.
-    const blocks = layout.lines.length
-        ? layout.lines[layout.lines.length - 1].block
-        : 0;
-    const total = blocks * cfg.COPY_REVEAL_STAGGER + cfg.COPY_REVEAL_SPAN;
-
     useFrame(() => {
-        const progress = progressRef.current * total;
-
         layout.lines.forEach((line, index) => {
-            const start = line.block * cfg.COPY_REVEAL_STAGGER;
-            const t = THREE.MathUtils.clamp(
-                (progress - start) / cfg.COPY_REVEAL_SPAN,
-                0,
-                1,
+            const eased = blockReveal(
+                progressRef.current,
+                line.block,
+                layout.blocks,
             );
-            const eased = 1 - Math.pow(1 - t, 3);
             const material = materials.current[index];
             if (material) material.opacity = eased;
             const group = lineGroups.current[index];
@@ -282,7 +287,8 @@ export function CaseStudyCopy({
                                 fontSize: `${line.size * pxPerUnit}px`,
                                 fontWeight: line.bold ? 800 : 300,
                                 letterSpacing: `${
-                                    LETTER_SPACING + HTML_LETTER_SPACING_OFFSET
+                                    LETTER_SPACING +
+                                    cfg.HTML_LETTER_SPACING_OFFSET
                                 }em`,
                                 color: "transparent",
                             }}

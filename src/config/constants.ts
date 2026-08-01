@@ -250,6 +250,19 @@ export const CONFIG = {
         GAP_AFTER_META_EM: 1.5,
         GAP_AFTER_LEDE_EM: 1.1,
         GAP_AFTER_PARAGRAPH_EM: 0.9,
+        // The name mark doubles as the way out, sat on one line with an Esc
+        // hint in the band above the image. In frame heights, leaving room over
+        // it before the frame's own top edge.
+        MARK_GAP_MULT: 0.055,
+        MARK_SIZE_EM: 1,
+        // Padding around the mark's twin, in its own em, so the hit area is
+        // bigger than the glyphs the way the header's items are.
+        MARK_HIT_PAD_EM: 0.75,
+        RETURN_HINT: "Esc to close",
+        // Troika and the browser disagree slightly on tracking; the details
+        // twins carry the same correction so selection and focus sit on top of
+        // the glyphs rather than beside them.
+        HTML_LETTER_SPACING_OFFSET: -0.004,
         // Wheel travel is read in frame heights so a flick moves the copy the
         // same distance whatever the window is.
         SCROLL_DAMPING: 9,

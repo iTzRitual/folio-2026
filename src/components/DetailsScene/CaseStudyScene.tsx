@@ -15,6 +15,7 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { curlUniforms } from "@/lib/detailsCurl";
 import { CaseStudyCopy, useCaseStudyLayout } from "./CaseStudyCopy";
+import { CaseStudyReturn } from "./CaseStudyReturn";
 
 const cfg = CONFIG.caseStudy;
 
@@ -297,11 +298,32 @@ export function CaseStudyScene() {
     return (
         <group ref={contentRef} visible={false}>
             {study && (
-                <CaseStudyCopy
-                    layout={layout}
-                    progressRef={reveal}
-                    pxPerUnit={pxPerUnit}
-                />
+                <>
+                    <CaseStudyCopy
+                        layout={layout}
+                        progressRef={reveal}
+                        pxPerUnit={pxPerUnit}
+                    />
+                    {/*
+                      Above the image rather than pinned to the frame: it is
+                      the study's own masthead, and it leaves with the image
+                      the copy scrolls up past.
+                    */}
+                    <CaseStudyReturn
+                        position={[
+                            (textWidth - plateWidth) / 2,
+                            plateHeight +
+                                frameHeight *
+                                    (cfg.COPY_GAP_MULT + cfg.MARK_GAP_MULT),
+                            0,
+                        ]}
+                        progressRef={reveal}
+                        blocks={layout.blocks}
+                        em={em}
+                        width={plateWidth}
+                        pxPerUnit={pxPerUnit}
+                    />
+                </>
             )}
         </group>
     );
