@@ -44,7 +44,6 @@ export function CaseStudyScene() {
     const scrollTarget = useRef(0);
     const reveal = useRef(0);
     const engaged = useRef(false);
-    const pushedHistory = useRef(false);
     const contentRef = useRef<THREE.Group>(null);
 
     // The frame the camera lands in, which every measurement below is authored
@@ -74,6 +73,9 @@ export function CaseStudyScene() {
             return;
         }
 
+        const instant = caseStudyStage.instant;
+        caseStudyStage.instant = false;
+
         anchor.current.copy(caseStudyStage.pose);
         scroll.current = 0;
         scrollTarget.current = 0;
@@ -82,43 +84,23 @@ export function CaseStudyScene() {
             { progress: 0 },
             {
                 progress: 1,
-                duration: prefersReducedMotion ? 0 : cfg.FLIGHT_DURATION,
+                duration:
+                    prefersReducedMotion || instant ? 0 : cfg.FLIGHT_DURATION,
                 ease: "power3.inOut",
                 overwrite: true,
             },
         );
     }, [openIndex, prefersReducedMotion]);
 
-    // The site is one persistent canvas, so a real route change would tear down
-    // the scene and the plate's video with it. The URL is rewritten underneath
-    // instead, which is enough for the address bar and for browser back.
     useEffect(() => {
         if (openIndex === null) return;
-
-        const { slug } = projectsData[openIndex];
-        window.history.pushState(null, "", `/projects/${slug}`);
-        pushedHistory.current = true;
 
         const onKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") close();
         };
-        // Back has already popped the entry we pushed, so the close must not
-        // try to pop it a second time.
-        const onPopState = () => {
-            pushedHistory.current = false;
-            close();
-        };
 
         window.addEventListener("keydown", onKey);
-        window.addEventListener("popstate", onPopState);
-
-        return () => {
-            window.removeEventListener("keydown", onKey);
-            window.removeEventListener("popstate", onPopState);
-            if (!pushedHistory.current) return;
-            pushedHistory.current = false;
-            window.history.back();
-        };
+        return () => window.removeEventListener("keydown", onKey);
     }, [openIndex, close]);
 
     // The page scroll drives the details sheet, so leaving it live would slide

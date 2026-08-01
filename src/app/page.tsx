@@ -15,6 +15,7 @@ import { MobileContent } from "@/components/Mobile/MobileContent";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { useTheme } from "@/context/ThemeContext";
 import {
@@ -131,12 +132,16 @@ export default function Home() {
             document.documentElement.style.overflow = "hidden";
             document.body.style.overflow = "hidden";
             window.scrollTo(0, 0);
-        } else {
+        } else if (!caseStudyStage.open) {
             document.documentElement.style.overflow = "";
             document.body.style.overflow = "";
         }
 
+        // A case study landed on directly is already open behind the loader,
+        // and it owns the lock from here: handing scrolling back now would
+        // slide the sheet out from under a camera that has left it.
         return () => {
+            if (caseStudyStage.open) return;
             document.documentElement.style.overflow = "";
             document.body.style.overflow = "";
         };

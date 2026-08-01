@@ -32,6 +32,13 @@ export const caseStudyStage = {
      * root per row is too much to pay for a boolean nobody draws.
      */
     open: false,
+    /**
+     * Whether the state now being shown was arrived at through the URL — a
+     * direct link, or a step through history — rather than through a click. It
+     * takes the flight off the open: there is no plate on screen to fly out of,
+     * and replaying the trip to a page someone landed on reads as a glitch.
+     */
+    instant: false,
     /** 0 → 1 while a case study is on screen. */
     progress: 0,
     /**
