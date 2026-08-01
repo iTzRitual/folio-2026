@@ -42,7 +42,7 @@ function SceneContent({
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <ProjectHoverProvider>
-        <CaseStudyProvider>
+        <CaseStudyProvider isMobile={isMobile}>
         <ThemeSweep />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment files="/hdri/city.hdr" />

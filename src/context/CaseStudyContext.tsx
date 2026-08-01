@@ -33,11 +33,19 @@ function indexFromPath(pathname: string) {
     return index === -1 ? null : index;
 }
 
-export function CaseStudyProvider({ children }: { children: ReactNode }) {
+export function CaseStudyProvider({
+    children,
+    isMobile,
+}: {
+    children: ReactNode;
+    isMobile: boolean;
+}) {
     // A study can be the page that was loaded, not only one that was clicked
-    // into, so the first state has to come from the URL.
+    // into, so the first state has to come from the URL. Not on mobile: this
+    // provider is above the gate the case study itself sits behind, so an open
+    // study there would be one with nothing mounted to draw or close it.
     const [openIndex, setOpenIndex] = useState<number | null>(() => {
-        const index = indexFromPath(window.location.pathname);
+        const index = isMobile ? null : indexFromPath(window.location.pathname);
         caseStudyStage.open = index !== null;
         caseStudyStage.instant = index !== null;
         return index;
@@ -52,6 +60,8 @@ export function CaseStudyProvider({ children }: { children: ReactNode }) {
     // still there after back, and stepping forward onto it again has to
     // reopen it. Listening only while open is what made forward do nothing.
     useEffect(() => {
+        if (isMobile) return;
+
         const onPopState = () => {
             const index = indexFromPath(window.location.pathname);
             ownsEntry.current = false;
@@ -62,7 +72,7 @@ export function CaseStudyProvider({ children }: { children: ReactNode }) {
 
         window.addEventListener("popstate", onPopState);
         return () => window.removeEventListener("popstate", onPopState);
-    }, []);
+    }, [isMobile]);
 
     // Split from the state for the same reason the project hover is: the links
     // only ever open a study, and each one re-renders an <Html> twin's React

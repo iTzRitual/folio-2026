@@ -128,23 +128,26 @@ export default function Home() {
     useEffect(() => {
         const isLoaderActive = !removeLoader;
 
+        // A case study landed on directly is already open behind the loader,
+        // and it holds the root element for as long as it is up: handing the
+        // scroll back now would slide the sheet out from under a camera that
+        // has left it. It only ever locks the root, so the body is released
+        // either way — nothing else would give it back.
+        const release = () => {
+            document.body.style.overflow = "";
+            if (caseStudyStage.open) return;
+            document.documentElement.style.overflow = "";
+        };
+
         if (isLoaderActive) {
             document.documentElement.style.overflow = "hidden";
             document.body.style.overflow = "hidden";
             window.scrollTo(0, 0);
-        } else if (!caseStudyStage.open) {
-            document.documentElement.style.overflow = "";
-            document.body.style.overflow = "";
+        } else {
+            release();
         }
 
-        // A case study landed on directly is already open behind the loader,
-        // and it owns the lock from here: handing scrolling back now would
-        // slide the sheet out from under a camera that has left it.
-        return () => {
-            if (caseStudyStage.open) return;
-            document.documentElement.style.overflow = "";
-            document.body.style.overflow = "";
-        };
+        return release;
     }, [removeLoader]);
 
     return (

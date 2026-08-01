@@ -8,6 +8,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { heroContent } from "@/data/content";
+import { caseStudyStage } from "@/lib/caseStudyStage";
 import { CONFIG } from "../config/constants";
 
 const LABEL_EXIT_START = CONFIG.heroText.LABEL_EXIT_START;
@@ -43,11 +44,19 @@ export function HeroText() {
     if (titleGroupRef.current) {
       titleGroupRef.current.position.y = titleYOffset;
     }
+    // A case study reached through its own URL opens over an unscrolled hero,
+    // which the flight would otherwise magnify into the frame around the
+    // opening image. The title looks after itself; the rest of the hero has
+    // nothing to say up there either.
+    const present = caseStudyStage.dim < 1;
+
     if (subtitleGroupRef.current) {
       subtitleGroupRef.current.position.y = subtitleYOffset;
+      subtitleGroupRef.current.visible = present;
     }
     if (heroGroupRef.current) {
       heroGroupRef.current.position.y = heroYOffset;
+      heroGroupRef.current.visible = present;
     }
   });
 
