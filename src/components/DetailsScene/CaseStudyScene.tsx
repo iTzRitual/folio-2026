@@ -203,6 +203,19 @@ export function CaseStudyScene() {
         // hidden` does nothing about. Taking the event before it reaches anyone
         // is the only way to keep the wheel without tearing that runner down.
         const onWheel = (event: WheelEvent) => {
+            // Only the vertical half. A sideways two-finger flick is the
+            // browser's own back gesture, and a better way out of a case study
+            // than anything worth reimplementing here. It is still taken off
+            // the smooth-scroll runner, which cancels anything carrying a
+            // vertical component and would swallow the gesture with it, but
+            // deliberately not cancelled here: the browser is the one that
+            // should act on it.
+            if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
             event.stopImmediatePropagation();
