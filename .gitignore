@@ -43,7 +43,7 @@ next-env.d.ts
 # source media, kept out of the bundle
 raw/
 
-# claude (local only)
-CLAUDE.md
+# local agent state
 .claude/skills/
+.claude/worktrees/
 plans/
