@@ -8,6 +8,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
+import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
@@ -411,6 +412,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;
     captureCamera.position.z = CONFIG.caseStudy.CAMERA_REST_Z;
+    captureCamera.layers.enable(HEADER_LAYER);
     captureCamera.updateMatrixWorld();
     gl.setRenderTarget(target);
     gl.clear();
