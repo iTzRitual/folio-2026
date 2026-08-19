@@ -189,28 +189,9 @@ function drawBrowserTexture({
     textureContext.fill();
   });
 
-  const iconSize = chromeHeight * CONFIG.phase2.BROWSER_ICON_FONT_MULT;
-  const iconX = firstControlX + controlRadius * 2 + controlGap;
-  textureContext.fillStyle = CONFIG.phase2.BROWSER_ICON_COLOR;
-  textureContext.font = `700 ${iconSize}px Arial`;
-  textureContext.textAlign = "center";
-  textureContext.textBaseline = "middle";
-  textureContext.fillText("‹", iconX, controlY + iconSize * 0.02);
-  textureContext.fillText(
-    "›",
-    iconX + iconSize * 1.25,
-    controlY + iconSize * 0.02,
-  );
-
   const addressHeight =
     chromeHeight * CONFIG.phase2.BROWSER_ADDRESS_HEIGHT_MULT;
-  const addressWidth = Math.min(
-    browserWidth * CONFIG.phase2.BROWSER_ADDRESS_WIDTH_MULT,
-    Math.max(
-      browserWidth * 0.18,
-      browserWidth - sidePadding * 2 - chromeHeight * 5,
-    ),
-  );
+  const addressWidth = browserWidth * CONFIG.phase2.BROWSER_ADDRESS_WIDTH_MULT;
   textureContext.fillStyle = CONFIG.phase2.BROWSER_ADDRESS_COLOR;
   textureContext.fillRect(
     browserX + (browserWidth - addressWidth) / 2,
@@ -222,14 +203,9 @@ function drawBrowserTexture({
   textureContext.font = `400 ${
     chromeHeight * CONFIG.phase2.BROWSER_ADDRESS_FONT_MULT
   }px Arial`;
+  textureContext.textAlign = "center";
+  textureContext.textBaseline = "middle";
   textureContext.fillText("folio-2026", browserX + browserWidth / 2, controlY);
-
-  const rightControlX = browserX + browserWidth - sidePadding;
-  const rightControlGap = iconSize * 1.7;
-  textureContext.font = `700 ${iconSize}px Arial`;
-  textureContext.fillText("↥", rightControlX - rightControlGap * 2, controlY);
-  textureContext.fillText("+", rightControlX - rightControlGap, controlY);
-  textureContext.fillText("▢", rightControlX, controlY);
   textureContext.restore();
 
   const texture = new THREE.CanvasTexture(textureCanvas);
