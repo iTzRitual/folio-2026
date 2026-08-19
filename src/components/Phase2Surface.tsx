@@ -37,6 +37,60 @@ function updatePlaneCurve(
   geometry.computeBoundingSphere();
 }
 
+function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
+  const rawWidth = Math.max(
+    sourceWidth,
+    sourceHeight * CONFIG.phase2.PLANE_ASPECT,
+  );
+  const scale = Math.min(
+    1,
+    CONFIG.phase2.TEXTURE_MAX_DIMENSION / rawWidth,
+  );
+  const width = Math.round(rawWidth * scale);
+
+  return {
+    width,
+    height: Math.round(width / CONFIG.phase2.PLANE_ASPECT),
+  };
+}
+
+function getBrowserLayout(
+  textureWidth: number,
+  textureHeight: number,
+  sourceWidth: number,
+  sourceHeight: number,
+) {
+  const margin =
+    Math.min(textureWidth, textureHeight) *
+    CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+  const availableWidth = textureWidth - margin * 2;
+  const availableHeight = textureHeight - margin * 2;
+  const browserAspect =
+    sourceWidth /
+    (sourceHeight * (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT));
+  let width = availableWidth;
+  let height = width / browserAspect;
+
+  if (height > availableHeight) {
+    height = availableHeight;
+    width = height * browserAspect;
+  }
+
+  const x = (textureWidth - width) / 2;
+  const y = (textureHeight - height) / 2;
+  const contentHeight =
+    height / (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT);
+
+  return {
+    x,
+    y,
+    width,
+    height,
+    contentHeight,
+    chromeHeight: height - contentHeight,
+  };
+}
+
 function drawBrowserTexture({
   pixels,
   sourceWidth,
@@ -46,17 +100,9 @@ function drawBrowserTexture({
   sourceWidth: number;
   sourceHeight: number;
 }) {
-  const rawTextureWidth = Math.max(
+  const { width: textureWidth, height: textureHeight } = getTextureDimensions(
     sourceWidth,
-    sourceHeight * CONFIG.phase2.PLANE_ASPECT,
-  );
-  const textureScale = Math.min(
-    1,
-    CONFIG.phase2.TEXTURE_MAX_DIMENSION / rawTextureWidth,
-  );
-  const textureWidth = Math.round(rawTextureWidth * textureScale);
-  const textureHeight = Math.round(
-    textureWidth / CONFIG.phase2.PLANE_ASPECT,
+    sourceHeight,
   );
   const sourceCanvas = document.createElement("canvas");
   const sourceContext = sourceCanvas.getContext("2d");
@@ -85,27 +131,20 @@ function drawBrowserTexture({
   textureContext.fillStyle = "#000000";
   textureContext.fillRect(0, 0, textureWidth, textureHeight);
 
-  const margin =
-    Math.min(textureWidth, textureHeight) *
-    CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
-  const availableWidth = textureWidth - margin * 2;
-  const availableHeight = textureHeight - margin * 2;
-  const browserAspect =
-    sourceWidth /
-    (sourceHeight * (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT));
-  let browserWidth = availableWidth;
-  let browserHeight = browserWidth / browserAspect;
-
-  if (browserHeight > availableHeight) {
-    browserHeight = availableHeight;
-    browserWidth = browserHeight * browserAspect;
-  }
-
-  const browserX = (textureWidth - browserWidth) / 2;
-  const browserY = (textureHeight - browserHeight) / 2;
-  const contentHeight =
-    browserHeight / (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT);
-  const chromeHeight = browserHeight - contentHeight;
+  const layout = getBrowserLayout(
+    textureWidth,
+    textureHeight,
+    sourceWidth,
+    sourceHeight,
+  );
+  const {
+    x: browserX,
+    y: browserY,
+    width: browserWidth,
+    height: browserHeight,
+    contentHeight,
+    chromeHeight,
+  } = layout;
   const cornerRadius = chromeHeight * 0.34;
 
   textureContext.save();
@@ -211,6 +250,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const planeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
+  const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
+    null,
+  );
   const capturedRef = useRef(false);
   const capturePendingRef = useRef(false);
   const lastCurveDepthRef = useRef(-1);
@@ -241,9 +283,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     targetRef.current = null;
     textureRef.current?.dispose();
     textureRef.current = null;
+    surfaceTransformRef.current = null;
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
-    if (planeRef.current) planeRef.current.visible = false;
+    if (planeRef.current) {
+      planeRef.current.visible = false;
+      planeRef.current.position.y = 0;
+      planeRef.current.scale.setScalar(1);
+    }
   }, [size.height, size.width]);
 
   useEffect(() => {
@@ -281,29 +328,26 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       camera.updateMatrixWorld();
     }
 
+    const surfaceProgress = prefersReducedMotion
+      ? reveal
+      : THREE.MathUtils.mapLinear(
+          reveal,
+          CONFIG.phase2.BROWSER_REVEAL_START,
+          1,
+          0,
+          1,
+        );
     const curveDepth =
-      maxCurveDepth * THREE.MathUtils.smoothstep(reveal, 0.04, 1);
+      maxCurveDepth *
+      THREE.MathUtils.smoothstep(
+        reveal,
+        CONFIG.phase2.PLANE_CURVE_START,
+        CONFIG.phase2.PLANE_CURVE_END,
+      );
 
     if (Math.abs(curveDepth - lastCurveDepthRef.current) > 0.0001) {
       updatePlaneCurve(planeGeometry, planeWidth, planeHeight, curveDepth);
       lastCurveDepthRef.current = curveDepth;
-    }
-
-    if (
-      capturedRef.current &&
-      reveal < CONFIG.phase2.BROWSER_REVEAL_START
-    ) {
-      capturedRef.current = false;
-      capturePendingRef.current = false;
-      textureRef.current?.dispose();
-      textureRef.current = null;
-
-      if (planeMaterialRef.current) {
-        planeMaterialRef.current.map = null;
-        planeMaterialRef.current.needsUpdate = true;
-      }
-      if (pageGroupRef.current) pageGroupRef.current.visible = true;
-      if (planeRef.current) planeRef.current.visible = false;
     }
 
     if (!capturedRef.current && reveal >= CONFIG.phase2.BROWSER_REVEAL_START) {
@@ -313,7 +357,20 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       }
     }
 
+    if (capturedRef.current && pageGroupRef.current) {
+      pageGroupRef.current.visible =
+        reveal < CONFIG.phase2.BROWSER_REVEAL_START;
+    }
+
     if (planeRef.current && capturedRef.current) {
+      const transform = surfaceTransformRef.current;
+
+      if (transform) {
+        const progress = THREE.MathUtils.clamp(surfaceProgress, 0, 1);
+        const scale = THREE.MathUtils.lerp(transform.scale, 1, progress);
+        planeRef.current.scale.setScalar(scale);
+        planeRef.current.position.y = THREE.MathUtils.lerp(transform.y, 0, progress);
+      }
       planeRef.current.visible = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
     }
   });
@@ -365,9 +422,39 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     textureRef.current = texture;
     planeMaterialRef.current.map = texture;
     planeMaterialRef.current.needsUpdate = true;
+    const { width: textureWidth, height: textureHeight } = getTextureDimensions(
+      sourceWidth,
+      sourceHeight,
+    );
+    const layout = getBrowserLayout(
+      textureWidth,
+      textureHeight,
+      sourceWidth,
+      sourceHeight,
+    );
+    const restDistance = CONFIG.caseStudy.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
+    const restHeight =
+      2 *
+      Math.tan(THREE.MathUtils.degToRad(captureCamera.fov) / 2) *
+      restDistance;
+    const restWidth = restHeight * captureCamera.aspect;
+    const contentWidth = planeWidth * (layout.width / textureWidth);
+    const contentCenterY =
+      planeHeight *
+      (0.5 -
+        (layout.y + layout.chromeHeight + layout.contentHeight / 2) /
+          textureHeight);
+    const scale = restWidth / contentWidth;
+
+    surfaceTransformRef.current = {
+      scale,
+      y: -contentCenterY * scale,
+    };
     capturedRef.current = true;
     capturePendingRef.current = false;
     pageGroupRef.current.visible = false;
+    planeRef.current.scale.setScalar(scale);
+    planeRef.current.position.y = -contentCenterY * scale;
     planeRef.current.visible = true;
   }, 0.5);
 
@@ -387,6 +474,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         <meshBasicMaterial
           ref={planeMaterialRef}
           color="#ffffff"
+          depthTest={false}
+          depthWrite={false}
           toneMapped={false}
         />
       </mesh>
