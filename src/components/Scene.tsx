@@ -34,20 +34,25 @@ import type {
   SceneInputMode,
   SceneQualityTier,
 } from "@/lib/responsiveScene";
+import { Phase2Surface } from "./Phase2Surface";
 
 function SceneContent({
   startAnimation,
   bioVariant,
+  detailsOverflowViewports,
 }: {
   startAnimation: boolean;
   bioVariant: BioVariant;
+  detailsOverflowViewports: number;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { qualityTier } = useSceneCapabilities();
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
-      <HeroTransitionProvider>
+      <HeroTransitionProvider
+        detailsOverflowViewports={detailsOverflowViewports}
+      >
         <ProjectHoverProvider>
         <CaseStudyProvider>
         <ThemeSweep />
@@ -55,15 +60,17 @@ function SceneContent({
         <Environment files="/hdri/city.hdr" />
 
         <Suspense fallback={null}>
-          <Model />
-        </Suspense>
+          <Phase2Surface>
+            <Model />
 
-        <Header />
-        <HeroText />
-        <Details bioVariant={bioVariant} />
-        <CurlEdgeFade />
-        <ProjectPreviewOverlay />
-        <CaseStudyScene />
+            <Header />
+            <HeroText />
+            <Details bioVariant={bioVariant} />
+            <CurlEdgeFade />
+            <ProjectPreviewOverlay />
+            <CaseStudyScene />
+          </Phase2Surface>
+        </Suspense>
         {(
           <EffectComposer multisampling={0}>
             <>
@@ -84,6 +91,7 @@ function SceneContent({
 export default function Scene({
   startAnimation,
   inputMode,
+  detailsOverflowViewports,
   isDebug,
   bioVariant,
   themeContext,
@@ -91,6 +99,7 @@ export default function Scene({
 }: {
   startAnimation: boolean;
   inputMode: SceneInputMode;
+  detailsOverflowViewports: number;
   isDebug: boolean;
   bioVariant: BioVariant;
   themeContext: ThemeContextValue;
@@ -166,6 +175,7 @@ export default function Scene({
               <SceneContent
                 startAnimation={startAnimation}
                 bioVariant={bioVariant}
+                detailsOverflowViewports={detailsOverflowViewports}
               />
             </DebugSettingsBridge>
           </ThemeBridge>

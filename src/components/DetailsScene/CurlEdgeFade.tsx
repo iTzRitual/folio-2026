@@ -51,7 +51,7 @@ void main() {
 export function CurlEdgeFade() {
   const { topSpanMult, bottomSpanMult } = useDebugSettings().edgeFade;
   const { viewport } = useHeroLayout();
-  const { progressRef } = useHeroTransition();
+  const { progressRef, revealProgressRef } = useHeroTransition();
   const materialRef = useRef<ShaderMaterial>(null);
 
   const uniforms = useMemo(
@@ -86,7 +86,8 @@ export function CurlEdgeFade() {
     // Both scrims are authored against the sheet's world Y. Once the camera has
     // left the sheet they are two bands lying across the case study, so they go
     // out with the rest of the list.
-    material.uniforms.uPresence.value = 1 - caseStudyStage.dim;
+    material.uniforms.uPresence.value =
+      (1 - caseStudyStage.dim) * (1 - revealProgressRef.current);
   });
 
   return (

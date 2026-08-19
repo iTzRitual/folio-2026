@@ -167,6 +167,7 @@ export default function Home() {
                             <DynamicScene
                                 startAnimation={startScene}
                                 inputMode={inputMode}
+                                detailsOverflowViewports={overflowViewports}
                                 isDebug={isDebug}
                                 bioVariant={bioVariant}
                                 themeContext={themeContext}
@@ -178,7 +179,11 @@ export default function Home() {
                     <main
                         className="relative z-10 w-full pointer-events-none"
                         style={{
-                            height: `${(TIMELINE_VIEWPORTS + overflowViewports) * 100}dvh`,
+                            height: `${(
+                                TIMELINE_VIEWPORTS +
+                                overflowViewports +
+                                CONFIG.phase2.REVEAL_VIEWPORTS
+                            ) * 100}dvh`,
                         }}
                     />
                 </div>

@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -9,24 +9,36 @@ gsap.registerPlugin(ScrollTrigger);
 
 interface HeroTransitionProviderProps {
   children: ReactNode;
+  detailsOverflowViewports: number;
 }
 
 export function HeroTransitionProvider({
   children,
+  detailsOverflowViewports,
 }: HeroTransitionProviderProps) {
   const progressRef = useRef(0);
   const detailsScrollRef = useRef(0);
+  const revealProgressRef = useRef(0);
+  const detailsOverflowViewportsRef = useRef(detailsOverflowViewports);
   const modelAnchorRef = useRef({
     xFraction: 0,
     yFraction: 0,
     scale: CONFIG.model.DETAILS_POPUP_SCALE,
   });
 
+  useEffect(() => {
+    detailsOverflowViewportsRef.current = Math.max(detailsOverflowViewports, 0);
+    ScrollTrigger.refresh();
+  }, [detailsOverflowViewports]);
+
   useGSAP(() => {
     const scrollState = { progress: 0 };
 
     const transitionDistance = () =>
       window.innerHeight * (CONFIG.scrollTimeline.VIEWPORTS - 1);
+
+    const revealDistance = () =>
+      window.innerHeight * CONFIG.phase2.REVEAL_VIEWPORTS;
 
     const tween = gsap.to(scrollState, {
       progress: 1,
@@ -43,7 +55,19 @@ export function HeroTransitionProvider({
     });
 
     const readDetailsScroll = (scroll: number) => {
-      detailsScrollRef.current = Math.max(0, scroll - transitionDistance());
+      const transition = transitionDistance();
+      const detailsDistance =
+        window.innerHeight * detailsOverflowViewportsRef.current;
+      const revealStart = transition + detailsDistance;
+
+      detailsScrollRef.current = Math.min(
+        Math.max(0, scroll - transition),
+        detailsDistance,
+      );
+      revealProgressRef.current = Math.min(
+        Math.max((scroll - revealStart) / revealDistance(), 0),
+        1,
+      );
     };
 
     const detailsTrigger = ScrollTrigger.create({
@@ -62,7 +86,14 @@ export function HeroTransitionProvider({
   }, []);
 
   return (
-    <HeroTransitionContextProvider value={{ progressRef, detailsScrollRef, modelAnchorRef }}>
+    <HeroTransitionContextProvider
+      value={{
+        progressRef,
+        detailsScrollRef,
+        revealProgressRef,
+        modelAnchorRef,
+      }}
+    >
       {children}
     </HeroTransitionContextProvider>
   );

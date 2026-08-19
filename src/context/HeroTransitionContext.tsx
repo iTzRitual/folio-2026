@@ -14,6 +14,7 @@ export interface ModelAnchor {
 export interface HeroTransitionContextType {
   progressRef: MutableRefObject<number>;
   detailsScrollRef: MutableRefObject<number>;
+  revealProgressRef: MutableRefObject<number>;
   modelAnchorRef: MutableRefObject<ModelAnchor>;
 }
 

@@ -51,7 +51,7 @@ export default function Model() {
     responsiveScale: baseResponsiveScale,
   } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
-  const { progressRef, modelAnchorRef } = useHeroTransition();
+  const { progressRef, revealProgressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { compactHeight, inputMode, layoutMode, qualityTier } =
     useSceneCapabilities();
@@ -128,6 +128,7 @@ export default function Model() {
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
+    const phase2Revealed = revealProgressRef.current > 0.001;
     const shouldLockInteraction =
       !directManipulation ||
       scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
@@ -197,6 +198,7 @@ export default function Model() {
         : CLIP_DISABLED;
 
     if (animGroupRef.current) {
+      animGroupRef.current.visible = !phase2Revealed;
       const heroYCurrent =
         CONFIG.model.BASE_MODEL_Y +
         scrollProgress *
