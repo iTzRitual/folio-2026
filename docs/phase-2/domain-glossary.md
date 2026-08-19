@@ -2,9 +2,9 @@
 
 ## Plane
 
-The physical 4:3 surface that eventually represents the monitor screen. It is
-the parent composition for the live portfolio, browser chrome, and future
-virtual desktop.
+The physical 4:3 surface that eventually represents the monitor screen. Its
+texture contains the frozen portfolio, browser chrome, and future virtual
+desktop.
 
 ## Close portfolio view
 
@@ -18,15 +18,16 @@ from the close portfolio view.
 
 ## Surface content
 
-Everything displayed within the 4:3 plane, including the live portfolio, the
-temporary black areas, Safari UI, and the future virtual desktop.
+Everything displayed within the 4:3 plane texture, including the frozen
+portfolio, the temporary black areas, Safari UI, and the future virtual
+desktop.
 
 ## Safari UI
 
-The browser-like chrome surrounding the portfolio inside the plane. It is a
-visual part of the surface content, is not visible in the close portfolio
-view, and is revealed before the virtual desktop. The complete Safari window
-uses contain fitting inside the 4:3 plane and is never cropped.
+The browser-like chrome surrounding the frozen portfolio inside the plane
+texture. It is not visible in the close portfolio view and is revealed before
+the virtual desktop. The complete Safari window uses contain fitting inside the
+4:3 plane, includes a small safety margin, and is never cropped.
 
 ## Virtual desktop
 

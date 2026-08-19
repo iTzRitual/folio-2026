@@ -43,12 +43,18 @@ desktop occupies them.
   portrait aspect ratio and the page keeps its narrow responsive composition.
 - Mobile does not switch to a desktop page layout just because it is displayed
   inside the 4:3 plane.
-- The Safari chrome is added outside the frozen portfolio content area. It
-  increases the outer browser window's height instead of causing the page to
-  reflow or shrink to make room for the toolbar.
-- Safari controls are visual-only in this phase. They do not create hit areas or
-  intercept pointer and touch input; interaction remains owned by the live
-  portfolio content.
+- At the reveal boundary, the frozen portfolio is captured into a canvas
+  texture. Safari chrome and the temporary black plane area are composed into
+  that same texture.
+- The texture is mapped onto the physical plane, so the page and Safari chrome
+  share its CRT curvature rather than sitting in separate depth layers.
+- The curvature starts flat and grows only as the camera pulls away, preserving
+  the close portfolio composition.
+- Safari chrome is composed above the frozen portfolio content inside the
+  texture. It increases the outer browser window's height instead of causing
+  the page to reflow or shrink to make room for the toolbar.
+- Safari controls are visual-only in this phase. The revealed browser is a
+  frozen visual composition, not an interactive browser surface.
 - The first implementation milestone stops at the Safari-wrapped page on a
   black plane. It excludes the macOS-like virtual desktop, CRT post-processing,
   and any additional physical monitor housing.
@@ -65,8 +71,8 @@ desktop occupies them.
   and depth-aware layout system used by the current WebGL scene.
 - The geometry's curvature is part of the plane contract; CRT scanlines,
   noise, and optical distortion remain separate screen effects.
-- The black surface must remain a live compositional layer so it can later be
-  replaced by the virtual desktop without changing the camera contract.
+- The black surface remains part of the plane texture so it can later be
+  replaced by virtual-desktop content without changing the camera contract.
 - Reveal timing must preserve the order: close page, Safari-wrapped page, then
   virtual desktop.
 - Any unused plane area around the contained Safari window remains available for
@@ -75,7 +81,8 @@ desktop occupies them.
   the plane; this is an intentional consequence of contain fitting.
 - The browser-window contract must preserve the portfolio content rectangle and
   position the toolbar relative to it.
-- The Safari chrome must not change event routing for the page underneath it.
+- The capture texture avoids depth seams between the Safari chrome and the
+  page while keeping the whole browser window inside the plane bounds.
 - This milestone is intentionally a composition and continuity test before
   adding desktop content or physical screen treatment.
 - Keeping the camera path one-dimensional makes screen fitting and reveal
