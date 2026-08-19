@@ -16,6 +16,7 @@ import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { curlScrimCoverY } from "@/lib/detailsCurl";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -37,7 +38,7 @@ const BLANK_BUFFER = new THREE.DataTexture(
 );
 BLANK_BUFFER.needsUpdate = true;
 
-export default function Model({ isMobile }: { isMobile?: boolean }) {
+export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -52,6 +53,10 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
   const { startTrigger } = useAnimationContext();
   const { progressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { compactHeight, inputMode, layoutMode, qualityTier } =
+    useSceneCapabilities();
+  const directManipulation = inputMode === "fine";
+  const lowQuality = inputMode === "coarse" || qualityTier === "low";
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
@@ -124,11 +129,12 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const shouldLockInteraction =
+      !directManipulation ||
       scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
     const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
 
-    const stage = inDetails ? 1 : 0;
-    const teleported = !isMobile && stage !== previousStage.current;
+    const stage = layoutMode === "narrow" ? 0 : inDetails ? 1 : 0;
+    const teleported = stage !== previousStage.current;
     previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
     const entryRamp = THREE.MathUtils.clamp(
@@ -137,10 +143,6 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
       0,
       1,
     );
-    // Layout-inducing on some engines, and the mobile branch below wants it
-    // twice.
-    const scrollY = isMobile ? window.scrollY : 0;
-
     const detailsScale = modelAnchorRef.current.scale * entryRamp;
 
     if (isInteractionLockedRef.current !== shouldLockInteraction) {
@@ -190,96 +192,100 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
     const foldDepthScale = modelViewport.height / viewport.height;
 
     FOLD_CLIP.constant =
-      !isMobile && inDetails
+      inDetails
         ? curlScrimCoverY() * foldDepthScale
         : CLIP_DISABLED;
 
     if (animGroupRef.current) {
-      if (isMobile) {
-        const scrolledScreens = scrollY / window.innerHeight;
-        const mobileYOffset = 0.1;
-        const targetY =
-          CONFIG.model.BASE_MODEL_Y +
-          mobileYOffset +
-          scrolledScreens * modelViewport.height;
+      const heroYCurrent =
+        CONFIG.model.BASE_MODEL_Y +
+        scrollProgress *
+          viewport.height *
+          CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
+      const detailsTargetY =
+        modelAnchorRef.current.yFraction * modelViewport.height;
+      const detailsTargetX =
+        modelAnchorRef.current.xFraction * modelViewport.width;
+      const narrowHeroX = compactHeight
+        ? modelViewport.width * CONFIG.model.NARROW_COMPACT_X_FRACTION
+        : 0;
 
-        animGroupRef.current.position.x = 0;
-        animGroupRef.current.position.y = THREE.MathUtils.damp(
-          animGroupRef.current.position.y,
-          targetY,
-          20,
-          dt,
-        );
-      } else {
-        const heroYCurrent =
-          CONFIG.model.BASE_MODEL_Y +
-          scrollProgress *
-            viewport.height *
-            CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
-        const detailsTargetY =
-          modelAnchorRef.current.yFraction * modelViewport.height;
-        const detailsTargetX =
-          modelAnchorRef.current.xFraction * modelViewport.width;
+      const narrowTransition = THREE.MathUtils.smoothstep(
+        scrollProgress,
+        CONFIG.model.NARROW_TRANSITION_START,
+        1,
+      );
+      const targetX =
+        layoutMode === "narrow"
+          ? THREE.MathUtils.lerp(
+              narrowHeroX,
+              detailsTargetX,
+              narrowTransition,
+            )
+          : inDetails
+            ? detailsTargetX
+            : 0;
+      const targetY =
+        layoutMode === "narrow"
+          ? THREE.MathUtils.lerp(heroYCurrent, detailsTargetY, narrowTransition)
+          : inDetails
+            ? detailsTargetY
+            : heroYCurrent;
 
-        const targetX = inDetails ? detailsTargetX : 0;
-        const targetY = inDetails ? detailsTargetY : heroYCurrent;
-
-        animGroupRef.current.position.x = teleported
-          ? targetX
-          : THREE.MathUtils.damp(
-              animGroupRef.current.position.x,
-              targetX,
-              10,
-              dt,
-            );
-        animGroupRef.current.position.y = teleported
-          ? targetY
-          : THREE.MathUtils.damp(
-              animGroupRef.current.position.y,
-              targetY,
-              10,
-              dt,
-            );
-      }
+      animGroupRef.current.position.x = teleported
+        ? targetX
+        : THREE.MathUtils.damp(
+            animGroupRef.current.position.x,
+            targetX,
+            10,
+            dt,
+          );
+      animGroupRef.current.position.y = teleported
+        ? targetY
+        : THREE.MathUtils.damp(
+            animGroupRef.current.position.y,
+            targetY,
+            10,
+            dt,
+          );
     }
 
     if (transitionScaleGroupRef.current) {
-      if (isMobile) {
-        const scaleOutProgress = THREE.MathUtils.clamp(
-          scrollY / (window.innerHeight * 0.8),
-          0,
-          1,
-        );
-        const targetScale = 1 - scaleOutProgress * 0.5;
+      const scaleOutProgress = THREE.MathUtils.clamp(
+        (scrollProgress - CONFIG.model.SCALE_OUT_START) /
+          (CONFIG.model.SCALE_OUT_END - CONFIG.model.SCALE_OUT_START),
+        0,
+        1,
+      );
+      const narrowTransition = THREE.MathUtils.smoothstep(
+        scrollProgress,
+        CONFIG.model.NARROW_TRANSITION_START,
+        1,
+      );
+      const narrowHeroScale = compactHeight
+        ? CONFIG.model.NARROW_COMPACT_HERO_SCALE
+        : CONFIG.model.NARROW_HERO_SCALE;
+      const targetScale =
+        layoutMode === "narrow"
+          ? THREE.MathUtils.lerp(
+              narrowHeroScale,
+              modelAnchorRef.current.scale,
+              narrowTransition,
+            )
+          : inDetails
+            ? detailsScale
+            : 1 - scaleOutProgress;
 
-        const currentScale = transitionScaleGroupRef.current.scale.x;
-        const smoothScale = THREE.MathUtils.damp(
-          currentScale,
-          targetScale,
-          15,
-          dt,
-        );
-        transitionScaleGroupRef.current.scale.setScalar(smoothScale);
-      } else {
-        const scaleOutProgress = THREE.MathUtils.clamp(
-          (scrollProgress - CONFIG.model.SCALE_OUT_START) /
-            (CONFIG.model.SCALE_OUT_END - CONFIG.model.SCALE_OUT_START),
-          0,
-          1,
-        );
-        const targetScale = inDetails ? detailsScale : 1 - scaleOutProgress;
-
-        const currentScale = teleported
-          ? 0
-          : transitionScaleGroupRef.current.scale.x;
-        const smoothScale = THREE.MathUtils.damp(
-          currentScale,
-          targetScale,
-          10,
-          dt,
-        );
-        transitionScaleGroupRef.current.scale.setScalar(smoothScale);
-      }
+      const currentScale = teleported
+        ? 0
+        : transitionScaleGroupRef.current.scale.x;
+      const smoothScale = THREE.MathUtils.damp(
+        currentScale,
+        targetScale,
+        10,
+        dt,
+      );
+      transitionScaleGroupRef.current.scale.setScalar(smoothScale);
     }
 
     const outerGroupY =
@@ -397,11 +403,11 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
         <mesh
           position={[0, 0, 0]}
           onPointerEnter={() => {
-            if (isInteractionLockedRef.current) return;
+            if (!directManipulation || isInteractionLockedRef.current) return;
             isHoveringCenter.current = true;
           }}
           onPointerLeave={() => {
-            if (isInteractionLockedRef.current) return;
+            if (!directManipulation || isInteractionLockedRef.current) return;
             isHoveringCenter.current = false;
           }}
         >
@@ -414,17 +420,17 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
             <mesh
               position={[0, 0, 0.01]}
               onPointerEnter={() => {
-                if (isInteractionLockedRef.current) return;
+                if (!directManipulation || isInteractionLockedRef.current) return;
                 isHoveringModel.current = true;
                 document.body.style.cursor = "grab";
               }}
               onPointerLeave={() => {
-                if (isInteractionLockedRef.current) return;
+                if (!directManipulation || isInteractionLockedRef.current) return;
                 isHoveringModel.current = false;
                 document.body.style.cursor = "auto";
               }}
               onPointerDown={(e) => {
-                if (isInteractionLockedRef.current) return;
+                if (!directManipulation || isInteractionLockedRef.current) return;
                 isDragging.current = true;
                 document.body.style.cursor = "grabbing";
                 document.body.style.userSelect = "none";
@@ -432,7 +438,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                 e.stopPropagation();
               }}
               onPointerUp={(e) => {
-                if (isInteractionLockedRef.current) return;
+                if (!directManipulation || isInteractionLockedRef.current) return;
                 isDragging.current = false;
                 document.body.style.cursor = isHoveringModel.current
                   ? "grab"
@@ -441,7 +447,7 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                 (e.target as Element).releasePointerCapture(e.pointerId);
               }}
               onPointerCancel={(e) => {
-                if (isMobile || isInteractionLockedRef.current) return;
+                if (!directManipulation || isInteractionLockedRef.current) return;
                 isDragging.current = false;
                 document.body.style.cursor = "auto";
                 document.body.style.userSelect = "";
@@ -463,12 +469,12 @@ export default function Model({ isMobile }: { isMobile?: boolean }) {
                     clippingPlanes={FOLD_CLIP_PLANES}
                     {...materialProps}
                     resolution={
-                      isMobile
+                      lowQuality
                         ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
                         : CONFIG.model.TRANSMISSION_RESOLUTION
                     }
                     samples={
-                      isMobile
+                      lowQuality
                         ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
                         : CONFIG.model.TRANSMISSION_SAMPLES
                     }

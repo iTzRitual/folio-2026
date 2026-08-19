@@ -32,6 +32,8 @@ import {
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { applyCurlSettings, curlUniforms } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 
 export function Details({
   bioVariant = DEFAULT_BIO_VARIANT,
@@ -50,6 +52,9 @@ export function Details({
   } = useHeroLayout();
 
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { layoutMode, inputMode } = useSceneCapabilities();
+  const { setHoveredPreview, resetHoveredPreview } =
+    useProjectHoverActions();
   const debug = useDebugSettings();
   const anchorCfg = debug.modelAnchor;
   const {
@@ -69,11 +74,16 @@ export function Details({
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const revealedRef = useRef<Record<string, boolean>>({});
+  const [activeProjectIndex, setActiveProjectIndex] = useState<number | null>(
+    null,
+  );
+  const activeProjectRef = useRef<number | null>(null);
 
   const experienceHeadingRef = useRef<Group>(null);
   const projectsHeadingRef = useRef<Group>(null);
   const educationHeadingRef = useRef<Group>(null);
   const coursesHeadingRef = useRef<Group>(null);
+  const skillsHeadingRef = useRef<Group>(null);
   const layout = useMemo(
     () =>
       calculateDetailsLayout({
@@ -147,6 +157,7 @@ export function Details({
     // the scroll started. Re-running the intersection is what R3F offers for
     // exactly this; it is a no-op until the pointer has been seen once.
     if (
+      inputMode === "fine" &&
       Math.abs(groupY - lastPointerSyncY.current) >
       pxTo3DHeight * CONFIG.detailsLayout.POINTER_SYNC_PX
     ) {
@@ -181,14 +192,14 @@ export function Details({
     stickHeading(projectsHeadingRef.current, "projects");
     stickHeading(educationHeadingRef.current, "education");
     stickHeading(coursesHeadingRef.current, "courses");
-
-    const projects = layout.sections.projects;
-    const projectsCenter =
-      projects.bodyY + (projectsData.length * layout.projectLineHeight) / 2;
+    if (layoutMode === "narrow") {
+      stickHeading(skillsHeadingRef.current, "skills");
+    }
 
     const gapX = layout.modelGapCenterPx / size.width - 0.5;
     const gapY =
-      (groupY + sectionTop - projectsCenter * pxTo3DHeight) / viewport.height;
+      (groupY + sectionTop - layout.modelAnchorY * pxTo3DHeight) /
+      viewport.height;
 
     const fadeEnd =
       titleSettledBottomY / viewport.height - anchorCfg.foldFadeClearance;
@@ -210,6 +221,47 @@ export function Details({
     anchor.yFraction = gapY;
     anchor.scale =
       CONFIG.model.DETAILS_POPUP_SCALE * foldFade * (1 - modelExit);
+
+    if (layoutMode === "narrow" && inputMode === "coarse") {
+      const projects = layout.sections.projects;
+      const activationY =
+        viewport.height *
+        (0.5 - CONFIG.projectPreview.MOBILE_ACTIVATION_VIEWPORT_Y);
+      const firstY =
+        groupY + sectionTop - projects.bodyY * pxTo3DHeight;
+      const lastY =
+        firstY -
+        (projectsData.length - 1) *
+          layout.projectLineHeight *
+          pxTo3DHeight;
+      const edgePad = layout.projectLineHeight * pxTo3DHeight * 0.5;
+      let nextIndex: number | null = null;
+
+      if (
+        activationY <= firstY + edgePad &&
+        activationY >= lastY - edgePad
+      ) {
+        nextIndex = MathUtils.clamp(
+          Math.round(
+            (firstY - activationY) /
+              (layout.projectLineHeight * pxTo3DHeight),
+          ),
+          0,
+          projectsData.length - 1,
+        );
+      }
+
+      if (nextIndex !== activeProjectRef.current) {
+        activeProjectRef.current = nextIndex;
+        setActiveProjectIndex(nextIndex);
+        if (nextIndex === null) resetHoveredPreview();
+        else setHoveredPreview(projectsData[nextIndex].preview);
+      }
+    } else if (activeProjectRef.current !== null) {
+      activeProjectRef.current = null;
+      setActiveProjectIndex(null);
+      resetHoveredPreview();
+    }
 
     const revealEdge =
       -viewport.height / 2 +
@@ -233,37 +285,43 @@ export function Details({
 
   const experienceItems: DetailsSectionItem[] = useMemo(
     () =>
-      experienceData.map((exp) => ({
-        text: `${exp.duration} / ${exp.position} @ ${exp.company}`,
-      })),
-    [],
+      layoutMode === "narrow"
+        ? layout.sectionLines.experience.map((text) => ({ text }))
+        : experienceData.map((exp) => ({
+            text: `${exp.duration} / ${exp.position} @ ${exp.company}`,
+          })),
+    [layoutMode, layout.sectionLines.experience],
   );
 
   const projectItems: DetailsSectionItem[] = useMemo(
     () =>
       projectsData.map((project, index) => ({
-        text: project.name,
+        text: layoutMode === "narrow" ? project.title : project.name,
         href: project.link,
         previewImage: project.preview,
         caseStudyIndex: index,
       })),
-    [],
+    [layoutMode],
   );
 
   const educationItems: DetailsSectionItem[] = useMemo(
     () =>
-      educationData.map((edu) => ({
-        text: `${edu.field} (${edu.degree}) @ ${edu.institution}`,
-      })),
-    [],
+      layoutMode === "narrow"
+        ? layout.sectionLines.education.map((text) => ({ text }))
+        : educationData.map((edu) => ({
+            text: `${edu.field} (${edu.degree}) @ ${edu.institution}`,
+          })),
+    [layoutMode, layout.sectionLines.education],
   );
 
   const coursesItems: DetailsSectionItem[] = useMemo(
     () =>
-      coursesData.map((course) => ({
-        text: `${course.date} / ${course.title} @ ${course.issuer}`,
-      })),
-    [],
+      layoutMode === "narrow"
+        ? layout.sectionLines.courses.map((text) => ({ text }))
+        : coursesData.map((course) => ({
+            text: `${course.date} / ${course.title} @ ${course.issuer}`,
+          })),
+    [layoutMode, layout.sectionLines.courses],
   );
 
   const skillItems: DetailsSectionItem[] = useMemo(
@@ -299,6 +357,23 @@ export function Details({
       />
 
       <DetailsSection
+        heading={SECTION_HEADINGS.skills}
+        items={skillItems}
+        headingX={layoutMode === "narrow" ? leftX : rightTitleX}
+        headingY={sectionY("skills").headingY}
+        bodyX={layoutMode === "narrow" ? leftX : rightX}
+        bodyY={sectionY("skills").bodyY}
+        bodyAnchorX={layoutMode === "narrow" ? "left" : "right"}
+        direction={layoutMode === "narrow" ? "leftToRight" : "rightToLeft"}
+        startTrigger={startTrigger && !!revealed.skills}
+        headingGroupRef={skillsHeadingRef}
+        staggerStep={CONFIG.detailsTimings.SKILLS_STAGGER_STEP}
+        columns={layoutMode === "narrow" ? layout.skillsColumns : 1}
+        columnWidth={layout.skillsColumnWidth * pxTo3DWidth}
+        {...shared}
+      />
+
+      <DetailsSection
         heading={SECTION_HEADINGS.projects}
         items={projectItems}
         headingX={leftX}
@@ -309,6 +384,7 @@ export function Details({
         direction="leftToRight"
         startTrigger={startTrigger && !!revealed.projects}
         headingGroupRef={projectsHeadingRef}
+        activeItemIndex={activeProjectIndex}
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
         bodyLineHeight={layout.projectLineHeight * pxTo3DHeight}
@@ -347,8 +423,14 @@ export function Details({
       <BioSection
         heading={SECTION_HEADINGS.bio}
         lines={layout.bioLines}
-        imageX={leftX}
-        topY={sectionY("bio").headingY}
+        imageX={leftX + layout.bioImageXOffset * pxTo3DWidth}
+        imageY={sectionTop - layout.bioImageY * pxTo3DHeight}
+        headingX={
+          layoutMode === "narrow"
+            ? leftX
+            : leftX + layout.bioTextOffset * pxTo3DWidth
+        }
+        headingY={sectionY("bio").headingY}
         textY={sectionY("bio").bodyY}
         imageWidth={layout.bioImageWidth * pxTo3DWidth}
         imageHeight={layout.bioImageHeight * pxTo3DHeight}
@@ -358,20 +440,6 @@ export function Details({
         bodyLineHeight={bodyLineHeight}
         pxTo3DWidth={pxTo3DWidth}
         startTrigger={startTrigger && !!revealed.bio}
-      />
-
-      <DetailsSection
-        heading={SECTION_HEADINGS.skills}
-        items={skillItems}
-        headingX={rightTitleX}
-        headingY={sectionY("skills").headingY}
-        bodyX={rightX}
-        bodyY={sectionY("skills").bodyY}
-        bodyAnchorX="right"
-        direction="rightToLeft"
-        startTrigger={startTrigger && !!revealed.skills}
-        staggerStep={CONFIG.detailsTimings.SKILLS_STAGGER_STEP}
-        {...shared}
       />
     </group>
   );

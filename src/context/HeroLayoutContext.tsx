@@ -12,6 +12,7 @@ export interface HeroLayoutContextType {
   row3TopY: number;
   row3BottomY: number;
   titleFontSize: number;
+  titleSettledFontSize: number;
   titleY: number;
   titleSettledBottomY: number;
   viewportMinDimension: number;

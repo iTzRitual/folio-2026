@@ -10,6 +10,7 @@ import {
 } from "@/context/AnimationContext";
 import { calculateHeroSafeZone } from "@/lib/heroSafeZone";
 import { CONFIG } from "@/config/constants";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 interface HeroLayoutProviderProps {
   children: ReactNode;
@@ -21,6 +22,7 @@ export function HeroLayoutProvider({
   startAnimation,
 }: HeroLayoutProviderProps) {
   const { size, viewport } = useThree();
+  const { layoutMode, compactHeight } = useSceneCapabilities();
 
   const layoutValue: HeroLayoutContextType = useMemo(() => {
     const pxTo3DWidth = viewport.width / size.width;
@@ -48,16 +50,52 @@ export function HeroLayoutProvider({
     const row3TopY = viewport.height / 2 - marginY - frHeight;
     const row3BottomY = -viewport.height / 2 + marginY + frHeight;
 
+    const contentWidth = viewport.width - 2 * marginX;
+    const contentWidthPx = size.width - 2 * marginXPx;
+    const narrowTitlePx = Math.min(
+      Math.max(
+        contentWidthPx * CONFIG.heroLayout.NARROW_TITLE_FONT_SIZE,
+        compactHeight
+          ? CONFIG.heroLayout.NARROW_TITLE_COMPACT_MIN_PX
+          : CONFIG.heroLayout.NARROW_TITLE_MIN_PX,
+      ),
+      compactHeight
+        ? CONFIG.heroLayout.NARROW_TITLE_COMPACT_MAX_PX
+        : CONFIG.heroLayout.NARROW_TITLE_MAX_PX,
+    );
     const titleFontSize =
-      (viewport.width - 2 * marginX) * CONFIG.heroLayout.TITLE_FONT_SIZE;
+      layoutMode === "narrow"
+        ? narrowTitlePx * pxTo3DWidth
+        : contentWidth * CONFIG.heroLayout.TITLE_FONT_SIZE;
+    const settledTitlePx = Math.min(
+      Math.max(
+        narrowTitlePx * CONFIG.heroLayout.NARROW_SETTLED_TITLE_SCALE,
+        CONFIG.heroLayout.NARROW_SETTLED_TITLE_MIN_PX,
+      ),
+      CONFIG.heroLayout.NARROW_SETTLED_TITLE_MAX_PX,
+    );
+    const titleSettledFontSize =
+      layoutMode === "narrow"
+        ? settledTitlePx * pxTo3DWidth
+        : titleFontSize * CONFIG.title.TARGET_SCALE;
     const titleY =
       -viewport.height / 2 +
       marginY +
       titleFontSize * CONFIG.heroLayout.TITLE_FONT_VISUAL_OFFSET;
+    const narrowStickyTitleTopPx = compactHeight
+      ? CONFIG.heroLayout.NARROW_STICKY_TITLE_COMPACT_TOP_PX
+      : CONFIG.heroLayout.NARROW_STICKY_TITLE_TOP_PX;
+    const narrowStickyStackBottomPx =
+      narrowStickyTitleTopPx +
+      settledTitlePx +
+      CONFIG.heroLayout.NARROW_ROLE_STICKY_GAP_PX +
+      CONFIG.heroLayout.NARROW_ROLE_ROW_PITCH_PX * 2;
     const titleSettledBottomY =
-      titleY +
-      viewport.height * CONFIG.heroLayout.TITLE_Y_MULTIPLIER -
-      titleFontSize * CONFIG.title.TARGET_SCALE;
+      layoutMode === "narrow"
+        ? viewport.height / 2 - narrowStickyStackBottomPx * pxTo3DHeight
+        : titleY +
+          viewport.height * CONFIG.heroLayout.TITLE_Y_MULTIPLIER -
+          titleSettledFontSize;
 
     const viewportMinDimension = Math.min(
       viewport.width - extraMarginX * 2,
@@ -80,6 +118,7 @@ export function HeroLayoutProvider({
       row3TopY,
       row3BottomY,
       titleFontSize,
+      titleSettledFontSize,
       titleY,
       titleSettledBottomY,
       viewportMinDimension,
@@ -87,7 +126,7 @@ export function HeroLayoutProvider({
       grabAreaRadius,
       stickyAreaRadius,
     };
-  }, [viewport, size]);
+  }, [viewport, size, layoutMode, compactHeight]);
 
   const animationValue: AnimationContextType = useMemo(
     () => ({

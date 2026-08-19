@@ -8,10 +8,8 @@ import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Loader } from "@/components/Loader";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useInputMode } from "@/hooks/useInputMode";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { MobileHero } from "@/components/Mobile/MobileHero";
-import { MobileContent } from "@/components/Mobile/MobileContent";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
@@ -44,7 +42,7 @@ const RESIZE_DEBOUNCE_MS = 150;
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
-    const isMobile = useIsMobile();
+    const inputMode = useInputMode();
     const prefersReducedMotion = usePrefersReducedMotion();
     const pathname = usePathname();
     const isDebug = pathname === "/debug";
@@ -59,8 +57,6 @@ export default function Home() {
     const bioVariant = debugSettings.bio.variant;
 
     useEffect(() => {
-        if (isMobile) return;
-
         const update = () =>
             setOverflowViewports(
                 calculateDetailsOverflowViewports({
@@ -87,7 +83,7 @@ export default function Home() {
             window.clearTimeout(debounce);
             window.removeEventListener("resize", onResize);
         };
-    }, [isMobile, bioVariant, fontsReady]);
+    }, [bioVariant, fontsReady]);
 
     useEffect(() => {
         ScrollTrigger.refresh();
@@ -155,7 +151,7 @@ export default function Home() {
             <NoJsContent />
             <div className="js-only-app">
                 {isDebug && <DynamicDebugPanel onChange={setDebugSettings} />}
-                {removeLoader && !prefersReducedMotion && (
+                {removeLoader && !prefersReducedMotion && inputMode === "fine" && (
                     <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
                 )}
 
@@ -170,7 +166,7 @@ export default function Home() {
                         <div className="w-full h-full pointer-events-auto">
                             <DynamicScene
                                 startAnimation={startScene}
-                                isMobile={isMobile}
+                                inputMode={inputMode}
                                 isDebug={isDebug}
                                 bioVariant={bioVariant}
                                 themeContext={themeContext}
@@ -182,14 +178,9 @@ export default function Home() {
                     <main
                         className="relative z-10 w-full pointer-events-none"
                         style={{
-                            height: isMobile
-                                ? "auto"
-                                : `${(TIMELINE_VIEWPORTS + overflowViewports) * 100}vh`,
+                            height: `${(TIMELINE_VIEWPORTS + overflowViewports) * 100}dvh`,
                         }}
-                    >
-                        {isMobile && <MobileHero startScene={startScene} />}
-                        {isMobile && <MobileContent />}
-                    </main>
+                    />
                 </div>
             </div>
         </>

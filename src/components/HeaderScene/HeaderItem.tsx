@@ -141,14 +141,18 @@ export function HeaderItem({
   const label = (
     <p className="m-0 p-0">{text}</p>
   );
+  const hitPadPx = Math.max(
+    CONFIG.header.HIT_PAD_EM * pixelFontSize,
+    (44 - pixelFontSize) / 2,
+  );
 
   const hitPad = (
     <span
       aria-hidden
       className="absolute inset-x-0 block"
       style={{
-        top: `${-CONFIG.header.HIT_PAD_EM}em`,
-        bottom: `${-CONFIG.header.HIT_PAD_EM}em`,
+        top: `${-hitPadPx}px`,
+        bottom: `${-hitPadPx}px`,
       }}
     />
   );

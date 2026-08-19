@@ -32,6 +32,9 @@ interface DetailsSectionProps {
     startTrigger: boolean;
     staggerStep: number;
     headingGroupRef?: RefObject<Group | null>;
+    columns?: number;
+    columnWidth?: number;
+    activeItemIndex?: number | null;
 }
 
 export function DetailsSection({
@@ -50,13 +53,18 @@ export function DetailsSection({
     startTrigger,
     staggerStep,
     headingGroupRef,
+    columns = 1,
+    columnWidth = 0,
+    activeItemIndex = null,
 }: DetailsSectionProps) {
+    const rows = Math.ceil(items.length / columns);
+
     return (
         <>
             <group ref={headingGroupRef}>
                 {headingLines(heading).map((line, index) => (
                     <DetailsText
-                        key={line}
+                        key={`${heading}-${index}`}
                         text={line}
                         position={[
                             headingX,
@@ -83,9 +91,15 @@ export function DetailsSection({
             </group>
 
             {items.map((item, index) => {
+                const column = Math.floor(index / rows);
+                const row = index % rows;
                 const shared = {
                     text: item.text,
-                    position: [bodyX, bodyY - index * bodyLineHeight, 0] as [
+                    position: [
+                        bodyX + column * columnWidth,
+                        bodyY - row * bodyLineHeight,
+                        0,
+                    ] as [
                         number,
                         number,
                         number,
@@ -109,15 +123,16 @@ export function DetailsSection({
 
                 return item.href ? (
                     <DetailsLink
-                        key={item.text}
+                        key={`${heading}-${index}`}
                         href={item.href}
                         previewImage={item.previewImage}
                         caseStudyIndex={item.caseStudyIndex}
+                        active={activeItemIndex === index}
                         rowPitchEm={bodyLineHeight / bodyFontSize}
                         {...shared}
                     />
                 ) : (
-                    <DetailsText key={item.text} {...shared} />
+                    <DetailsText key={`${heading}-${index}`} {...shared} />
                 );
             })}
         </>

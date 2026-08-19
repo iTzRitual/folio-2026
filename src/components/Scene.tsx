@@ -26,42 +26,51 @@ import {
   type DebugSettings,
 } from "@/context/DebugSettingsContext";
 import type { BioVariant } from "@/data/content";
+import {
+  SceneCapabilitiesProvider,
+  useSceneCapabilities,
+} from "@/context/SceneCapabilitiesContext";
+import type {
+  SceneInputMode,
+  SceneQualityTier,
+} from "@/lib/responsiveScene";
 
 function SceneContent({
   startAnimation,
-  isMobile,
   bioVariant,
 }: {
   startAnimation: boolean;
-  isMobile: boolean;
   bioVariant: BioVariant;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { qualityTier } = useSceneCapabilities();
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider>
         <ProjectHoverProvider>
-        <CaseStudyProvider isMobile={isMobile}>
+        <CaseStudyProvider>
         <ThemeSweep />
         <directionalLight intensity={3} position={[0, 3, 2]} />
         <Environment files="/hdri/city.hdr" />
 
         <Suspense fallback={null}>
-          <Model isMobile={isMobile} />
+          <Model />
         </Suspense>
 
-        {!isMobile && <Header />}
-        {!isMobile && <HeroText />}
-        {!isMobile && <Details bioVariant={bioVariant} />}
-        {!isMobile && <CurlEdgeFade />}
-        {!isMobile && <ProjectPreviewOverlay />}
-        {!isMobile && <CaseStudyScene />}
-        {!isMobile && (
+        <Header />
+        <HeroText />
+        <Details bioVariant={bioVariant} />
+        <CurlEdgeFade />
+        <ProjectPreviewOverlay />
+        <CaseStudyScene />
+        {(
           <EffectComposer multisampling={0}>
             <>
               <HeaderExclusion />
-              {!prefersReducedMotion && <CustomAberration />}
+              {!prefersReducedMotion && qualityTier !== "low" && (
+                <CustomAberration />
+              )}
             </>
           </EffectComposer>
         )}
@@ -74,14 +83,14 @@ function SceneContent({
 
 export default function Scene({
   startAnimation,
-  isMobile,
+  inputMode,
   isDebug,
   bioVariant,
   themeContext,
   debugSettings,
 }: {
   startAnimation: boolean;
-  isMobile: boolean;
+  inputMode: SceneInputMode;
   isDebug: boolean;
   bioVariant: BioVariant;
   themeContext: ThemeContextValue;
@@ -90,6 +99,7 @@ export default function Scene({
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
 
   const [dpr, setDpr] = useState(1);
+  const [qualityTier, setQualityTier] = useState<SceneQualityTier>("balanced");
 
   return (
     <div
@@ -101,7 +111,7 @@ export default function Scene({
         key="main-canvas"
         eventSource={eventWrapperRef}
         eventPrefix="client"
-        style={{ touchAction: "auto" }}
+        style={{ touchAction: inputMode === "coarse" ? "pan-y" : "auto" }}
         dpr={dpr}
         gl={{
           // EffectComposer renders into its own targets, so MSAA on the default
@@ -117,6 +127,7 @@ export default function Scene({
           bounds={() => [45, 55]}
           step={1}
           onDecline={() => {
+            setQualityTier("low");
             setDpr((prevDpr) => {
               if (prevDpr >= 1.5) {
                 return 1.0;
@@ -128,6 +139,7 @@ export default function Scene({
             });
           }}
           onIncline={() => {
+            setQualityTier("high");
             setDpr((prevDpr) => {
               if (prevDpr <= 0.75) {
                 return 1.0;
@@ -145,15 +157,19 @@ export default function Scene({
           // it.
           flipflops={3}
         />
-        <ThemeBridge value={themeContext}>
-          <DebugSettingsBridge value={debugSettings}>
-            <SceneContent
-              startAnimation={startAnimation}
-              isMobile={isMobile}
-              bioVariant={bioVariant}
-            />
-          </DebugSettingsBridge>
-        </ThemeBridge>
+        <SceneCapabilitiesProvider
+          inputMode={inputMode}
+          qualityTier={qualityTier}
+        >
+          <ThemeBridge value={themeContext}>
+            <DebugSettingsBridge value={debugSettings}>
+              <SceneContent
+                startAnimation={startAnimation}
+                bioVariant={bioVariant}
+              />
+            </DebugSettingsBridge>
+          </ThemeBridge>
+        </SceneCapabilitiesProvider>
         {isDebug && <Stats />}
       </Canvas>
     </div>

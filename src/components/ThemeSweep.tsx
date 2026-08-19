@@ -71,7 +71,7 @@ export function ThemeSweep() {
       const object = target.object.current;
       let progress = 1;
 
-      if (object) {
+      if (!finished && object) {
         ndc.setFromMatrixPosition(object.matrixWorld).project(camera);
         progress = sweepProgress(
           front,

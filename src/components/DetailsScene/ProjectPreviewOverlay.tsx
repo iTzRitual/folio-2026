@@ -32,6 +32,29 @@ import {
 } from "@/context/ProjectHoverContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "@/config/constants";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { useHeroLayout } from "@/context/HeroLayoutContext";
+
+const SCRIM_VERTEX = /* glsl */ `
+varying vec2 vUv;
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const SCRIM_FRAGMENT = /* glsl */ `
+uniform vec3 uColor;
+uniform float uOpacity;
+varying vec2 vUv;
+
+void main() {
+  vec2 feather = smoothstep(vec2(0.0), vec2(0.12), vUv) *
+    smoothstep(vec2(0.0), vec2(0.12), 1.0 - vUv);
+  gl_FragColor = vec4(uColor, feather.x * feather.y * uOpacity);
+}
+`;
 
 /**
  * Written every frame from the plate's own travel. Module scope because there
@@ -388,6 +411,9 @@ void main() {
 
 export function ProjectPreviewOverlay() {
     const { viewport } = useThree();
+    const { leftX, rightX } = useHeroLayout();
+    const { layoutMode, compactHeight, inputMode } = useSceneCapabilities();
+    const fixedPreview = layoutMode === "narrow";
     const { progressRef } = useHeroTransition();
     const prefersReducedMotion = usePrefersReducedMotion();
     const debug = useDebugSettings();
@@ -455,13 +481,21 @@ export function ProjectPreviewOverlay() {
 
     const groupRef = useRef<THREE.Group>(null);
     const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+    const scrimMaterialRef = useRef<THREE.ShaderMaterial>(null);
     const radiusUv = useMemo(() => ({ value: new THREE.Vector2(1, 1) }), []);
     const applyShader = useMemo(() => previewShader(radiusUv), [radiusUv]);
 
     const cfg = CONFIG.projectPreview;
     const tuning = debug.projectPreview;
 
-    const width = viewport.width * cfg.WIDTH_FRACTION * tuning.sizeMult;
+    const availableWidth = rightX - leftX;
+    const width =
+        (fixedPreview
+            ? availableWidth *
+              (compactHeight
+                  ? cfg.MOBILE_COMPACT_WIDTH_FRACTION
+                  : cfg.MOBILE_WIDTH_FRACTION)
+            : viewport.width * cfg.WIDTH_FRACTION) * tuning.sizeMult;
     const height = width / cfg.ASPECT;
     const bleedSpanX = 1 + 2 * cfg.GLITCH_BLEED[0];
     const bleedSpanY = 1 + 2 * cfg.GLITCH_BLEED[1];
@@ -484,7 +518,8 @@ export function ProjectPreviewOverlay() {
 
     const caption = useMemo(
         () =>
-            drawCaptionTexture({
+            inputMode === "fine"
+                ? drawCaptionTexture({
                 width: cfg.CAPTION_TEXTURE_WIDTH,
                 aspect: cfg.ASPECT,
                 lead: cfg.CAPTION_LEAD,
@@ -495,8 +530,9 @@ export function ProjectPreviewOverlay() {
                 barFraction: cfg.CAPTION_BAR_FRACTION,
                 barGapFraction: cfg.CAPTION_BAR_GAP_FRACTION,
                 fontFamily,
-            }),
-        [cfg, fontFamily],
+                  })
+                : null,
+        [cfg, fontFamily, inputMode],
     );
 
 
@@ -545,6 +581,23 @@ export function ProjectPreviewOverlay() {
         useCallback((hex: string) => {
             previewUniforms.uPreviewBg.value.set(hex);
         }, []),
+    );
+
+    const scrimUniforms = useMemo(
+        () => ({
+            uColor: { value: new THREE.Color() },
+            uOpacity: { value: 0 },
+        }),
+        [],
+    );
+
+    useSweptColor(
+        "bg",
+        groupRef,
+        useCallback(
+            (hex: string) => scrimUniforms.uColor.value.set(hex),
+            [scrimUniforms],
+        ),
     );
 
     const proxy = useRef({ reveal: 0, glitch: 0, opacity: 0, scale: 1 });
@@ -677,8 +730,15 @@ export function ProjectPreviewOverlay() {
             state.camera,
             plateDepth.current,
         );
-        const targetX = (state.pointer.x * plateViewport.width) / 2;
-        const targetY = (state.pointer.y * plateViewport.height) / 2;
+        const targetX = fixedPreview
+            ? rightX - width / 2
+            : (state.pointer.x * plateViewport.width) / 2;
+        const mobileCenter = compactHeight
+            ? cfg.MOBILE_COMPACT_CENTER_VIEWPORT_Y
+            : cfg.MOBILE_CENTER_VIEWPORT_Y;
+        const targetY = fixedPreview
+            ? plateViewport.height * (0.5 - mobileCenter)
+            : (state.pointer.y * plateViewport.height) / 2;
 
         const move = motion.current;
         const scrollY = window.scrollY;
@@ -693,6 +753,8 @@ export function ProjectPreviewOverlay() {
         // whatever that wrote; only the hover follow is damped.
         if (placed) {
             group.position.set(control.x, control.y, control.z);
+        } else if (fixedPreview) {
+            group.position.set(targetX, targetY, CONFIG.scene.DETAILS_GROUP_Z);
         } else {
             group.position.x = THREE.MathUtils.damp(
                 group.position.x,
@@ -721,7 +783,9 @@ export function ProjectPreviewOverlay() {
         );
 
         const sheetTravel = (2 * (scrollY - move.scrollY)) / state.size.height;
-        const rawX = (state.pointer.x - move.pointer.x) / Math.max(dt, 1e-4);
+        const rawX = fixedPreview
+            ? 0
+            : (state.pointer.x - move.pointer.x) / Math.max(dt, 1e-4);
         const rawY =
             (state.pointer.y - move.pointer.y + sheetTravel) /
             Math.max(dt, 1e-4);
@@ -808,7 +872,13 @@ export function ProjectPreviewOverlay() {
         // The caption promises what a click and a hold do. Once the click has
         // been taken it is answered, and it would otherwise be baked into the
         // opening image at full size.
-        captionUniforms.uCaptionOpacity.value = values.opacity * control.follow;
+        captionUniforms.uCaptionOpacity.value =
+            inputMode === "fine" ? values.opacity * control.follow : 0;
+        if (scrimMaterialRef.current) {
+            scrimMaterialRef.current.uniforms.uOpacity.value = fixedPreview
+                ? values.opacity * control.follow
+                : 0;
+        }
 
         group.visible = values.opacity > 1e-3 && plateTexture !== null;
         if (materialRef.current) materialRef.current.opacity = values.opacity;
@@ -820,6 +890,25 @@ export function ProjectPreviewOverlay() {
             position={[0, 0, CONFIG.scene.DETAILS_GROUP_Z]}
             visible={false}
         >
+            {fixedPreview && (
+                <mesh
+                    renderOrder={cfg.RENDER_ORDER - 1}
+                    raycast={() => null}
+                    position={[0, 0, -0.001]}
+                >
+                    <planeGeometry args={[plateWidth * 1.08, plateHeight * 1.18]} />
+                    <shaderMaterial
+                        ref={scrimMaterialRef}
+                        vertexShader={SCRIM_VERTEX}
+                        fragmentShader={SCRIM_FRAGMENT}
+                        uniforms={scrimUniforms}
+                        transparent
+                        depthTest={false}
+                        depthWrite={false}
+                        toneMapped={false}
+                    />
+                </mesh>
+            )}
             <mesh renderOrder={cfg.RENDER_ORDER} raycast={() => null}>
                 <planeGeometry
                     args={[
@@ -847,6 +936,7 @@ export function ProjectPreviewOverlay() {
               make every glyph the exact inverse of the pixels beneath it,
               while the black around them leaves the plate untouched.
             */}
+            {inputMode === "fine" && (
             <mesh renderOrder={cfg.RENDER_ORDER + 1} raycast={() => null}>
                 <planeGeometry
                     args={[
@@ -874,6 +964,7 @@ export function ProjectPreviewOverlay() {
                     toneMapped={false}
                 />
             </mesh>
+            )}
         </group>
     );
 }

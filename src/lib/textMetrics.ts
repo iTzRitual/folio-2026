@@ -30,11 +30,12 @@ export function measureTextWidth(
     fontPx: number,
     letterSpacingEm: number,
     fontsReady: boolean,
+    fontWeight = 300,
 ): number {
     const ctx = fontsReady ? getContext() : null;
     if (!ctx) return text.length * fontPx * ESTIMATED_ADVANCE_EM;
 
-    ctx.font = `300 ${fontPx}px ${getFontFamily()}`;
+    ctx.font = `${fontWeight} ${fontPx}px ${getFontFamily()}`;
     const tracking = letterSpacingEm * fontPx * Math.max(0, text.length - 1);
 
     return ctx.measureText(text).width + tracking;

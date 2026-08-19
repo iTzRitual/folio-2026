@@ -12,6 +12,7 @@ interface SubtitleProps {
   y: number;
   calculatedFontSize: number;
   pixelFontSize: number;
+  pixelMaxWidth?: number;
 }
 
 export function Subtitle({
@@ -20,6 +21,7 @@ export function Subtitle({
   y,
   calculatedFontSize,
   pixelFontSize,
+  pixelMaxWidth,
 }: SubtitleProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const textRef = useRef<THREE.Mesh>(null);
@@ -58,10 +60,11 @@ export function Subtitle({
 
       <Html
         as="div"
-        className="-translate-x-1/2 -translate-y-full whitespace-nowrap m-0 p-0 text-red-500/0 pointer-events-auto font-karla font-extrabold leading-none"
+        className="-translate-x-1/2 -translate-y-full whitespace-pre-line text-center m-0 p-0 text-red-500/0 pointer-events-auto font-karla font-extrabold leading-none"
         style={{
           fontSize: `${pixelFontSize}px`,
           letterSpacing: `${CONFIG.subtitle.LETTER_SPACING}em`,
+          width: pixelMaxWidth ? `${pixelMaxWidth}px` : undefined,
         }}
       >
         <AnimatedRevealText

@@ -10,6 +10,7 @@ import { useSweptColor } from "@/context/ThemeContext";
 import { heroContent } from "@/data/content";
 import { mixHex } from "@/lib/oklab";
 import { blockReveal } from "./CaseStudyCopy";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 const cfg = CONFIG.caseStudy;
 const LETTER_SPACING = CONFIG.detailsLayout.LETTER_SPACING;
@@ -27,6 +28,7 @@ export function CaseStudyReturn({
     em,
     width,
     pxPerUnit,
+    stickyOffsetRef,
 }: {
     position: [number, number, number];
     /** 0→1 reveal shared with the copy. */
@@ -38,7 +40,10 @@ export function CaseStudyReturn({
     width: number;
     /** Pixels per world unit in the landed frame, for the DOM twin. */
     pxPerUnit: number;
+    stickyOffsetRef?: RefObject<number>;
 }) {
+    const { layoutMode } = useSceneCapabilities();
+    const sticky = layoutMode === "narrow" && stickyOffsetRef !== undefined;
     const { close } = useCaseStudyActions();
     const groupRef = useRef<THREE.Group>(null);
     const riseRef = useRef<THREE.Group>(null);
@@ -89,9 +94,13 @@ export function CaseStudyReturn({
     };
 
     useFrame((_, delta) => {
+        if (groupRef.current && stickyOffsetRef) {
+            groupRef.current.position.y =
+                position[1] - stickyOffsetRef.current;
+        }
         const eased = blockReveal(progressRef.current, 0, blocks);
         if (markRef.current) markRef.current.opacity = eased;
-        if (hintRef.current) hintRef.current.opacity = eased;
+        if (hintRef.current) hintRef.current.opacity = sticky ? 0 : eased;
         if (riseRef.current) {
             riseRef.current.position.y =
                 (1 - eased) * cfg.COPY_REVEAL_RISE * markSize;
@@ -134,7 +143,7 @@ export function CaseStudyReturn({
     return (
         <group ref={groupRef} position={position}>
             <group ref={riseRef}>
-                <Text
+                {!sticky && <Text
                     renderOrder={cfg.RENDER_ORDER}
                     anchorX="left"
                     anchorY="middle"
@@ -154,7 +163,7 @@ export function CaseStudyReturn({
                         depthTest={false}
                         depthWrite={false}
                     />
-                </Text>
+                </Text>}
 
                 <Text
                     position={[width, 0, 0]}
@@ -179,7 +188,15 @@ export function CaseStudyReturn({
                     />
                 </Text>
 
-                <Html as="div" className="left-0 top-0">
+                <Html
+                    as="div"
+                    className="left-0 top-0"
+                    zIndexRange={
+                        sticky
+                            ? [cfg.MOBILE_CONTROL_Z_INDEX, cfg.MOBILE_CONTROL_Z_INDEX]
+                            : undefined
+                    }
+                >
                     <div
                         ref={twinRef}
                         className="relative font-karla"
@@ -193,7 +210,7 @@ export function CaseStudyReturn({
                             onMouseLeave={disengage}
                             onFocus={engage}
                             onBlur={disengage}
-                            className="absolute left-0 top-0 m-0 p-0 block cursor-pointer whitespace-nowrap border-0 bg-transparent font-extrabold leading-none outline-none pointer-events-auto"
+                            className="absolute left-0 top-0 m-0 flex min-h-11 min-w-11 cursor-pointer items-center whitespace-nowrap border-0 bg-transparent p-0 font-extrabold leading-none outline-none pointer-events-auto"
                             style={{
                                 transform: "translateY(-50%)",
                                 fontSize: `${markSize * pxPerUnit}px`,
@@ -209,7 +226,7 @@ export function CaseStudyReturn({
                             {heroContent.title}
                         </button>
 
-                        <span
+                        {!sticky && <span
                             className="absolute top-0 m-0 block whitespace-nowrap p-0 font-light leading-none"
                             style={{
                                 left: `${width * pxPerUnit}px`,
@@ -220,7 +237,7 @@ export function CaseStudyReturn({
                             }}
                         >
                             {cfg.RETURN_HINT}
-                        </span>
+                        </span>}
                     </div>
                 </Html>
             </group>

@@ -10,7 +10,11 @@ import {
     type BioVariant,
 } from "@/data/content";
 import { calculateHeroSafeZone } from "./heroSafeZone";
-import { measureTextWidth, wrapParagraphs } from "./textMetrics";
+import { measureTextWidth, wrapParagraphs, wrapText } from "./textMetrics";
+import {
+    calculateSceneLayoutCapabilities,
+    type SceneLayoutMode,
+} from "./responsiveScene";
 
 export type DetailsColumn = "left" | "right";
 
@@ -21,6 +25,8 @@ export interface DetailsSectionOffsets {
 }
 
 export interface DetailsLayout {
+    layoutMode: SceneLayoutMode;
+    compactHeight: boolean;
     headingFontSize: number;
     bodyFontSize: number;
     bodyLineHeight: number;
@@ -31,9 +37,16 @@ export interface DetailsLayout {
     bioLines: string[];
     bioImageWidth: number;
     bioImageHeight: number;
+    bioImageXOffset: number;
+    bioImageY: number;
     bioTextOffset: number;
     bioTextMaxWidth: number;
     modelGapCenterPx: number;
+    modelAnchorY: number;
+    modelInterludeHeight: number;
+    skillsColumns: number;
+    skillsColumnWidth: number;
+    sectionLines: Record<string, string[]>;
     sections: Record<string, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
@@ -85,7 +98,7 @@ export const DETAILS_SECTION_KEYS = [
     "skills",
 ] as const;
 
-export function calculateDetailsLayout({
+function calculateWideDetailsLayout({
     viewportWidth,
     viewportHeight,
     bioVariant = DEFAULT_BIO_VARIANT,
@@ -250,6 +263,8 @@ export function calculateDetailsLayout({
     const overflow = bioTopY + bioOverflow;
 
     return {
+        layoutMode: "wide",
+        compactHeight: false,
         headingFontSize,
         bodyFontSize,
         bodyLineHeight,
@@ -260,14 +275,239 @@ export function calculateDetailsLayout({
         bioLines,
         bioImageWidth,
         bioImageHeight,
+        bioImageXOffset: 0,
+        bioImageY: bioTopY,
         bioTextOffset,
         bioTextMaxWidth,
         modelGapCenterPx,
+        modelAnchorY:
+            offsets.projects.bodyY +
+            (projectsData.length * projectLineHeight) / 2,
+        modelInterludeHeight: 0,
+        skillsColumns: 1,
+        skillsColumnWidth: bodyMaxWidth,
+        sectionLines: {
+            experience: experienceData.map(
+                (exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`,
+            ),
+            projects: projectsData.map((project) => project.name),
+            education: educationData.map(
+                (edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`,
+            ),
+            courses: coursesData.map(
+                (course) =>
+                    `${course.date} / ${course.title} @ ${course.issuer}`,
+            ),
+            skills: [...skillsData],
+        },
         sections: offsets,
         contentHeight,
         usableHeight,
         overflow,
     };
+}
+
+function calculateNarrowDetailsLayout({
+    viewportWidth,
+    viewportHeight,
+    bioVariant = DEFAULT_BIO_VARIANT,
+    fontsReady = false,
+}: DetailsLayoutInput): DetailsLayout {
+    const { compactHeight } = calculateSceneLayoutCapabilities(
+        viewportWidth,
+        viewportHeight,
+    );
+    const { marginX, marginY } = calculateHeroSafeZone({
+        viewportWidth,
+        viewportHeight,
+    });
+    const L = CONFIG.detailsLayout;
+    const contentWidth = Math.max(0, viewportWidth - marginX * 2);
+    const headingFontSize = Math.min(
+        Math.max(
+            contentWidth * L.NARROW_HEADING_SIZE_MULT,
+            L.NARROW_HEADING_MIN_PX,
+        ),
+        compactHeight
+            ? Math.min(L.NARROW_HEADING_MAX_PX, 34)
+            : L.NARROW_HEADING_MAX_PX,
+    );
+    const bodyFontSize = Math.min(
+        Math.max(
+            headingFontSize * L.NARROW_BODY_SIZE_MULT,
+            L.NARROW_BODY_MIN_PX,
+        ),
+        L.NARROW_BODY_MAX_PX,
+    );
+    const bodyLineHeight = bodyFontSize * L.NARROW_BODY_LINE_HEIGHT_MULT;
+    const projectLineHeight = bodyLineHeight * L.PROJECT_ROW_PITCH_MULT;
+    const bodyTopOffset = headingFontSize * L.NARROW_BODY_GAP_MULT;
+    const sectionGap = headingFontSize * L.NARROW_SECTION_GAP_MULT;
+    const skillsColumnGap = viewportWidth * L.NARROW_SKILLS_COLUMN_GAP_MULT;
+    const widestSkill = skillsData.reduce(
+        (max, skill) =>
+            Math.max(
+                max,
+                measureTextWidth(
+                    skill,
+                    bodyFontSize,
+                    L.LETTER_SPACING,
+                    fontsReady,
+                ),
+            ),
+        0,
+    );
+    const skillsColumns =
+        widestSkill * 2 + skillsColumnGap <= contentWidth ? 2 : 1;
+    const skillsColumnWidth =
+        (contentWidth - skillsColumnGap * (skillsColumns - 1)) / skillsColumns;
+    const wrapItems = (items: readonly string[]) =>
+        items.flatMap((item) =>
+            wrapText(
+                item,
+                contentWidth,
+                bodyFontSize,
+                L.LETTER_SPACING,
+                fontsReady,
+            ),
+        );
+    const sectionLines = {
+        experience: wrapItems(
+            experienceData.map(
+                (exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`,
+            ),
+        ),
+        projects: projectsData.map((project) => project.title),
+        education: wrapItems(
+            educationData.map(
+                (edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`,
+            ),
+        ),
+        courses: wrapItems(
+            coursesData.map(
+                (course) =>
+                    `${course.date} / ${course.title} @ ${course.issuer}`,
+            ),
+        ),
+        skills: [...skillsData],
+    };
+    const offsets: Record<string, DetailsSectionOffsets> = {};
+    let cursor = 0;
+
+    const place = (key: string, rows: number, lineHeight: number) => {
+        const top = cursor;
+        const headingHeight = headingBlockHeight(
+            SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
+            headingFontSize,
+        );
+        const bodyY = top + headingHeight + bodyTopOffset;
+        const inkHeight =
+            rows > 0 ? (rows - 1) * lineHeight + bodyFontSize : 0;
+        offsets[key] = {
+            headingY: top,
+            bodyY,
+            bottomY: bodyY + inkHeight,
+        };
+        cursor = offsets[key].bottomY + sectionGap;
+    };
+
+    place("experience", sectionLines.experience.length, bodyLineHeight);
+    place("skills", Math.ceil(skillsData.length / skillsColumns), bodyLineHeight);
+
+    const modelInterludeHeight = Math.min(
+        Math.max(
+            viewportHeight *
+                (compactHeight
+                    ? L.NARROW_MODEL_INTERLUDE_COMPACT_MULT
+                    : L.NARROW_MODEL_INTERLUDE_MULT),
+            L.NARROW_MODEL_INTERLUDE_MIN_PX,
+        ),
+        L.NARROW_MODEL_INTERLUDE_MAX_PX,
+    );
+    const modelAnchorY = cursor + modelInterludeHeight / 2;
+    cursor += modelInterludeHeight + sectionGap;
+
+    place("projects", projectsData.length, projectLineHeight);
+    place("education", sectionLines.education.length, bodyLineHeight);
+    place("courses", sectionLines.courses.length, bodyLineHeight);
+
+    const topInset =
+        viewportHeight * -L.TARGET_BASE_Y_MULT +
+        marginY * L.SECTION_TOP_OFF_MULT;
+    const bottomInset = marginY * L.SECTION_TOP_OFF_MULT;
+    const usableHeight = Math.max(0, viewportHeight - topInset - bottomInset);
+    const detailsHeight = Math.max(0, cursor - sectionGap);
+    const detailsOverflow = Math.max(0, detailsHeight - usableHeight);
+    const bioTopY = detailsOverflow + viewportHeight;
+    const bioHeadingHeight = headingBlockHeight(
+        SECTION_HEADINGS.bio,
+        headingFontSize,
+    );
+    const bioImageWidth = contentWidth * L.NARROW_BIO_IMAGE_WIDTH_MULT;
+    const bioImageHeight = bioImageWidth * L.BIO_IMAGE_ASPECT;
+    const bioImageY = bioTopY + bioHeadingHeight + bodyTopOffset;
+    const bioTextY =
+        bioImageY +
+        bioImageHeight +
+        headingFontSize * L.NARROW_BIO_IMAGE_GAP_MULT;
+    const bioLines = wrapParagraphs(
+        bioVariants[bioVariant],
+        contentWidth,
+        bodyFontSize,
+        L.LETTER_SPACING,
+        fontsReady,
+    );
+    const bioHeight =
+        bioTextY - bioTopY + bioLines.length * bodyLineHeight;
+    offsets.bio = {
+        headingY: bioTopY,
+        bodyY: bioTextY,
+        bottomY: bioTopY + bioHeight,
+    };
+    const bioOverflow = Math.max(0, bioHeight - usableHeight);
+    const contentHeight = bioTopY + bioHeight;
+    const overflow = bioTopY + bioOverflow;
+
+    return {
+        layoutMode: "narrow",
+        compactHeight,
+        headingFontSize,
+        bodyFontSize,
+        bodyLineHeight,
+        projectLineHeight,
+        bodyTopOffset,
+        bodyColumnOffset: 0,
+        bodyMaxWidth: contentWidth,
+        bioLines,
+        bioImageWidth,
+        bioImageHeight,
+        bioImageXOffset: contentWidth - bioImageWidth,
+        bioImageY,
+        bioTextOffset: 0,
+        bioTextMaxWidth: contentWidth,
+        modelGapCenterPx: viewportWidth / 2,
+        modelAnchorY,
+        modelInterludeHeight,
+        skillsColumns,
+        skillsColumnWidth,
+        sectionLines,
+        sections: offsets,
+        contentHeight,
+        usableHeight,
+        overflow,
+    };
+}
+
+export function calculateDetailsLayout(
+    input: DetailsLayoutInput,
+): DetailsLayout {
+    const { layoutMode } = calculateSceneLayoutCapabilities(
+        input.viewportWidth,
+        input.viewportHeight,
+    );
+    return layoutMode === "narrow"
+        ? calculateNarrowDetailsLayout(input)
+        : calculateWideDetailsLayout(input);
 }
 
 export function calculateDetailsOverflowViewports({

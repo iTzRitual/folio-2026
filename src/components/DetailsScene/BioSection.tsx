@@ -10,7 +10,9 @@ interface BioSectionProps {
     heading: string;
     lines: readonly string[];
     imageX: number;
-    topY: number;
+    imageY: number;
+    headingX: number;
+    headingY: number;
     textY: number;
     imageWidth: number;
     imageHeight: number;
@@ -26,7 +28,9 @@ export function BioSection({
     heading,
     lines,
     imageX,
-    topY,
+    imageY,
+    headingX,
+    headingY,
     textY,
     imageWidth,
     imageHeight,
@@ -41,7 +45,7 @@ export function BioSection({
         <>
             <DetailsText
                 text={heading}
-                position={[textX, topY, 0]}
+                position={[headingX, headingY, 0]}
                 anchorX="left"
                 anchorY="top"
                 calculatedFontSize={headingFontSize}
@@ -61,7 +65,7 @@ export function BioSection({
                     src={bioImage.src}
                     width={imageWidth}
                     height={imageHeight}
-                    position={[imageX, topY, 0]}
+                    position={[imageX, imageY, 0]}
                     cornerRadius={
                         CONFIG.detailsLayout.BIO_REVEAL_BLOCK_RADIUS_PX *
                         pxTo3DWidth

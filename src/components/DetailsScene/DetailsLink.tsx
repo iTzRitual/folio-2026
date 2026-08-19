@@ -27,6 +27,8 @@ import { LinkButtonPlate } from "./LinkButtonPlate";
 import { useCurlFade } from "./useCurlFade";
 import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 import { useCaseStudyActions } from "@/context/CaseStudyContext";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { mixHex } from "@/lib/oklab";
 
 // Built once instead of on every hover enter and leave.
 const FINE_POINTER_QUERY =
@@ -79,6 +81,7 @@ interface DetailsLinkProps {
   rowPitchEm?: number;
   blockRole?: ThemeRole;
   onSync?: (mesh: Mesh) => void;
+  active?: boolean;
 }
 
 export function DetailsLink({
@@ -103,7 +106,11 @@ export function DetailsLink({
   rowPitchEm,
   blockRole,
   onSync,
+  active = false,
 }: DetailsLinkProps) {
+  const { layoutMode, inputMode } = useSceneCapabilities();
+  const opensCaseStudyDirectly =
+    layoutMode === "narrow" && inputMode === "coarse";
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
   const plateRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -139,8 +146,11 @@ export function DetailsLink({
   const pointerInsideRef = useRef(false);
   const hoveredRef = useRef(false);
   const plateShownRef = useRef(false);
+  const restHexRef = useRef("");
+  const activeHexRef = useRef("");
+  const activeCursorRef = useRef(0);
 
-  const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLAnchorElement>(
+  const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLElement>(
     (opacity) => {
       const shown = plateShownRef.current ? 1 : 0;
       if (materialRef.current) materialRef.current.opacity = shown;
@@ -300,8 +310,39 @@ export function DetailsLink({
 
   useEffect(() => detachPressWatchers, []);
 
-  useFrame(() => {
+  const color = useSweptColor(
+    role,
+    groupRef,
+    useCallback((hex: string) => {
+      restHexRef.current = hex;
+    }, []),
+  );
+
+  const activeColor = useSweptColor(
+    "hover",
+    groupRef,
+    useCallback((hex: string) => {
+      activeHexRef.current = hex;
+    }, []),
+  );
+
+  useFrame((_, delta) => {
     stepHold();
+
+    const wanted = active ? 1 : 0;
+    const step = delta / CONFIG.header.HOVER_DURATION;
+    activeCursorRef.current =
+      wanted > activeCursorRef.current
+        ? Math.min(wanted, activeCursorRef.current + step)
+        : Math.max(wanted, activeCursorRef.current - step);
+    const activeMix = activeCursorRef.current;
+    const mixed = mixHex(
+      restHexRef.current || color,
+      activeHexRef.current || activeColor,
+      activeMix * activeMix * (3 - 2 * activeMix),
+    );
+    materialRef.current?.color.set(mixed);
+    arrowRef.current?.color.set(mixed);
 
     const curl = hitCurlRef.current;
     const group = groupRef.current;
@@ -334,15 +375,6 @@ export function DetailsLink({
   });
   const [arrowTex, setArrowTex] = useState<THREE.Texture | null>(arrowTexture);
   const [revealBounds, setRevealBounds] = useState<TextBounds | null>(null);
-
-  const color = useSweptColor(
-    role,
-    groupRef,
-    useCallback((hex: string) => {
-      materialRef.current?.color.set(hex);
-      arrowRef.current?.color.set(hex);
-    }, []),
-  );
 
   const revealColor = useSweptColor(
     blockRole ?? role,
@@ -472,6 +504,20 @@ export function DetailsLink({
     syncHoverRef.current = syncHover;
   });
 
+  useEffect(() => {
+    if (!arrowMeshRef.current) return;
+    const nudge = active
+      ? arrowSize * CONFIG.detailsLink.ARROW_NUDGE_FACTOR
+      : 0;
+    gsap.to(arrowMeshRef.current.position, {
+      x: arrowX + nudge,
+      y: arrowY + nudge,
+      duration: CONFIG.detailsLink.ARROW_DURATION,
+      ease: "power2.out",
+      overwrite: true,
+    });
+  }, [active, arrowSize, arrowX, arrowY]);
+
   const padX = calculatedFontSize * CONFIG.detailsLink.BUTTON_PAD_X_EM;
   const padY = calculatedFontSize * CONFIG.detailsLink.BUTTON_PAD_Y_EM;
   const contentMaxX = arrowGap + arrowSize;
@@ -589,20 +635,9 @@ export function DetailsLink({
       )}
 
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
-        <a
-          ref={twinRef}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(event) => {
-            if (event.detail > 0) event.preventDefault();
-          }}
-          className={`whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`}
-          style={{
-            fontSize: `${pixelFontSize}px`,
-            letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
-          }}
-        >
+        {(() => {
+          const content = (
+            <>
           {hitPadEm > 0 && (
             <span
               aria-hidden
@@ -624,7 +659,41 @@ export function DetailsLink({
               &#8203;
             </span>
           </p>
-        </a>
+            </>
+          );
+          const className = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`;
+          const style = {
+            fontSize: `${pixelFontSize}px`,
+            letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
+          };
+
+          return opensCaseStudyDirectly && caseStudyIndex !== undefined ? (
+            <button
+              ref={twinRef as React.RefObject<HTMLButtonElement | null>}
+              type="button"
+              onClick={() => openCaseStudy(caseStudyIndex)}
+              aria-label={`Open case study: ${text}`}
+              className={`${className} min-h-11 border-0 bg-transparent text-left`}
+              style={style}
+            >
+              {content}
+            </button>
+          ) : (
+            <a
+              ref={twinRef as React.RefObject<HTMLAnchorElement | null>}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                if (event.detail > 0) event.preventDefault();
+              }}
+              className={className}
+              style={style}
+            >
+              {content}
+            </a>
+          );
+        })()}
       </Html>
     </group>
   );

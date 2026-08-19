@@ -4,6 +4,7 @@ import { Vector2, MathUtils } from "three";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "../../config/constants";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 function affordableTaps(width: number, height: number) {
   const {
@@ -25,10 +26,12 @@ function affordableTaps(width: number, height: number) {
 
 export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     const scroll = useDebugSettings().scrollBlur;
+    const { inputMode } = useSceneCapabilities();
     const { size } = useThree();
     const taps = Math.min(
       scroll.taps,
       affordableTaps(size.width, size.height),
+      inputMode === "coarse" ? 4 : CONFIG.customAberration.SCROLL_TAPS,
     );
     const effect = useMemo(() => new CustomAberrationEffect(taps), [taps]);
 
@@ -55,7 +58,10 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
       const dx = mappedX - targetMouse.current.x;
       const dy = mappedY - targetMouse.current.y;
 
-      if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+      if (
+        inputMode === "fine" &&
+        (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001)
+      ) {
         intensity.current = 1.0;
       }
 
@@ -116,11 +122,15 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
       }
 
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
-      effect.uniforms.get("u_aberrationIntensity")!.value = intensity.current;
+      effect.uniforms.get("u_aberrationIntensity")!.value =
+        inputMode === "fine" ? intensity.current : 0;
       effect.uniforms.get("u_mouseVelocity")!.value.set(velX, velY);
       effect.uniforms.get("u_scrollVelocity")!.value = scrollVelocity.current;
-      effect.uniforms.get("u_scrollBlur")!.value = scroll.blur;
-      effect.uniforms.get("u_scrollSplit")!.value = scroll.split;
+      const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
+      effect.uniforms.get("u_scrollBlur")!.value =
+        scroll.blur * mobileIntensity;
+      effect.uniforms.get("u_scrollSplit")!.value =
+        scroll.split * mobileIntensity;
       effect.uniforms
         .get("u_scrollVignette")!
         .value.set(
