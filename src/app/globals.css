@@ -108,3 +108,7 @@ p .block-line-wrapper {
 .no-js .js-only-app {
     display: none !important;
 }
+
+.phase2-html-overlay-hidden {
+    display: none !important;
+}

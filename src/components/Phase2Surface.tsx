@@ -236,10 +236,24 @@ function createPageMask(
   return texture;
 }
 
+function setHtmlOverlayVisibility(
+  container: HTMLElement | null,
+  canvas: HTMLCanvasElement,
+  hidden: boolean,
+) {
+  if (!container) return;
+
+  for (const child of container.children) {
+    if (child instanceof HTMLElement && !child.contains(canvas)) {
+      child.classList.toggle("phase2-html-overlay-hidden", hidden);
+    }
+  }
+}
+
 export function Phase2Surface({ children }: { children: ReactNode }) {
   const { viewport } = useHeroLayout();
   const { revealProgressRef } = useHeroTransition();
-  const { camera, gl, scene, size } = useThree();
+  const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
@@ -254,6 +268,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const capturedRef = useRef(false);
   const capturePendingRef = useRef(false);
   const lastCurveDepthRef = useRef(-1);
+  const htmlOverlayHiddenRef = useRef(false);
 
   const planeWidth = Math.max(
     viewport.width,
@@ -298,8 +313,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       targetRef.current?.dispose();
       chromeTextureRef.current?.dispose();
       pageMaskRef.current?.dispose();
+      setHtmlOverlayVisibility(
+        events.connected as HTMLElement | null,
+        gl.domElement,
+        false,
+      );
     };
-  }, []);
+  }, [events, gl]);
 
   useFrame(() => {
     const scrollReveal = THREE.MathUtils.clamp(revealProgressRef.current, 0, 1);
@@ -308,6 +328,16 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         ? 1
         : 0
       : scrollReveal;
+    const hideHtmlOverlays = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
+
+    if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
+      setHtmlOverlayVisibility(
+        (events.connected as HTMLElement | null) ?? gl.domElement.parentElement,
+        gl.domElement,
+        hideHtmlOverlays,
+      );
+      htmlOverlayHiddenRef.current = hideHtmlOverlays;
+    }
     const planeZ = CONFIG.phase2.PLANE_Z;
     const restZ = CONFIG.caseStudy.CAMERA_REST_Z;
     const perspective = camera as THREE.PerspectiveCamera;
