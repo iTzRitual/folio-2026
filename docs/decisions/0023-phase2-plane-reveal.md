@@ -43,18 +43,19 @@ desktop occupies them.
   portrait aspect ratio and the page keeps its narrow responsive composition.
 - Mobile does not switch to a desktop page layout just because it is displayed
   inside the 4:3 plane.
-- At the reveal boundary, the frozen portfolio is captured into a canvas
-  texture. Safari chrome and the temporary black plane area are composed into
-  that same texture.
+- At the reveal boundary, the portfolio is rendered continuously into a GPU
+  texture while its document scroll remains clamped at the end of About me.
+  Safari chrome and the temporary black plane area are rendered on the same
+  physical plane.
 - The texture is mapped onto the physical plane, so the page and Safari chrome
   share its CRT curvature rather than sitting in separate depth layers.
 - The curvature starts flat and grows only as the camera pulls away, preserving
   the close portfolio composition.
-- Safari chrome is composed above the frozen portfolio content inside the
+- Safari chrome is composed above the live portfolio content inside the plane
   texture. It increases the outer browser window's height instead of causing
   the page to reflow or shrink to make room for the toolbar.
 - Safari controls are visual-only in this phase. The revealed browser is a
-  frozen visual composition, not an interactive browser surface.
+  non-interactive browser surface with live rendered content.
 - The first implementation milestone stops at the Safari-wrapped page on a
   black plane. It excludes the macOS-like virtual desktop, CRT post-processing,
   and any additional physical monitor housing.
@@ -81,7 +82,7 @@ desktop occupies them.
   the plane; this is an intentional consequence of contain fitting.
 - The browser-window contract must preserve the portfolio content rectangle and
   position the toolbar relative to it.
-- The capture texture avoids depth seams between the Safari chrome and the
+- The live plane texture avoids depth seams between the Safari chrome and the
   page while keeping the whole browser window inside the plane bounds.
 - This milestone is intentionally a composition and continuity test before
   adding desktop content or physical screen treatment.
