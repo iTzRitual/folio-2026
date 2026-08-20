@@ -12,7 +12,7 @@ const {
   SCROLL_VIGNETTE_OUTER,
 } = CONFIG.customAberration;
 
-const buildFragmentShader = (taps: number) => `
+export const buildCustomAberrationProgram = (taps: number) => `
 precision mediump float;
 uniform vec2 u_mouse;
 uniform float u_aberrationIntensity;
@@ -26,10 +26,11 @@ uniform vec4 u_scrollVignette;
 
 #define SCROLL_TAPS ${Math.max(2, Math.round(taps))}
 
-void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+vec4 inputSample(vec2 uv);
+
+vec4 applyCustomAberration(vec2 uv) {
     if (u_aberrationIntensity < 0.001 && abs(u_scrollVelocity) < 0.001) {
-        outputColor = texture2D(inputBuffer, uv);
-        return;
+        return inputSample(uv);
     }
 
     vec2 gridUV = floor(uv * u_gridSize) / u_gridSize;
@@ -48,13 +49,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     // three fetches, not SCROLL_TAPS * 3. The test is on uniforms only, so the
     // branch is coherent across the whole pass.
     if (abs(u_scrollVelocity) * u_scrollBlur < 0.0001) {
-        outputColor = vec4(
-            texture2D(inputBuffer, newUv + rgbOffset).r,
-            texture2D(inputBuffer, newUv).g,
-            texture2D(inputBuffer, newUv - rgbOffset).b,
+        return vec4(
+            inputSample(newUv + rgbOffset).r,
+            inputSample(newUv).g,
+            inputSample(newUv - rgbOffset).b,
             1.0
         );
-        return;
     }
 
     vec2 fromCenter = (uv - 0.5) * vec2(u_scrollVignette.x, 1.0);
@@ -72,12 +72,24 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
         float t = float(i) / float(SCROLL_TAPS - 1) - 0.5;
         vec2 tapUv = newUv + vec2(0.0, t * blurAmount);
 
-        accum.r += texture2D(inputBuffer, tapUv + rgbOffset + scrollSplit).r;
-        accum.g += texture2D(inputBuffer, tapUv).g;
-        accum.b += texture2D(inputBuffer, tapUv - rgbOffset - scrollSplit).b;
+        accum.r += inputSample(tapUv + rgbOffset + scrollSplit).r;
+        accum.g += inputSample(tapUv).g;
+        accum.b += inputSample(tapUv - rgbOffset - scrollSplit).b;
     }
 
-    outputColor = vec4(accum / float(SCROLL_TAPS), 1.0);
+    return vec4(accum / float(SCROLL_TAPS), 1.0);
+}
+`;
+
+const buildFragmentShader = (taps: number) => `
+${buildCustomAberrationProgram(taps)}
+
+vec4 inputSample(vec2 uv) {
+    return texture2D(inputBuffer, uv);
+}
+
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+    outputColor = applyCustomAberration(uv);
 }
 `;
 

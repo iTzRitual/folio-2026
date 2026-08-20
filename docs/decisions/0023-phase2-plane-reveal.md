@@ -56,6 +56,9 @@ desktop occupies them.
   the page to reflow or shrink to make room for the toolbar.
 - Safari controls are visual-only in this phase. The revealed browser is a
   non-interactive browser surface with live rendered content.
+- Cursor- and scroll-driven aberration is rendered only inside the Safari
+  content texture after the reveal begins; browser chrome and unused plane
+  content remain stable.
 - The first implementation milestone stops at the Safari-wrapped page on a
   black plane. It excludes the macOS-like virtual desktop, CRT post-processing,
   and any additional physical monitor housing.

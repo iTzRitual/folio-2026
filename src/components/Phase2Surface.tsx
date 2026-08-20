@@ -6,8 +6,11 @@ import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
@@ -250,15 +253,121 @@ function setHtmlOverlayVisibility(
   }
 }
 
+function affordableAberrationTaps(width: number, height: number) {
+  const devicePixels =
+    width *
+    height *
+    CONFIG.customAberration.SCROLL_TAP_DPR_CEILING ** 2;
+
+  if (devicePixels <= 0) return CONFIG.customAberration.SCROLL_TAPS;
+
+  return THREE.MathUtils.clamp(
+    Math.round(
+      (CONFIG.customAberration.SCROLL_TAPS *
+        CONFIG.customAberration.SCROLL_TAP_PIXEL_BUDGET) /
+        devicePixels,
+    ),
+    CONFIG.customAberration.SCROLL_TAPS_MIN,
+    CONFIG.customAberration.SCROLL_TAPS,
+  );
+}
+
+const PAGE_ABERRATION_VERTEX_SHADER = `
+varying vec2 vUv;
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+function createPageAberrationMaterial(taps: number) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      u_pageTexture: { value: null },
+      u_pageMask: { value: null },
+      u_sourceRepeat: { value: new THREE.Vector2(1, 1) },
+      u_sourceOffset: { value: new THREE.Vector2(0, 0) },
+      u_mouse: { value: new THREE.Vector2(0.5, 0.5) },
+      u_aberrationIntensity: { value: 0 },
+      u_gridSize: { value: new THREE.Vector2(80, 80) },
+      u_aspect: { value: new THREE.Vector2(1, 1) },
+      u_mouseVelocity: { value: new THREE.Vector2(0, 0) },
+      u_scrollVelocity: { value: 0 },
+      u_scrollBlur: { value: CONFIG.customAberration.SCROLL_BLUR },
+      u_scrollSplit: { value: CONFIG.customAberration.SCROLL_SPLIT },
+      u_scrollVignette: {
+        value: new THREE.Vector4(
+          CONFIG.customAberration.SCROLL_VIGNETTE_X_WEIGHT,
+          CONFIG.customAberration.SCROLL_VIGNETTE_INNER,
+          CONFIG.customAberration.SCROLL_VIGNETTE_OUTER,
+          CONFIG.customAberration.SCROLL_VIGNETTE_FLOOR,
+        ),
+      },
+    },
+    vertexShader: PAGE_ABERRATION_VERTEX_SHADER,
+    fragmentShader: `
+uniform sampler2D u_pageTexture;
+uniform sampler2D u_pageMask;
+uniform vec2 u_sourceRepeat;
+uniform vec2 u_sourceOffset;
+varying vec2 vUv;
+
+${buildCustomAberrationProgram(taps)}
+
+vec4 inputSample(vec2 uv) {
+  return texture2D(u_pageTexture, uv * u_sourceRepeat + u_sourceOffset);
+}
+
+void main() {
+  if (texture2D(u_pageMask, vUv).r < 0.5) discard;
+  gl_FragColor = applyCustomAberration(vUv);
+}
+`,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
+type PageUvBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type PageTextureTransform = {
+  repeatX: number;
+  repeatY: number;
+  offsetX: number;
+  offsetY: number;
+};
+
+function configurePageAberrationMaterial(
+  material: THREE.ShaderMaterial,
+  target: THREE.WebGLRenderTarget,
+  pageMask: THREE.CanvasTexture,
+  transform: PageTextureTransform,
+) {
+  material.uniforms.u_pageTexture.value = target.texture;
+  material.uniforms.u_pageMask.value = pageMask;
+  material.uniforms.u_sourceRepeat.value.set(transform.repeatX, transform.repeatY);
+  material.uniforms.u_sourceOffset.value.set(transform.offsetX, transform.offsetY);
+}
+
 export function Phase2Surface({ children }: { children: ReactNode }) {
   const { viewport } = useHeroLayout();
   const { revealProgressRef } = useHeroTransition();
   const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
+  const scroll = useDebugSettings().scrollBlur;
+  const { inputMode } = useSceneCapabilities();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const chromeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const pageMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const pageMeshRef = useRef<THREE.Mesh>(null);
+  const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
@@ -269,6 +378,25 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const capturePendingRef = useRef(false);
   const lastCurveDepthRef = useRef(-1);
   const htmlOverlayHiddenRef = useRef(false);
+  const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
+  const pageTextureTransformRef = useRef<PageTextureTransform | null>(null);
+  const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
+  const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
+  const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
+  const mouseIntensityRef = useRef(0);
+  const previousScrollYRef = useRef<number | null>(null);
+  const scrollVelocityRef = useRef(0);
+  const intersectionsRef = useRef<THREE.Intersection[]>([]);
+
+  const taps = Math.min(
+    scroll.taps,
+    affordableAberrationTaps(size.width, size.height),
+    inputMode === "coarse" ? 4 : CONFIG.customAberration.SCROLL_TAPS,
+  );
+  const pageAberrationMaterial = useMemo(
+    () => createPageAberrationMaterial(taps),
+    [taps],
+  );
 
   const planeWidth = Math.max(
     viewport.width,
@@ -289,6 +417,34 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   }, [planeGeometry]);
 
   useEffect(() => {
+    return () => pageAberrationMaterial.dispose();
+  }, [pageAberrationMaterial]);
+
+  useEffect(() => {
+    pageAberrationMaterialRef.current = pageAberrationMaterial;
+    return () => {
+      if (pageAberrationMaterialRef.current === pageAberrationMaterial) {
+        pageAberrationMaterialRef.current = null;
+      }
+    };
+  }, [pageAberrationMaterial]);
+
+  useEffect(() => {
+    const target = targetRef.current;
+    const pageMask = pageMaskRef.current;
+    const transform = pageTextureTransformRef.current;
+
+    if (target && pageMask && transform) {
+      configurePageAberrationMaterial(
+        pageAberrationMaterial,
+        target,
+        pageMask,
+        transform,
+      );
+    }
+  }, [pageAberrationMaterial]);
+
+  useEffect(() => {
     capturedRef.current = false;
     capturePendingRef.current = false;
     lastCurveDepthRef.current = -1;
@@ -299,6 +455,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageMaskRef.current?.dispose();
     pageMaskRef.current = null;
     surfaceTransformRef.current = null;
+    pageUvBoundsRef.current = null;
+    pageTextureTransformRef.current = null;
+    previousScrollYRef.current = null;
+    scrollVelocityRef.current = 0;
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
     if (surfaceGroupRef.current) {
@@ -411,6 +571,116 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
   });
 
+  useFrame((state, delta) => {
+    if (
+      !capturedRef.current ||
+      revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START ||
+      !pageMeshRef.current ||
+      !pageUvBoundsRef.current ||
+      !pageAberrationMaterialRef.current
+    ) {
+      return;
+    }
+
+    const intersections = intersectionsRef.current;
+    intersections.length = 0;
+    state.raycaster.setFromCamera(state.pointer, state.camera);
+    state.raycaster.intersectObject(pageMeshRef.current, false, intersections);
+    const pageUv = intersections[0]?.uv;
+    const bounds = pageUvBoundsRef.current;
+    const mouseX = pageUv ? (pageUv.x - bounds.x) / bounds.width : -1;
+    const mouseY = pageUv ? (pageUv.y - bounds.y) / bounds.height : -1;
+    const pointerInsidePage =
+      mouseX >= 0 && mouseX <= 1 && mouseY >= 0 && mouseY <= 1;
+
+    if (pointerInsidePage) {
+      const dx = mouseX - targetMouseRef.current.x;
+      const dy = mouseY - targetMouseRef.current.y;
+
+      if (
+        inputMode === "fine" &&
+        (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001)
+      ) {
+        mouseIntensityRef.current = 1;
+      }
+
+      targetMouseRef.current.set(mouseX, mouseY);
+    }
+
+    prevMouseRef.current.copy(currentMouseRef.current);
+    currentMouseRef.current.lerp(
+      targetMouseRef.current,
+      1 - Math.exp(-CONFIG.customAberration.LERP_FACTOR_MULT * delta),
+    );
+    mouseIntensityRef.current = THREE.MathUtils.lerp(
+      mouseIntensityRef.current,
+      0,
+      1 - Math.exp(-CONFIG.customAberration.INTENSITY_LERP_MULT * delta),
+    );
+
+    if (mouseIntensityRef.current < CONFIG.customAberration.INTENSITY_MIN) {
+      mouseIntensityRef.current = 0;
+    }
+
+    const safeDelta = Math.max(delta, CONFIG.customAberration.SAFE_DELTA_MIN);
+    const mouseVelocityX =
+      mouseIntensityRef.current > 0
+        ? ((currentMouseRef.current.x - prevMouseRef.current.x) *
+            CONFIG.customAberration.VEL_MULT) /
+          safeDelta
+        : 0;
+    const mouseVelocityY =
+      mouseIntensityRef.current > 0
+        ? ((currentMouseRef.current.y - prevMouseRef.current.y) *
+            CONFIG.customAberration.VEL_MULT) /
+          safeDelta
+        : 0;
+    const scrollY = window.scrollY;
+    const scrollDelta =
+      previousScrollYRef.current === null
+        ? 0
+        : scrollY - previousScrollYRef.current;
+    previousScrollYRef.current = scrollY;
+    const targetScrollVelocity = THREE.MathUtils.clamp(
+      ((scrollDelta / size.height) *
+        scroll.velocityScale *
+        CONFIG.customAberration.VEL_MULT) /
+        safeDelta,
+      -CONFIG.customAberration.SCROLL_VEL_CLAMP,
+      CONFIG.customAberration.SCROLL_VEL_CLAMP,
+    );
+    const scrollLerp =
+      Math.abs(targetScrollVelocity) > Math.abs(scrollVelocityRef.current)
+        ? scroll.attack
+        : scroll.release;
+
+    scrollVelocityRef.current = THREE.MathUtils.lerp(
+      scrollVelocityRef.current,
+      targetScrollVelocity,
+      1 - Math.exp(-scrollLerp * delta),
+    );
+
+    if (Math.abs(scrollVelocityRef.current) < CONFIG.customAberration.SCROLL_MIN) {
+      scrollVelocityRef.current = 0;
+    }
+
+    const uniforms = pageAberrationMaterialRef.current.uniforms;
+    uniforms.u_mouse.value.copy(currentMouseRef.current);
+    uniforms.u_aberrationIntensity.value =
+      inputMode === "fine" ? mouseIntensityRef.current : 0;
+    uniforms.u_mouseVelocity.value.set(mouseVelocityX, mouseVelocityY);
+    uniforms.u_scrollVelocity.value = scrollVelocityRef.current;
+    const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
+    uniforms.u_scrollBlur.value = scroll.blur * mobileIntensity;
+    uniforms.u_scrollSplit.value = scroll.split * mobileIntensity;
+    uniforms.u_scrollVignette.value.set(
+      scroll.vignetteXWeight,
+      scroll.vignetteInner,
+      scroll.vignetteOuter,
+      scroll.vignetteFloor,
+    );
+  });
+
   useFrame(() => {
     if (
       (!capturePendingRef.current && !capturedRef.current) ||
@@ -472,8 +742,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (
       !chromeTexture ||
       !pageMask ||
-      !chromeMaterialRef.current ||
-      !pageMaterialRef.current
+      !chromeMaterialRef.current
     ) {
       return;
     }
@@ -484,23 +753,31 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageMaskRef.current = pageMask;
     chromeMaterialRef.current.map = chromeTexture;
     chromeMaterialRef.current.needsUpdate = true;
-    target.texture.repeat.set(
-      textureWidth / layout.width,
-      textureHeight / layout.contentHeight,
-    );
-    target.texture.offset.set(
-      -layout.x / layout.width,
-      -(
-        1 -
-        (layout.y + layout.chromeHeight + layout.contentHeight) /
-          textureHeight
-      ) /
+    const transform = {
+      repeatX: textureWidth / layout.width,
+      repeatY: textureHeight / layout.contentHeight,
+      offsetX: -layout.x / layout.width,
+      offsetY:
+        -(
+          1 -
+          (layout.y + layout.chromeHeight + layout.contentHeight) /
+            textureHeight
+        ) /
         (layout.contentHeight / textureHeight),
+    };
+    pageTextureTransformRef.current = transform;
+    pageUvBoundsRef.current = {
+      x: layout.x / textureWidth,
+      y: (layout.y + layout.chromeHeight) / textureHeight,
+      width: layout.width / textureWidth,
+      height: layout.contentHeight / textureHeight,
+    };
+    configurePageAberrationMaterial(
+      pageAberrationMaterial,
+      target,
+      pageMask,
+      transform,
     );
-    target.texture.needsUpdate = true;
-    pageMaterialRef.current.map = target.texture;
-    pageMaterialRef.current.alphaMap = pageMask;
-    pageMaterialRef.current.needsUpdate = true;
     const restDistance = CONFIG.caseStudy.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
     const restHeight =
       2 *
@@ -537,6 +814,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         visible={false}
       >
         <mesh
+          ref={pageMeshRef}
           geometry={planeGeometry}
           renderOrder={10}
           frustumCulled={false}
@@ -557,14 +835,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           frustumCulled={false}
           raycast={() => null}
         >
-          <meshBasicMaterial
-            ref={pageMaterialRef}
-            color="#ffffff"
-            transparent
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-          />
+          <primitive object={pageAberrationMaterial} attach="material" />
         </mesh>
       </group>
     </group>

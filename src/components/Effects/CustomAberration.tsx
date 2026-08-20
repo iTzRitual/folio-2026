@@ -5,6 +5,7 @@ import { CustomAberrationEffect } from "./CustomAberrationEffect";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "../../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { useHeroTransition } from "@/context/HeroTransitionContext";
 
 function affordableTaps(width: number, height: number) {
   const {
@@ -27,6 +28,7 @@ function affordableTaps(width: number, height: number) {
 export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     const scroll = useDebugSettings().scrollBlur;
     const { inputMode } = useSceneCapabilities();
+    const { revealProgressRef } = useHeroTransition();
     const { size } = useThree();
     const taps = Math.min(
       scroll.taps,
@@ -52,6 +54,8 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     }, [size, effect]);
 
     useFrame(({ pointer }, delta) => {
+      const phase2Active =
+        revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
       const mappedX = (pointer.x + 1) / 2;
       const mappedY = (pointer.y + 1) / 2;
 
@@ -123,9 +127,14 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
 
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
       effect.uniforms.get("u_aberrationIntensity")!.value =
-        inputMode === "fine" ? intensity.current : 0;
-      effect.uniforms.get("u_mouseVelocity")!.value.set(velX, velY);
-      effect.uniforms.get("u_scrollVelocity")!.value = scrollVelocity.current;
+        !phase2Active && inputMode === "fine" ? intensity.current : 0;
+      effect
+        .uniforms
+        .get("u_mouseVelocity")!
+        .value.set(phase2Active ? 0 : velX, phase2Active ? 0 : velY);
+      effect.uniforms.get("u_scrollVelocity")!.value = phase2Active
+        ? 0
+        : scrollVelocity.current;
       const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
       effect.uniforms.get("u_scrollBlur")!.value =
         scroll.blur * mobileIntensity;
