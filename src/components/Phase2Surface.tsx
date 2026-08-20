@@ -814,7 +814,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         visible={false}
       >
         <mesh
-          ref={pageMeshRef}
           geometry={planeGeometry}
           renderOrder={10}
           frustumCulled={false}
@@ -830,10 +829,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           />
         </mesh>
         <mesh
+          ref={pageMeshRef}
           geometry={planeGeometry}
           renderOrder={11}
           frustumCulled={false}
-          raycast={() => null}
         >
           <primitive object={pageAberrationMaterial} attach="material" />
         </mesh>
