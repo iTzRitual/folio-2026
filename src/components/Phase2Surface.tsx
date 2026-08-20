@@ -1,6 +1,6 @@
 "use client";
 
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
@@ -10,6 +10,7 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { useTheme } from "@/context/ThemeContext";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 
@@ -356,13 +357,63 @@ function configurePageAberrationMaterial(
   material.uniforms.u_sourceOffset.value.set(transform.offsetX, transform.offsetY);
 }
 
+function isThemeToggleHit({
+  pageX,
+  pageY,
+  viewport,
+  size,
+  leftX,
+  rightX,
+  layoutMode,
+}: {
+  pageX: number;
+  pageY: number;
+  viewport: { width: number; height: number };
+  size: { width: number; height: number };
+  leftX: number;
+  rightX: number;
+  layoutMode: "wide" | "narrow";
+}) {
+  const headerMargin =
+    layoutMode === "narrow"
+      ? CONFIG.header.NARROW_MARGIN_Y_PX
+      : CONFIG.header.MARGIN_Y_PX;
+  const verticalCenter = 1 - headerMargin / size.height;
+  const verticalHitRadius = 24 / size.height;
+
+  if (Math.abs(pageY - verticalCenter) > verticalHitRadius) return false;
+
+  const themeX =
+    layoutMode === "narrow"
+      ? leftX +
+        (rightX - leftX) * CONFIG.header.NARROW_THEME_SLOT_T
+      : leftX + (rightX - leftX) * CONFIG.header.SLOT_TS[2];
+  const themeXNormalized = (themeX + viewport.width / 2) / viewport.width;
+
+  if (layoutMode === "narrow") {
+    const hitRadius = 24 / size.width;
+    return Math.abs(pageX - themeXNormalized) <= hitRadius;
+  }
+
+  return (
+    pageX >= themeXNormalized - 18 / size.width &&
+    pageX <= themeXNormalized + 150 / size.width
+  );
+}
+
 export function Phase2Surface({ children }: { children: ReactNode }) {
-  const { viewport } = useHeroLayout();
+  const {
+    viewport,
+    size: layoutSize,
+    leftX,
+    rightX,
+  } = useHeroLayout();
   const { revealProgressRef } = useHeroTransition();
   const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
   const scroll = useDebugSettings().scrollBlur;
-  const { inputMode } = useSceneCapabilities();
+  const { inputMode, layoutMode } = useSceneCapabilities();
+  const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const chromeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -768,7 +819,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageTextureTransformRef.current = transform;
     pageUvBoundsRef.current = {
       x: layout.x / textureWidth,
-      y: (layout.y + layout.chromeHeight) / textureHeight,
+      y:
+        1 -
+        (layout.y + layout.chromeHeight + layout.contentHeight) /
+          textureHeight,
       width: layout.width / textureWidth,
       height: layout.contentHeight / textureHeight,
     };
@@ -804,6 +858,33 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     surfaceGroupRef.current.visible = true;
   }, 0.5);
 
+  const handlePageClick = (event: ThreeEvent<MouseEvent>) => {
+    const pageUv = event.uv;
+    const bounds = pageUvBoundsRef.current;
+
+    if (!pageUv || !bounds) return;
+
+    const pageX = (pageUv.x - bounds.x) / bounds.width;
+    const pageY = (pageUv.y - bounds.y) / bounds.height;
+
+    if (
+      !isThemeToggleHit({
+        pageX,
+        pageY,
+        viewport,
+        size: layoutSize,
+        leftX,
+        rightX,
+        layoutMode,
+      })
+    ) {
+      return;
+    }
+
+    event.stopPropagation();
+    setTheme(theme === "Light" ? "Dark" : "Light");
+  };
+
   return (
     <group>
       <group ref={pageGroupRef}>{children}</group>
@@ -833,6 +914,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           geometry={planeGeometry}
           renderOrder={11}
           frustumCulled={false}
+          onClick={handlePageClick}
         >
           <primitive object={pageAberrationMaterial} attach="material" />
         </mesh>
