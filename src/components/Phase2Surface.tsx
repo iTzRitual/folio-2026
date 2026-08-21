@@ -158,15 +158,30 @@ function drawDock(
   const radius = height * 0.27;
   const magnificationRadius =
     itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
+  const activeIndex =
+    pointerX === null
+      ? -1
+      : Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }).findIndex(
+          (_, index) => {
+            const itemX = layout.itemX + index * (itemSize + itemGap);
+            return pointerX >= itemX && pointerX <= itemX + itemSize;
+          },
+        );
+  const magnificationCenter =
+    activeIndex >= 0
+      ? layout.itemX +
+        activeIndex * (itemSize + itemGap) +
+        itemSize / 2
+      : pointerX;
   const scales = Array.from(
     { length: CONFIG.phase2.DOCK_ITEM_COUNT },
     (_, index) => {
-      if (pointerX === null || magnification === 0) return 1;
+      if (magnificationCenter === null || magnification === 0) return 1;
 
       const center =
         layout.itemX + index * (itemSize + itemGap) + itemSize / 2;
       const influence = THREE.MathUtils.clamp(
-        1 - Math.abs(pointerX - center) / magnificationRadius,
+        1 - Math.abs(magnificationCenter - center) / magnificationRadius,
         0,
         1,
       );
