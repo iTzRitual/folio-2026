@@ -208,7 +208,6 @@ type DockRenderer = {
   context: CanvasRenderingContext2D;
   texture: THREE.CanvasTexture;
   layout: ReturnType<typeof getDockLayout>;
-  browserLayout: ReturnType<typeof getBrowserLayout>;
   scales: number[];
   x: number;
   width: number;
@@ -366,27 +365,7 @@ function updateDockRenderer(
   if (!changed) return;
 
   const { canvas, context, layout } = renderer;
-  const clearTop = Math.max(
-    0,
-    layout.y -
-      layout.itemSize * (1 + CONFIG.phase2.DOCK_MAGNIFICATION_MAX),
-  );
-  context.fillStyle = "#000000";
-  context.fillRect(0, clearTop, canvas.width, canvas.height - clearTop);
-  const browserContentTop =
-    renderer.browserLayout.y + renderer.browserLayout.chromeHeight;
-  const browserClearTop = Math.max(clearTop, browserContentTop);
-  const browserClearBottom =
-    renderer.browserLayout.y + renderer.browserLayout.height;
-
-  if (browserClearTop < browserClearBottom) {
-    context.clearRect(
-      renderer.browserLayout.x,
-      browserClearTop,
-      renderer.browserLayout.width,
-      browserClearBottom - browserClearTop,
-    );
-  }
+  context.clearRect(0, 0, canvas.width, canvas.height);
   drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
   renderer.texture.needsUpdate = true;
 }
@@ -421,7 +400,6 @@ function createBrowserChromeTexture({
     sourceHeight,
     tuning,
   );
-  const dock = getDockLayout(textureWidth, textureHeight, tuning);
   const {
     x: browserX,
     y: browserY,
@@ -502,37 +480,55 @@ function createBrowserChromeTexture({
   textureContext.textBaseline = "middle";
   textureContext.fillText("folio-2026", browserX + browserWidth / 2, controlY);
   textureContext.restore();
-  drawDock(
-    textureContext,
-    dock,
-    Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
-    dock.x,
-    dock.width,
-  );
 
   const texture = new THREE.CanvasTexture(textureCanvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  return {
+  return texture;
+}
+
+function createDockRenderer({
+  sourceWidth,
+  sourceHeight,
+  tuning,
+}: {
+  sourceWidth: number;
+  sourceHeight: number;
+  tuning: Phase2Tuning;
+}) {
+  const { width, height } = getTextureDimensions(sourceWidth, sourceHeight);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) return null;
+
+  canvas.width = width;
+  canvas.height = height;
+  const layout = getDockLayout(width, height, tuning);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  const renderer: DockRenderer = {
+    canvas,
+    context,
     texture,
-    dockRenderer: {
-      canvas: textureCanvas,
-      context: textureContext,
-      texture,
-      layout: dock,
-      browserLayout: layout,
-      scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
-      x: dock.x,
-      width: dock.width,
-      anchor: null,
-      leftAnchor: dock.x,
-      rightAnchor: dock.x + dock.width,
-      entrySettled: false,
-      smoothedPointerX: null,
-    },
+    layout,
+    scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
+    x: layout.x,
+    width: layout.width,
+    anchor: null,
+    leftAnchor: layout.x,
+    rightAnchor: layout.x + layout.width,
+    entrySettled: false,
+    smoothedPointerX: null,
   };
+
+  drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
+  return renderer;
 }
 
 function createPageMask(
@@ -753,10 +749,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const chromeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const pageMeshRef = useRef<THREE.Mesh>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const dockTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const dockRendererRef = useRef<DockRenderer | null>(null);
   const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
   const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
@@ -839,6 +837,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     targetRef.current = null;
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = null;
+    dockTextureRef.current?.dispose();
+    dockTextureRef.current = null;
     dockRendererRef.current = null;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = null;
@@ -869,6 +869,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     return () => {
       targetRef.current?.dispose();
       chromeTextureRef.current?.dispose();
+      dockTextureRef.current?.dispose();
       dockRendererRef.current = null;
       pageMaskRef.current?.dispose();
       setHtmlOverlayVisibility(
@@ -1169,23 +1170,34 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       sourceHeight,
       tuning: phase2,
     });
+    const dockRenderer = createDockRenderer({
+      sourceWidth,
+      sourceHeight,
+      tuning: phase2,
+    });
     const pageMask = createPageMask(textureWidth, textureHeight, layout);
 
     if (
       !chromeTexture ||
+      !dockRenderer ||
       !pageMask ||
-      !chromeMaterialRef.current
+      !chromeMaterialRef.current ||
+      !dockMaterialRef.current
     ) {
       return;
     }
 
     chromeTextureRef.current?.dispose();
-    chromeTextureRef.current = chromeTexture.texture;
-    dockRendererRef.current = chromeTexture.dockRenderer;
+    chromeTextureRef.current = chromeTexture;
+    dockTextureRef.current?.dispose();
+    dockTextureRef.current = dockRenderer.texture;
+    dockRendererRef.current = dockRenderer;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = pageMask;
-    chromeMaterialRef.current.map = chromeTexture.texture;
+    chromeMaterialRef.current.map = chromeTexture;
     chromeMaterialRef.current.needsUpdate = true;
+    dockMaterialRef.current.map = dockRenderer.texture;
+    dockMaterialRef.current.needsUpdate = true;
     const bounds = {
       x: layout.x / textureWidth,
       y:
@@ -1287,6 +1299,21 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           onClick={handlePageClick}
         >
           <primitive object={pageAberrationMaterial} attach="material" />
+        </mesh>
+        <mesh
+          geometry={planeGeometry}
+          renderOrder={12}
+          frustumCulled={false}
+          raycast={() => null}
+        >
+          <meshBasicMaterial
+            ref={dockMaterialRef}
+            color="#ffffff"
+            transparent
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+          />
         </mesh>
       </group>
     </group>
