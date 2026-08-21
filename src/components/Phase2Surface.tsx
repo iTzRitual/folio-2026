@@ -151,44 +151,12 @@ function getBrowserLayout(
 function drawDock(
   context: CanvasRenderingContext2D,
   layout: ReturnType<typeof getDockLayout>,
-  magnification = 0,
-  pointerX: number | null = null,
+  scales: number[],
+  x: number,
+  width: number,
 ) {
-  const { y, height, itemGap, itemSize, centerX } = layout;
+  const { y, height, itemGap, itemSize } = layout;
   const radius = height * 0.27;
-  const magnificationRadius =
-    itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
-  const activeIndex =
-    pointerX === null
-      ? -1
-      : Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }).findIndex(
-          (_, index) => {
-            const itemX = layout.itemX + index * (itemSize + itemGap);
-            return pointerX >= itemX && pointerX <= itemX + itemSize;
-          },
-        );
-  const scales = Array.from(
-    { length: CONFIG.phase2.DOCK_ITEM_COUNT },
-    (_, index) => {
-      if (pointerX === null || magnification === 0) return 1;
-      if (index === activeIndex) return 1 + magnification;
-
-      const center =
-        layout.itemX + index * (itemSize + itemGap) + itemSize / 2;
-      const influence = THREE.MathUtils.clamp(
-        1 - Math.abs(pointerX - center) / magnificationRadius,
-        0,
-        1,
-      );
-
-      return 1 + magnification * influence * influence;
-    },
-  );
-  const itemsWidth =
-    scales.reduce((total, scale) => total + itemSize * scale, 0) +
-    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
-  const width = itemsWidth + height * 0.32;
-  const x = centerX - width / 2;
 
   context.save();
   context.shadowColor = "rgba(0, 0, 0, 0.38)";
@@ -240,24 +208,91 @@ type DockRenderer = {
   context: CanvasRenderingContext2D;
   texture: THREE.CanvasTexture;
   layout: ReturnType<typeof getDockLayout>;
-  lastMagnification: number;
-  lastPointerX: number | null;
+  scales: number[];
+  x: number;
+  width: number;
 };
+
+function getDockTarget(
+  layout: ReturnType<typeof getDockLayout>,
+  magnification: number,
+  pointerX: number | null,
+) {
+  const { itemGap, itemSize } = layout;
+  const count = CONFIG.phase2.DOCK_ITEM_COUNT;
+  const radius = itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
+
+  if (pointerX === null || magnification === 0) {
+    return {
+      scales: Array.from({ length: count }, () => 1),
+      x: layout.x,
+      width: layout.width,
+    };
+  }
+
+  const influence = (index: number) => {
+    const center = layout.itemX + index * (itemSize + itemGap) + itemSize / 2;
+    return THREE.MathUtils.clamp(1 - Math.abs(pointerX - center) / radius, 0, 1) ** 2;
+  };
+  const virtualRange = Math.ceil(radius / (itemSize + itemGap)) + 1;
+  let fullInfluence = 0;
+
+  for (let index = -virtualRange; index < count + virtualRange; index += 1) {
+    fullInfluence += influence(index);
+  }
+
+  const extraScale =
+    (magnification * CONFIG.phase2.DOCK_MAGNIFICATION_TOTAL_MULT) /
+    Math.max(fullInfluence, 0.0001);
+  const scales = Array.from(
+    { length: count },
+    (_, index) => 1 + influence(index) * extraScale,
+  );
+  const width =
+    scales.reduce((total, scale) => total + itemSize * scale, 0) +
+    itemGap * (count - 1) +
+    layout.height * 0.32;
+  const leftEdge = layout.itemX;
+  const rightEdge = layout.itemX + count * itemSize + (count - 1) * itemGap;
+  const x =
+    pointerX < leftEdge + radius
+      ? layout.x + layout.width - width
+      : pointerX > rightEdge - radius
+        ? layout.x
+        : layout.centerX - width / 2;
+
+  return { scales, x, width };
+}
 
 function updateDockRenderer(
   renderer: DockRenderer,
   magnification: number,
   pointerX: number | null,
+  delta: number,
 ) {
-  if (
-    renderer.lastMagnification === magnification &&
-    (renderer.lastPointerX === pointerX ||
-      (renderer.lastPointerX !== null &&
-        pointerX !== null &&
-        Math.abs(renderer.lastPointerX - pointerX) < 0.5))
-  ) {
-    return;
+  const target = getDockTarget(renderer.layout, magnification, pointerX);
+  const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
+  let changed = false;
+
+  for (let index = 0; index < renderer.scales.length; index += 1) {
+    const next = THREE.MathUtils.lerp(
+      renderer.scales[index],
+      target.scales[index],
+      amount,
+    );
+    changed ||= Math.abs(next - renderer.scales[index]) > 0.0001;
+    renderer.scales[index] = next;
   }
+
+  const nextX = THREE.MathUtils.lerp(renderer.x, target.x, amount);
+  const nextWidth = THREE.MathUtils.lerp(renderer.width, target.width, amount);
+  changed ||=
+    Math.abs(nextX - renderer.x) > 0.01 ||
+    Math.abs(nextWidth - renderer.width) > 0.01;
+  renderer.x = nextX;
+  renderer.width = nextWidth;
+
+  if (!changed) return;
 
   const { canvas, context, layout } = renderer;
   const clearTop = Math.max(
@@ -267,10 +302,8 @@ function updateDockRenderer(
   );
   context.fillStyle = "#000000";
   context.fillRect(0, clearTop, canvas.width, canvas.height - clearTop);
-  drawDock(context, layout, magnification, pointerX);
+  drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
   renderer.texture.needsUpdate = true;
-  renderer.lastMagnification = magnification;
-  renderer.lastPointerX = pointerX;
 }
 
 function createBrowserChromeTexture({
@@ -384,7 +417,13 @@ function createBrowserChromeTexture({
   textureContext.textBaseline = "middle";
   textureContext.fillText("folio-2026", browserX + browserWidth / 2, controlY);
   textureContext.restore();
-  drawDock(textureContext, dock);
+  drawDock(
+    textureContext,
+    dock,
+    Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
+    dock.x,
+    dock.width,
+  );
 
   const texture = new THREE.CanvasTexture(textureCanvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -398,8 +437,9 @@ function createBrowserChromeTexture({
       context: textureContext,
       texture,
       layout: dock,
-      lastMagnification: 0,
-      lastPointerX: null,
+      scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
+      x: dock.x,
+      width: dock.width,
     },
   };
 }
@@ -887,6 +927,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         dockRenderer,
         phase2.dockMagnification,
         pointerInsideDock ? pointerX : null,
+        delta,
       );
     }
 
