@@ -71,6 +71,7 @@ function getDockLayout(
   const screenMargin =
     Math.min(textureWidth, textureHeight) *
     CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+  const screenUnit = Math.min(textureWidth, textureHeight);
   const height =
     Math.min(textureWidth, textureHeight) *
     CONFIG.phase2.DOCK_HEIGHT_MULT *
@@ -82,17 +83,23 @@ function getDockLayout(
     itemSize * CONFIG.phase2.DOCK_ITEM_COUNT +
     itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
   const width = itemsWidth + horizontalPadding * 2;
+  const x = (textureWidth - width) / 2 + tuning.dockOffsetX * screenUnit;
+  const y =
+    textureHeight -
+    screenMargin -
+    height +
+    tuning.dockOffsetY * screenUnit;
 
   return {
-    x: (textureWidth - width) / 2,
-    y: textureHeight - screenMargin - height,
+    x,
+    y,
     width,
     height,
     itemGap,
     itemSize,
-    itemX: (textureWidth - itemsWidth) / 2,
-    itemY: textureHeight - screenMargin - height + (height - itemSize) / 2,
-    safeTop: textureHeight - height - screenMargin * 2,
+    itemX: x + horizontalPadding,
+    itemY: y + (height - itemSize) / 2,
+    safeTop: y - tuning.safariBottomSafeArea * screenUnit,
   };
 }
 
@@ -628,7 +635,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
   }, [
     phase2.dockScale,
+    phase2.dockOffsetX,
+    phase2.dockOffsetY,
     phase2.safariAddressScale,
+    phase2.safariBottomSafeArea,
     phase2.safariChromeScale,
     phase2.safariControlsScale,
     size.height,

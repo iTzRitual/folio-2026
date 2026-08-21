@@ -112,3 +112,7 @@ p .block-line-wrapper {
 .phase2-html-overlay-hidden {
     display: none !important;
 }
+
+.debug-panel {
+    overscroll-behavior: contain;
+}

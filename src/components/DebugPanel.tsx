@@ -166,6 +166,8 @@ const EXCLUSION_SCHEMA = {
 
 const PHASE2_SCHEMA = {
     dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
+    dockOffsetX: { value: D.phase2.dockOffsetX, min: -0.3, max: 0.3, step: 0.005 },
+    dockOffsetY: { value: D.phase2.dockOffsetY, min: -0.3, max: 0.045, step: 0.005 },
     safariChromeScale: {
         value: D.phase2.safariChromeScale,
         min: 0.6,
@@ -183,6 +185,12 @@ const PHASE2_SCHEMA = {
         min: 0.5,
         max: 2,
         step: 0.01,
+    },
+    safariBottomSafeArea: {
+        value: D.phase2.safariBottomSafeArea,
+        min: 0,
+        max: 0.3,
+        step: 0.005,
     },
 };
 
@@ -236,5 +244,9 @@ export default function DebugPanel({
         headerExclusion,
     ]);
 
-    return <Leva collapsed />;
+    return (
+        <div data-lenis-prevent className="debug-panel">
+            <Leva collapsed />
+        </div>
+    );
 }

@@ -53,9 +53,12 @@ export interface DebugSettings {
     };
     phase2: {
         dockScale: number;
+        dockOffsetX: number;
+        dockOffsetY: number;
         safariChromeScale: number;
         safariControlsScale: number;
         safariAddressScale: number;
+        safariBottomSafeArea: number;
     };
     headerExclusion: { strength: number; threshold: number; softness: number };
 }
@@ -120,9 +123,12 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     },
     phase2: {
         dockScale: CONFIG.phase2.DOCK_SCALE,
+        dockOffsetX: CONFIG.phase2.DOCK_OFFSET_X,
+        dockOffsetY: CONFIG.phase2.DOCK_OFFSET_Y,
         safariChromeScale: CONFIG.phase2.SAFARI_CHROME_SCALE,
         safariControlsScale: CONFIG.phase2.SAFARI_CONTROLS_SCALE,
         safariAddressScale: CONFIG.phase2.SAFARI_ADDRESS_SCALE,
+        safariBottomSafeArea: CONFIG.phase2.SAFARI_BOTTOM_SAFE_AREA,
     },
     headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
 };
