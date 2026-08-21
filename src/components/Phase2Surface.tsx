@@ -60,6 +60,29 @@ function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
   };
 }
 
+function getDockLayout(textureWidth: number, textureHeight: number) {
+  const screenMargin =
+    Math.min(textureWidth, textureHeight) *
+    CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+  const height =
+    Math.min(textureWidth, textureHeight) * CONFIG.phase2.DOCK_HEIGHT_MULT;
+  const width = Math.min(
+    textureWidth - screenMargin * 2,
+    textureWidth * CONFIG.phase2.DOCK_WIDTH_MULT,
+  );
+
+  return {
+    x: (textureWidth - width) / 2,
+    y: textureHeight - screenMargin - height,
+    width,
+    height,
+    safeTop:
+      textureHeight -
+      screenMargin -
+      height * (1 + CONFIG.phase2.DOCK_SAFE_GAP_MULT),
+  };
+}
+
 function getBrowserLayout(
   textureWidth: number,
   textureHeight: number,
@@ -69,8 +92,9 @@ function getBrowserLayout(
   const margin =
     Math.min(textureWidth, textureHeight) *
     CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+  const dock = getDockLayout(textureWidth, textureHeight);
   const availableWidth = textureWidth - margin * 2;
-  const availableHeight = textureHeight - margin * 2;
+  const availableHeight = dock.safeTop - margin;
   const browserAspect =
     sourceWidth /
     (sourceHeight * (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT));
@@ -83,7 +107,7 @@ function getBrowserLayout(
   }
 
   const x = (textureWidth - width) / 2;
-  const y = (textureHeight - height) / 2;
+  const y = margin + (availableHeight - height) / 2;
   const contentHeight =
     height / (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT);
 
@@ -95,6 +119,67 @@ function getBrowserLayout(
     contentHeight,
     chromeHeight: height - contentHeight,
   };
+}
+
+function drawDock(
+  context: CanvasRenderingContext2D,
+  layout: ReturnType<typeof getDockLayout>,
+) {
+  const { x, y, width, height } = layout;
+  const radius = height * 0.27;
+  const itemGap = height * CONFIG.phase2.DOCK_ITEM_GAP_MULT;
+  const horizontalPadding = height * 0.16;
+  const itemSize = Math.min(
+    height - horizontalPadding * 2,
+    (width - horizontalPadding * 2 -
+      itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1)) /
+      CONFIG.phase2.DOCK_ITEM_COUNT,
+  );
+  const itemsWidth =
+    itemSize * CONFIG.phase2.DOCK_ITEM_COUNT +
+    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
+  const itemX = x + (width - itemsWidth) / 2;
+  const itemY = y + (height - itemSize) / 2;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.38)";
+  context.shadowBlur = height * 0.18;
+  context.shadowOffsetY = height * 0.08;
+  context.fillStyle = "rgba(218, 218, 218, 0.2)";
+  context.beginPath();
+  context.roundRect(x, y, width, height, radius);
+  context.fill();
+  context.shadowColor = "transparent";
+  context.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  context.lineWidth = Math.max(1, height * 0.018);
+  context.stroke();
+
+  for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
+    const currentX = itemX + index * (itemSize + itemGap);
+    const gradient = context.createLinearGradient(
+      currentX,
+      itemY,
+      currentX + itemSize,
+      itemY + itemSize,
+    );
+    gradient.addColorStop(0, "#d9d9d9");
+    gradient.addColorStop(1, "#8a8a8a");
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.roundRect(
+      currentX,
+      itemY,
+      itemSize,
+      itemSize,
+      itemSize * 0.24,
+    );
+    context.fill();
+    context.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    context.lineWidth = Math.max(1, itemSize * 0.035);
+    context.stroke();
+  }
+
+  context.restore();
 }
 
 function createBrowserChromeTexture({
@@ -124,6 +209,7 @@ function createBrowserChromeTexture({
     sourceWidth,
     sourceHeight,
   );
+  const dock = getDockLayout(textureWidth, textureHeight);
   const {
     x: browserX,
     y: browserY,
@@ -193,6 +279,7 @@ function createBrowserChromeTexture({
   textureContext.textBaseline = "middle";
   textureContext.fillText("folio-2026", browserX + browserWidth / 2, controlY);
   textureContext.restore();
+  drawDock(textureContext, dock);
 
   const texture = new THREE.CanvasTexture(textureCanvas);
   texture.colorSpace = THREE.SRGBColorSpace;
