@@ -1,9 +1,10 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
-import { Color, Vector3 } from "three";
+import { useEffect, useRef } from "react";
+import { Color, type Mesh, Vector3 } from "three";
 import { CONFIG, THEMES } from "@/config/constants";
+import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useTheme, type ThemeRole } from "@/context/ThemeContext";
 import { mixHex } from "@/lib/oklab";
 import {
@@ -44,15 +45,40 @@ void main() {
 `;
 
 const PLANE_DEPTH = new Vector3(0, 0, CONFIG.themeSweep.PLANE_Z);
+export const THEME_SWEEP_LAYER = 2;
 
 export function ThemeSweep() {
   const { camera, viewport } = useThree();
+  const { revealProgressRef } = useHeroTransition();
   const { runRef, targetsRef } = useTheme().sweep;
   const projected = useRef(new Vector3());
   const backdrop = useRef<Color>(null);
+  const sweepPlane = useRef<Mesh>(null);
+  const wasPhase2Active = useRef(false);
+
+  useEffect(() => {
+    camera.layers.enable(THEME_SWEEP_LAYER);
+    sweepPlane.current?.layers.set(THEME_SWEEP_LAYER);
+
+    return () => camera.layers.disable(THEME_SWEEP_LAYER);
+  }, [camera]);
 
   useFrame((_, delta) => {
+    const phase2Active =
+      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
     const run = runRef.current;
+    const { style } = document.documentElement;
+
+    camera.layers.enable(THEME_SWEEP_LAYER);
+    if (phase2Active) camera.layers.disable(THEME_SWEEP_LAYER);
+
+    if (!phase2Active && wasPhase2Active.current) {
+      backdrop.current?.set(run.to.bg);
+      for (const [, name] of CSS_VARS) style.removeProperty(name);
+    }
+
+    wasPhase2Active.current = phase2Active;
+
     if (!run.active && run.settled) return;
 
     if (run.active) {
@@ -84,13 +110,14 @@ export function ThemeSweep() {
       );
     }
 
-    const centre = sweepProgress(front, sweepCoord(0.5, 0.5));
-    backdrop.current?.set(mixHex(run.from.bg, run.to.bg, centre));
+    if (!phase2Active) {
+      const centre = sweepProgress(front, sweepCoord(0.5, 0.5));
+      backdrop.current?.set(mixHex(run.from.bg, run.to.bg, centre));
 
-    const { style } = document.documentElement;
-    for (const [role, name] of CSS_VARS) {
-      if (finished) style.removeProperty(name);
-      else style.setProperty(name, mixHex(run.from[role], run.to[role], centre));
+      for (const [role, name] of CSS_VARS) {
+        if (finished) style.removeProperty(name);
+        else style.setProperty(name, mixHex(run.from[role], run.to[role], centre));
+      }
     }
 
     sweepUniforms.uSweepFront.value = front;
@@ -107,6 +134,7 @@ export function ThemeSweep() {
     <>
       <color attach="background" ref={backdrop} args={[THEMES.Dark.bg]} />
       <mesh
+        ref={sweepPlane}
         position={[0, 0, CONFIG.themeSweep.PLANE_Z]}
         scale={[plane.width, plane.height, 1]}
       >

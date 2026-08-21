@@ -13,6 +13,7 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
+import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
@@ -764,6 +765,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageGroupRef.current.visible = true;
     captureCamera.position.z = CONFIG.caseStudy.CAMERA_REST_Z;
     captureCamera.layers.enable(HEADER_LAYER);
+    captureCamera.layers.enable(THEME_SWEEP_LAYER);
     captureCamera.updateMatrixWorld();
     gl.setRenderTarget(target);
     gl.clear();
