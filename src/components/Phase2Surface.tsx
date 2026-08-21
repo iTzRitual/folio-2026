@@ -403,8 +403,7 @@ function createPageAberrationMaterial(taps: number) {
     uniforms: {
       u_pageTexture: { value: null },
       u_pageMask: { value: null },
-      u_sourceRepeat: { value: new THREE.Vector2(1, 1) },
-      u_sourceOffset: { value: new THREE.Vector2(0, 0) },
+      u_pageBounds: { value: new THREE.Vector4(0, 0, 1, 1) },
       u_mouse: { value: new THREE.Vector2(0.5, 0.5) },
       u_aberrationIntensity: { value: 0 },
       u_gridSize: { value: new THREE.Vector2(80, 80) },
@@ -426,19 +425,19 @@ function createPageAberrationMaterial(taps: number) {
     fragmentShader: `
 uniform sampler2D u_pageTexture;
 uniform sampler2D u_pageMask;
-uniform vec2 u_sourceRepeat;
-uniform vec2 u_sourceOffset;
+uniform vec4 u_pageBounds;
 varying vec2 vUv;
 
 ${buildCustomAberrationProgram(taps)}
 
 vec4 inputSample(vec2 uv) {
-  return texture2D(u_pageTexture, uv * u_sourceRepeat + u_sourceOffset);
+  return texture2D(u_pageTexture, uv);
 }
 
 void main() {
   if (texture2D(u_pageMask, vUv).r < 0.5) discard;
-  gl_FragColor = applyCustomAberration(vUv);
+  vec2 pageUv = (vUv - u_pageBounds.xy) / u_pageBounds.zw;
+  gl_FragColor = applyCustomAberration(pageUv);
 }
 `,
     depthTest: false,
@@ -454,23 +453,26 @@ type PageUvBounds = {
   height: number;
 };
 
-type PageTextureTransform = {
-  repeatX: number;
-  repeatY: number;
-  offsetX: number;
-  offsetY: number;
-};
-
 function configurePageAberrationMaterial(
   material: THREE.ShaderMaterial,
   target: THREE.WebGLRenderTarget,
   pageMask: THREE.CanvasTexture,
-  transform: PageTextureTransform,
+  bounds: PageUvBounds,
 ) {
   material.uniforms.u_pageTexture.value = target.texture;
   material.uniforms.u_pageMask.value = pageMask;
-  material.uniforms.u_sourceRepeat.value.set(transform.repeatX, transform.repeatY);
-  material.uniforms.u_sourceOffset.value.set(transform.offsetX, transform.offsetY);
+  material.uniforms.u_pageBounds.value.set(
+    bounds.x,
+    bounds.y,
+    bounds.width,
+    bounds.height,
+  );
+  const aspect = bounds.width / bounds.height;
+  material.uniforms.u_gridSize.value.set(
+    CONFIG.customAberration.COLUMNS,
+    CONFIG.customAberration.COLUMNS / aspect,
+  );
+  material.uniforms.u_aspect.value.set(aspect, 1);
 }
 
 function isThemeToggleHit({
@@ -546,7 +548,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const lastCurveDepthRef = useRef(-1);
   const htmlOverlayHiddenRef = useRef(false);
   const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
-  const pageTextureTransformRef = useRef<PageTextureTransform | null>(null);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
@@ -599,14 +600,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useEffect(() => {
     const target = targetRef.current;
     const pageMask = pageMaskRef.current;
-    const transform = pageTextureTransformRef.current;
+    const bounds = pageUvBoundsRef.current;
 
-    if (target && pageMask && transform) {
+    if (target && pageMask && bounds) {
       configurePageAberrationMaterial(
         pageAberrationMaterial,
         target,
         pageMask,
-        transform,
+        bounds,
       );
     }
   }, [pageAberrationMaterial]);
@@ -623,7 +624,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageMaskRef.current = null;
     surfaceTransformRef.current = null;
     pageUvBoundsRef.current = null;
-    pageTextureTransformRef.current = null;
     previousScrollYRef.current = null;
     scrollVelocityRef.current = 0;
 
@@ -933,20 +933,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageMaskRef.current = pageMask;
     chromeMaterialRef.current.map = chromeTexture;
     chromeMaterialRef.current.needsUpdate = true;
-    const transform = {
-      repeatX: textureWidth / layout.width,
-      repeatY: textureHeight / layout.contentHeight,
-      offsetX: -layout.x / layout.width,
-      offsetY:
-        -(
-          1 -
-          (layout.y + layout.chromeHeight + layout.contentHeight) /
-            textureHeight
-        ) /
-        (layout.contentHeight / textureHeight),
-    };
-    pageTextureTransformRef.current = transform;
-    pageUvBoundsRef.current = {
+    const bounds = {
       x: layout.x / textureWidth,
       y:
         1 -
@@ -955,11 +942,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       width: layout.width / textureWidth,
       height: layout.contentHeight / textureHeight,
     };
+    pageUvBoundsRef.current = bounds;
     configurePageAberrationMaterial(
       pageAberrationMaterial,
       target,
       pageMask,
-      transform,
+      bounds,
     );
     const restDistance = CONFIG.caseStudy.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
     const restHeight =
