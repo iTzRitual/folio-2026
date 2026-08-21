@@ -208,6 +208,7 @@ type DockRenderer = {
   context: CanvasRenderingContext2D;
   texture: THREE.CanvasTexture;
   layout: ReturnType<typeof getDockLayout>;
+  browserLayout: ReturnType<typeof getBrowserLayout>;
   scales: number[];
   x: number;
   width: number;
@@ -372,6 +373,20 @@ function updateDockRenderer(
   );
   context.fillStyle = "#000000";
   context.fillRect(0, clearTop, canvas.width, canvas.height - clearTop);
+  const browserContentTop =
+    renderer.browserLayout.y + renderer.browserLayout.chromeHeight;
+  const browserClearTop = Math.max(clearTop, browserContentTop);
+  const browserClearBottom =
+    renderer.browserLayout.y + renderer.browserLayout.height;
+
+  if (browserClearTop < browserClearBottom) {
+    context.clearRect(
+      renderer.browserLayout.x,
+      browserClearTop,
+      renderer.browserLayout.width,
+      browserClearBottom - browserClearTop,
+    );
+  }
   drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
   renderer.texture.needsUpdate = true;
 }
@@ -507,6 +522,7 @@ function createBrowserChromeTexture({
       context: textureContext,
       texture,
       layout: dock,
+      browserLayout: layout,
       scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
       x: dock.x,
       width: dock.width,
