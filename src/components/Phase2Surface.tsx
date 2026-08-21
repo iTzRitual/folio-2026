@@ -211,12 +211,14 @@ type DockRenderer = {
   scales: number[];
   x: number;
   width: number;
+  anchor: "left" | "right" | null;
 };
 
 function getDockTarget(
   layout: ReturnType<typeof getDockLayout>,
   magnification: number,
   pointerX: number | null,
+  anchor: DockRenderer["anchor"],
 ) {
   const { itemGap, itemSize } = layout;
   const count = CONFIG.phase2.DOCK_ITEM_COUNT;
@@ -252,12 +254,10 @@ function getDockTarget(
     scales.reduce((total, scale) => total + itemSize * scale, 0) +
     itemGap * (count - 1) +
     layout.height * 0.32;
-  const leftEdge = layout.itemX;
-  const rightEdge = layout.itemX + count * itemSize + (count - 1) * itemGap;
   const x =
-    pointerX < leftEdge + radius
+    anchor === "right"
       ? layout.x + layout.width - width
-      : pointerX > rightEdge - radius
+      : anchor === "left"
         ? layout.x
         : layout.centerX - width / 2;
 
@@ -270,7 +270,19 @@ function updateDockRenderer(
   pointerX: number | null,
   delta: number,
 ) {
-  const target = getDockTarget(renderer.layout, magnification, pointerX);
+  if (pointerX === null) {
+    renderer.anchor = null;
+  } else if (renderer.anchor === null) {
+    renderer.anchor =
+      pointerX < renderer.layout.centerX ? "right" : "left";
+  }
+
+  const target = getDockTarget(
+    renderer.layout,
+    magnification,
+    pointerX,
+    renderer.anchor,
+  );
   const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
   let changed = false;
 
@@ -440,6 +452,7 @@ function createBrowserChromeTexture({
       scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
       x: dock.x,
       width: dock.width,
+      anchor: null,
     },
   };
 }
