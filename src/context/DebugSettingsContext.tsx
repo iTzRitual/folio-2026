@@ -119,10 +119,10 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         release: CONFIG.customAberration.SCROLL_RELEASE_MULT,
     },
     phase2: {
-        dockScale: 1,
-        safariChromeScale: 1,
-        safariControlsScale: 1,
-        safariAddressScale: 1,
+        dockScale: CONFIG.phase2.DOCK_SCALE,
+        safariChromeScale: CONFIG.phase2.SAFARI_CHROME_SCALE,
+        safariControlsScale: CONFIG.phase2.SAFARI_CONTROLS_SCALE,
+        safariAddressScale: CONFIG.phase2.SAFARI_ADDRESS_SCALE,
     },
     headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
 };

@@ -92,10 +92,7 @@ function getDockLayout(
     itemSize,
     itemX: (textureWidth - itemsWidth) / 2,
     itemY: textureHeight - screenMargin - height + (height - itemSize) / 2,
-    safeTop:
-      textureHeight -
-      screenMargin -
-      height * (1 + CONFIG.phase2.DOCK_SAFE_GAP_MULT),
+    safeTop: textureHeight - height - screenMargin * 2,
   };
 }
 
