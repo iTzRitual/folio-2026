@@ -59,6 +59,8 @@ export const CONFIG = {
         DOCK_HEIGHT_MULT: 0.11,
         DOCK_ITEM_COUNT: 8,
         DOCK_ITEM_GAP_MULT: 0.11,
+        DOCK_MAGNIFICATION_RADIUS_MULT: 3,
+        DOCK_MAGNIFICATION_MAX: 1.5,
         DOCK_SCALE: 0.6,
         DOCK_OFFSET_X: 0,
         DOCK_OFFSET_Y: 0.025,

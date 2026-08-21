@@ -55,6 +55,7 @@ export interface DebugSettings {
         dockScale: number;
         dockOffsetX: number;
         dockOffsetY: number;
+        dockMagnification: number;
         safariChromeScale: number;
         safariControlsScale: number;
         safariAddressScale: number;
@@ -125,6 +126,7 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         dockScale: CONFIG.phase2.DOCK_SCALE,
         dockOffsetX: CONFIG.phase2.DOCK_OFFSET_X,
         dockOffsetY: CONFIG.phase2.DOCK_OFFSET_Y,
+        dockMagnification: 0.5,
         safariChromeScale: CONFIG.phase2.SAFARI_CHROME_SCALE,
         safariControlsScale: CONFIG.phase2.SAFARI_CONTROLS_SCALE,
         safariAddressScale: CONFIG.phase2.SAFARI_ADDRESS_SCALE,

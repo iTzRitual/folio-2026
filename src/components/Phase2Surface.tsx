@@ -97,6 +97,7 @@ function getDockLayout(
     height,
     itemGap,
     itemSize,
+    centerX: x + width / 2,
     itemX: x + horizontalPadding,
     itemY: y + (height - itemSize) / 2,
     safeTop: y - tuning.safariBottomSafeArea * screenUnit,
@@ -150,10 +151,34 @@ function getBrowserLayout(
 function drawDock(
   context: CanvasRenderingContext2D,
   layout: ReturnType<typeof getDockLayout>,
+  magnification = 0,
+  pointerX: number | null = null,
 ) {
-  const { x, y, width, height } = layout;
+  const { y, height, itemGap, itemSize, centerX } = layout;
   const radius = height * 0.27;
-  const { itemGap, itemSize, itemX, itemY } = layout;
+  const magnificationRadius =
+    itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
+  const scales = Array.from(
+    { length: CONFIG.phase2.DOCK_ITEM_COUNT },
+    (_, index) => {
+      if (pointerX === null || magnification === 0) return 1;
+
+      const center =
+        layout.itemX + index * (itemSize + itemGap) + itemSize / 2;
+      const influence = THREE.MathUtils.clamp(
+        1 - Math.abs(pointerX - center) / magnificationRadius,
+        0,
+        1,
+      );
+
+      return 1 + magnification * influence * influence;
+    },
+  );
+  const itemsWidth =
+    scales.reduce((total, scale) => total + itemSize * scale, 0) +
+    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
+  const width = itemsWidth + height * 0.32;
+  const x = centerX - width / 2;
 
   context.save();
   context.shadowColor = "rgba(0, 0, 0, 0.38)";
@@ -168,13 +193,16 @@ function drawDock(
   context.lineWidth = Math.max(1, height * 0.018);
   context.stroke();
 
+  let currentX = x + height * 0.16;
+
   for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
-    const currentX = itemX + index * (itemSize + itemGap);
+    const currentItemSize = itemSize * scales[index];
+    const currentY = y + height - height * 0.16 - currentItemSize;
     const gradient = context.createLinearGradient(
       currentX,
-      itemY,
-      currentX + itemSize,
-      itemY + itemSize,
+      currentY,
+      currentX + currentItemSize,
+      currentY + currentItemSize,
     );
     gradient.addColorStop(0, "#d9d9d9");
     gradient.addColorStop(1, "#8a8a8a");
@@ -182,18 +210,57 @@ function drawDock(
     context.beginPath();
     context.roundRect(
       currentX,
-      itemY,
-      itemSize,
-      itemSize,
-      itemSize * 0.24,
+      currentY,
+      currentItemSize,
+      currentItemSize,
+      currentItemSize * 0.24,
     );
     context.fill();
     context.strokeStyle = "rgba(255, 255, 255, 0.3)";
-    context.lineWidth = Math.max(1, itemSize * 0.035);
+    context.lineWidth = Math.max(1, currentItemSize * 0.035);
     context.stroke();
+    currentX += currentItemSize + itemGap;
   }
 
   context.restore();
+}
+
+type DockRenderer = {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  texture: THREE.CanvasTexture;
+  layout: ReturnType<typeof getDockLayout>;
+  lastMagnification: number;
+  lastPointerX: number | null;
+};
+
+function updateDockRenderer(
+  renderer: DockRenderer,
+  magnification: number,
+  pointerX: number | null,
+) {
+  if (
+    renderer.lastMagnification === magnification &&
+    (renderer.lastPointerX === pointerX ||
+      (renderer.lastPointerX !== null &&
+        pointerX !== null &&
+        Math.abs(renderer.lastPointerX - pointerX) < 0.5))
+  ) {
+    return;
+  }
+
+  const { canvas, context, layout } = renderer;
+  const clearTop = Math.max(
+    0,
+    layout.y -
+      layout.itemSize * (1 + CONFIG.phase2.DOCK_MAGNIFICATION_MAX),
+  );
+  context.fillStyle = "#000000";
+  context.fillRect(0, clearTop, canvas.width, canvas.height - clearTop);
+  drawDock(context, layout, magnification, pointerX);
+  renderer.texture.needsUpdate = true;
+  renderer.lastMagnification = magnification;
+  renderer.lastPointerX = pointerX;
 }
 
 function createBrowserChromeTexture({
@@ -314,7 +381,17 @@ function createBrowserChromeTexture({
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  return texture;
+  return {
+    texture,
+    dockRenderer: {
+      canvas: textureCanvas,
+      context: textureContext,
+      texture,
+      layout: dock,
+      lastMagnification: 0,
+      lastPointerX: null,
+    },
+  };
 }
 
 function createPageMask(
@@ -539,6 +616,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const dockRendererRef = useRef<DockRenderer | null>(null);
   const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
   const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
     null,
@@ -620,6 +698,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     targetRef.current = null;
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = null;
+    dockRendererRef.current = null;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = null;
     surfaceTransformRef.current = null;
@@ -649,6 +728,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     return () => {
       targetRef.current?.dispose();
       chromeTextureRef.current?.dispose();
+      dockRendererRef.current = null;
       pageMaskRef.current?.dispose();
       setHtmlOverlayVisibility(
         events.connected as HTMLElement | null,
@@ -769,6 +849,36 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const mouseY = pageUv ? (pageUv.y - bounds.y) / bounds.height : -1;
     const pointerInsidePage =
       mouseX >= 0 && mouseX <= 1 && mouseY >= 0 && mouseY <= 1;
+    const dockRenderer = dockRendererRef.current;
+    const pointerX =
+      pageUv && dockRenderer
+        ? pageUv.x * dockRenderer.canvas.width
+        : null;
+    const pointerY =
+      pageUv && dockRenderer
+        ? (1 - pageUv.y) * dockRenderer.canvas.height
+        : null;
+    const pointerInsideDock =
+      dockRenderer !== null &&
+      pointerX !== null &&
+      pointerY !== null &&
+      pointerX >= dockRenderer.layout.x - dockRenderer.layout.itemSize &&
+      pointerX <=
+        dockRenderer.layout.x +
+        dockRenderer.layout.width +
+        dockRenderer.layout.itemSize &&
+      pointerY >=
+        dockRenderer.layout.y -
+        dockRenderer.layout.itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_MAX &&
+      pointerY <= dockRenderer.layout.y + dockRenderer.layout.height;
+
+    if (dockRenderer) {
+      updateDockRenderer(
+        dockRenderer,
+        phase2.dockMagnification,
+        pointerInsideDock ? pointerX : null,
+      );
+    }
 
     if (pointerInsidePage) {
       const dx = mouseX - targetMouseRef.current.x;
@@ -928,10 +1038,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
 
     chromeTextureRef.current?.dispose();
-    chromeTextureRef.current = chromeTexture;
+    chromeTextureRef.current = chromeTexture.texture;
+    dockRendererRef.current = chromeTexture.dockRenderer;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = pageMask;
-    chromeMaterialRef.current.map = chromeTexture;
+    chromeMaterialRef.current.map = chromeTexture.texture;
     chromeMaterialRef.current.needsUpdate = true;
     const bounds = {
       x: layout.x / textureWidth,

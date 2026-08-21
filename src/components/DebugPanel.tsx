@@ -168,6 +168,12 @@ const PHASE2_SCHEMA = {
     dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
     dockOffsetX: { value: D.phase2.dockOffsetX, min: -0.3, max: 0.3, step: 0.005 },
     dockOffsetY: { value: D.phase2.dockOffsetY, min: -0.3, max: 0.045, step: 0.005 },
+    dockMagnification: {
+        value: D.phase2.dockMagnification,
+        min: 0,
+        max: CONFIG.phase2.DOCK_MAGNIFICATION_MAX,
+        step: 0.01,
+    },
     safariChromeScale: {
         value: D.phase2.safariChromeScale,
         min: 0.6,
