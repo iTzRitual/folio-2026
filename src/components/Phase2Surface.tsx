@@ -214,6 +214,8 @@ type DockRenderer = {
   anchor: "left" | "right" | null;
   leftAnchor: number;
   rightAnchor: number;
+  entrySettled: boolean;
+  smoothedPointerX: number | null;
 };
 
 function getDockTarget(
@@ -278,24 +280,42 @@ function updateDockRenderer(
     renderer.anchor = null;
     renderer.leftAnchor = renderer.layout.x;
     renderer.rightAnchor = renderer.layout.x + renderer.layout.width;
+    renderer.entrySettled = false;
+    renderer.smoothedPointerX = null;
   } else {
-    const nextAnchor =
-      pointerX < renderer.layout.centerX ? "right" : "left";
+    if (renderer.smoothedPointerX === null) {
+      renderer.smoothedPointerX = renderer.layout.centerX;
+    }
 
-    if (nextAnchor !== renderer.anchor) {
-      if (nextAnchor === "right") {
-        renderer.rightAnchor = renderer.x + renderer.width;
-      } else {
-        renderer.leftAnchor = renderer.x;
+    if (renderer.entrySettled) {
+      const pointerAmount = 1 - Math.exp(-delta / 0.045);
+      renderer.smoothedPointerX = THREE.MathUtils.lerp(
+        renderer.smoothedPointerX,
+        pointerX,
+        pointerAmount,
+      );
+      const nextAnchor =
+        renderer.smoothedPointerX < renderer.layout.centerX ? "right" : "left";
+
+      if (nextAnchor !== renderer.anchor) {
+        if (nextAnchor === "right") {
+          renderer.rightAnchor = renderer.x + renderer.width;
+        } else {
+          renderer.leftAnchor = renderer.x;
+        }
+        renderer.anchor = nextAnchor;
       }
-      renderer.anchor = nextAnchor;
     }
   }
 
   const target = getDockTarget(
     renderer.layout,
     magnification,
-    pointerX,
+    pointerX === null
+      ? null
+      : renderer.entrySettled
+        ? renderer.smoothedPointerX
+        : renderer.layout.centerX,
     renderer.anchor,
     renderer.leftAnchor,
     renderer.rightAnchor,
@@ -320,6 +340,23 @@ function updateDockRenderer(
     Math.abs(nextWidth - renderer.width) > 0.01;
   renderer.x = nextX;
   renderer.width = nextWidth;
+
+  if (
+    pointerX !== null &&
+    !renderer.entrySettled &&
+    Math.abs(renderer.width - target.width) < 0.5
+  ) {
+    const nextAnchor =
+      pointerX < renderer.layout.centerX ? "right" : "left";
+
+    if (nextAnchor === "right") {
+      renderer.rightAnchor = renderer.x + renderer.width;
+    } else {
+      renderer.leftAnchor = renderer.x;
+    }
+    renderer.anchor = nextAnchor;
+    renderer.entrySettled = true;
+  }
 
   if (!changed) return;
 
@@ -472,6 +509,8 @@ function createBrowserChromeTexture({
       anchor: null,
       leftAnchor: dock.x,
       rightAnchor: dock.x + dock.width,
+      entrySettled: false,
+      smoothedPointerX: null,
     },
   };
 }
