@@ -214,6 +214,7 @@ type DockRenderer = {
   anchor: "left" | "right" | null;
   leftAnchor: number;
   rightAnchor: number;
+  isHovering: boolean;
   entrySettled: boolean;
   smoothedPointerX: number | null;
 };
@@ -280,9 +281,11 @@ function updateDockRenderer(
     renderer.anchor = null;
     renderer.leftAnchor = renderer.layout.x;
     renderer.rightAnchor = renderer.layout.x + renderer.layout.width;
+    renderer.isHovering = false;
     renderer.entrySettled = false;
     renderer.smoothedPointerX = null;
   } else {
+    renderer.isHovering = true;
     if (renderer.smoothedPointerX === null) {
       renderer.smoothedPointerX = pointerX;
     }
@@ -523,6 +526,7 @@ function createDockRenderer({
     anchor: null,
     leftAnchor: layout.x,
     rightAnchor: layout.x + layout.width,
+    isHovering: false,
     entrySettled: false,
     smoothedPointerX: null,
   };
@@ -1000,19 +1004,34 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       pageUv && dockRenderer
         ? (1 - pageUv.y) * dockRenderer.canvas.height
         : null;
-    const pointerInsideDock =
+    const pointerInsideDockContainer =
       dockRenderer !== null &&
       pointerX !== null &&
       pointerY !== null &&
-      pointerX >= dockRenderer.layout.x - dockRenderer.layout.itemSize &&
-      pointerX <=
-        dockRenderer.layout.x +
-        dockRenderer.layout.width +
-        dockRenderer.layout.itemSize &&
-      pointerY >=
-        dockRenderer.layout.y -
-        dockRenderer.layout.itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_MAX &&
+      pointerX >= dockRenderer.layout.x &&
+      pointerX <= dockRenderer.layout.x + dockRenderer.layout.width &&
+      pointerY >= dockRenderer.layout.y &&
       pointerY <= dockRenderer.layout.y + dockRenderer.layout.height;
+    const maxIconScale = dockRenderer
+      ? Math.max(...dockRenderer.scales)
+      : 1;
+    const expandedDockTop = dockRenderer
+      ? dockRenderer.layout.y +
+        dockRenderer.layout.height -
+        dockRenderer.layout.height * 0.16 -
+        dockRenderer.layout.itemSize * maxIconScale
+      : 0;
+    const pointerInsideExpandedDock =
+      dockRenderer !== null &&
+      dockRenderer.isHovering &&
+      pointerX !== null &&
+      pointerY !== null &&
+      pointerX >= dockRenderer.x &&
+      pointerX <= dockRenderer.x + dockRenderer.width &&
+      pointerY >= expandedDockTop &&
+      pointerY <= dockRenderer.layout.y + dockRenderer.layout.height;
+    const pointerInsideDock =
+      pointerInsideDockContainer || pointerInsideExpandedDock;
 
     if (dockRenderer) {
       updateDockRenderer(
