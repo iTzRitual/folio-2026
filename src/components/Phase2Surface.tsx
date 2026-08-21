@@ -284,16 +284,17 @@ function updateDockRenderer(
     renderer.smoothedPointerX = null;
   } else {
     if (renderer.smoothedPointerX === null) {
-      renderer.smoothedPointerX = renderer.layout.centerX;
+      renderer.smoothedPointerX = pointerX;
     }
 
+    const pointerAmount = 1 - Math.exp(-delta / 0.045);
+    renderer.smoothedPointerX = THREE.MathUtils.lerp(
+      renderer.smoothedPointerX,
+      pointerX,
+      pointerAmount,
+    );
+
     if (renderer.entrySettled) {
-      const pointerAmount = 1 - Math.exp(-delta / 0.045);
-      renderer.smoothedPointerX = THREE.MathUtils.lerp(
-        renderer.smoothedPointerX,
-        pointerX,
-        pointerAmount,
-      );
       const nextAnchor =
         renderer.smoothedPointerX < renderer.layout.centerX ? "right" : "left";
 
@@ -308,18 +309,32 @@ function updateDockRenderer(
     }
   }
 
-  const target = getDockTarget(
-    renderer.layout,
-    magnification,
+  const scalePointerX =
     pointerX === null
       ? null
       : renderer.entrySettled
         ? renderer.smoothedPointerX
-        : renderer.layout.centerX,
+        : pointerX;
+  const pointerTarget = getDockTarget(
+    renderer.layout,
+    magnification,
+    scalePointerX,
     renderer.anchor,
     renderer.leftAnchor,
     renderer.rightAnchor,
   );
+  const centerTarget = getDockTarget(
+    renderer.layout,
+    magnification,
+    pointerX === null ? null : renderer.layout.centerX,
+    null,
+    renderer.leftAnchor,
+    renderer.rightAnchor,
+  );
+  const target =
+    pointerX !== null && !renderer.entrySettled
+      ? { ...pointerTarget, x: centerTarget.x, width: centerTarget.width }
+      : pointerTarget;
   const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
   let changed = false;
 
