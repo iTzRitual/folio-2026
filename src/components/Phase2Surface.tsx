@@ -323,18 +323,7 @@ function updateDockRenderer(
     renderer.leftAnchor,
     renderer.rightAnchor,
   );
-  const centerTarget = getDockTarget(
-    renderer.layout,
-    magnification,
-    pointerX === null ? null : renderer.layout.centerX,
-    null,
-    renderer.leftAnchor,
-    renderer.rightAnchor,
-  );
-  const target =
-    pointerX !== null && !renderer.entrySettled
-      ? { ...pointerTarget, x: centerTarget.x, width: centerTarget.width }
-      : pointerTarget;
+  const target = pointerTarget;
   const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
   let changed = false;
 
