@@ -51,6 +51,12 @@ export interface DebugSettings {
         attack: number;
         release: number;
     };
+    phase2: {
+        dockScale: number;
+        safariChromeScale: number;
+        safariControlsScale: number;
+        safariAddressScale: number;
+    };
     headerExclusion: { strength: number; threshold: number; softness: number };
 }
 
@@ -111,6 +117,12 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         vignetteFloor: CONFIG.customAberration.SCROLL_VIGNETTE_FLOOR,
         attack: CONFIG.customAberration.SCROLL_ATTACK_MULT,
         release: CONFIG.customAberration.SCROLL_RELEASE_MULT,
+    },
+    phase2: {
+        dockScale: 1,
+        safariChromeScale: 1,
+        safariControlsScale: 1,
+        safariAddressScale: 1,
     },
     headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
 };

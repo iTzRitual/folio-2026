@@ -164,6 +164,28 @@ const EXCLUSION_SCHEMA = {
     softness: { value: D.headerExclusion.softness, min: 0.01, max: 0.6, step: 0.005 },
 };
 
+const PHASE2_SCHEMA = {
+    dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
+    safariChromeScale: {
+        value: D.phase2.safariChromeScale,
+        min: 0.6,
+        max: 2,
+        step: 0.01,
+    },
+    safariControlsScale: {
+        value: D.phase2.safariControlsScale,
+        min: 0.5,
+        max: 2,
+        step: 0.01,
+    },
+    safariAddressScale: {
+        value: D.phase2.safariAddressScale,
+        min: 0.5,
+        max: 2,
+        step: 0.01,
+    },
+};
+
 /**
  * Every Leva control in the project lives here so that leva itself is only ever
  * pulled in on /debug. Nothing else may import it.
@@ -182,6 +204,7 @@ export default function DebugPanel({
     const header = useControls("Header", HEADER_SCHEMA);
     const edgeFade = useControls("Curl edge fade", EDGE_FADE_SCHEMA);
     const scrollBlur = useControls("Scroll blur", SCROLL_BLUR_SCHEMA);
+    const phase2 = useControls("CRT desktop", PHASE2_SCHEMA);
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
     useEffect(() => {
@@ -195,6 +218,7 @@ export default function DebugPanel({
             header,
             edgeFade,
             scrollBlur,
+            phase2,
             headerExclusion,
         });
     }, [
@@ -208,6 +232,7 @@ export default function DebugPanel({
         header,
         edgeFade,
         scrollBlur,
+        phase2,
         headerExclusion,
     ]);
 

@@ -7,6 +7,7 @@ import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
+import type { DebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
@@ -14,6 +15,8 @@ import { useTheme } from "@/context/ThemeContext";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
+
+type Phase2Tuning = DebugSettings["phase2"];
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
@@ -60,22 +63,35 @@ function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
   };
 }
 
-function getDockLayout(textureWidth: number, textureHeight: number) {
+function getDockLayout(
+  textureWidth: number,
+  textureHeight: number,
+  tuning: Phase2Tuning,
+) {
   const screenMargin =
     Math.min(textureWidth, textureHeight) *
     CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
   const height =
-    Math.min(textureWidth, textureHeight) * CONFIG.phase2.DOCK_HEIGHT_MULT;
-  const width = Math.min(
-    textureWidth - screenMargin * 2,
-    textureWidth * CONFIG.phase2.DOCK_WIDTH_MULT,
-  );
+    Math.min(textureWidth, textureHeight) *
+    CONFIG.phase2.DOCK_HEIGHT_MULT *
+    tuning.dockScale;
+  const itemGap = height * CONFIG.phase2.DOCK_ITEM_GAP_MULT;
+  const horizontalPadding = height * 0.16;
+  const itemSize = height - horizontalPadding * 2;
+  const itemsWidth =
+    itemSize * CONFIG.phase2.DOCK_ITEM_COUNT +
+    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
+  const width = itemsWidth + horizontalPadding * 2;
 
   return {
     x: (textureWidth - width) / 2,
     y: textureHeight - screenMargin - height,
     width,
     height,
+    itemGap,
+    itemSize,
+    itemX: (textureWidth - itemsWidth) / 2,
+    itemY: textureHeight - screenMargin - height + (height - itemSize) / 2,
     safeTop:
       textureHeight -
       screenMargin -
@@ -88,16 +104,20 @@ function getBrowserLayout(
   textureHeight: number,
   sourceWidth: number,
   sourceHeight: number,
+  tuning: Phase2Tuning,
 ) {
   const margin =
     Math.min(textureWidth, textureHeight) *
     CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
-  const dock = getDockLayout(textureWidth, textureHeight);
+  const dock = getDockLayout(textureWidth, textureHeight, tuning);
   const availableWidth = textureWidth - margin * 2;
   const availableHeight = dock.safeTop - margin;
   const browserAspect =
     sourceWidth /
-    (sourceHeight * (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT));
+    (sourceHeight *
+      (1 +
+        CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT *
+          tuning.safariChromeScale));
   let width = availableWidth;
   let height = width / browserAspect;
 
@@ -109,7 +129,9 @@ function getBrowserLayout(
   const x = (textureWidth - width) / 2;
   const y = margin + (availableHeight - height) / 2;
   const contentHeight =
-    height / (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT);
+    height /
+    (1 +
+      CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT * tuning.safariChromeScale);
 
   return {
     x,
@@ -127,19 +149,7 @@ function drawDock(
 ) {
   const { x, y, width, height } = layout;
   const radius = height * 0.27;
-  const itemGap = height * CONFIG.phase2.DOCK_ITEM_GAP_MULT;
-  const horizontalPadding = height * 0.16;
-  const itemSize = Math.min(
-    height - horizontalPadding * 2,
-    (width - horizontalPadding * 2 -
-      itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1)) /
-      CONFIG.phase2.DOCK_ITEM_COUNT,
-  );
-  const itemsWidth =
-    itemSize * CONFIG.phase2.DOCK_ITEM_COUNT +
-    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
-  const itemX = x + (width - itemsWidth) / 2;
-  const itemY = y + (height - itemSize) / 2;
+  const { itemGap, itemSize, itemX, itemY } = layout;
 
   context.save();
   context.shadowColor = "rgba(0, 0, 0, 0.38)";
@@ -185,9 +195,11 @@ function drawDock(
 function createBrowserChromeTexture({
   sourceWidth,
   sourceHeight,
+  tuning,
 }: {
   sourceWidth: number;
   sourceHeight: number;
+  tuning: Phase2Tuning;
 }) {
   const { width: textureWidth, height: textureHeight } = getTextureDimensions(
     sourceWidth,
@@ -208,8 +220,9 @@ function createBrowserChromeTexture({
     textureHeight,
     sourceWidth,
     sourceHeight,
+    tuning,
   );
-  const dock = getDockLayout(textureWidth, textureHeight);
+  const dock = getDockLayout(textureWidth, textureHeight, tuning);
   const {
     x: browserX,
     y: browserY,
@@ -241,10 +254,15 @@ function createBrowserChromeTexture({
   );
 
   const controlRadius =
-    chromeHeight * CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT;
+    chromeHeight *
+    CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT *
+    tuning.safariControlsScale;
   const sidePadding =
     chromeHeight * CONFIG.phase2.BROWSER_SIDE_PADDING_MULT;
-  const controlGap = chromeHeight * CONFIG.phase2.BROWSER_CONTROL_GAP_MULT;
+  const controlGap =
+    chromeHeight *
+    CONFIG.phase2.BROWSER_CONTROL_GAP_MULT *
+    tuning.safariControlsScale;
   const controlY = browserY + chromeHeight / 2;
   const firstControlX = browserX + sidePadding;
 
@@ -262,8 +280,13 @@ function createBrowserChromeTexture({
   });
 
   const addressHeight =
-    chromeHeight * CONFIG.phase2.BROWSER_ADDRESS_HEIGHT_MULT;
-  const addressWidth = browserWidth * CONFIG.phase2.BROWSER_ADDRESS_WIDTH_MULT;
+    chromeHeight *
+    CONFIG.phase2.BROWSER_ADDRESS_HEIGHT_MULT *
+    tuning.safariAddressScale;
+  const addressWidth =
+    browserWidth *
+    CONFIG.phase2.BROWSER_ADDRESS_WIDTH_MULT *
+    tuning.safariAddressScale;
   textureContext.fillStyle = CONFIG.phase2.BROWSER_ADDRESS_COLOR;
   textureContext.fillRect(
     browserX + (browserWidth - addressWidth) / 2,
@@ -274,6 +297,7 @@ function createBrowserChromeTexture({
   textureContext.fillStyle = CONFIG.phase2.BROWSER_ICON_COLOR;
   textureContext.font = `400 ${
     chromeHeight * CONFIG.phase2.BROWSER_ADDRESS_FONT_MULT
+      * tuning.safariAddressScale
   }px Arial`;
   textureContext.textAlign = "center";
   textureContext.textBaseline = "middle";
@@ -499,7 +523,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const { revealProgressRef } = useHeroTransition();
   const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const scroll = useDebugSettings().scrollBlur;
+  const { scrollBlur: scroll, phase2 } = useDebugSettings();
   const { inputMode, layoutMode } = useSceneCapabilities();
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
@@ -605,7 +629,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       surfaceGroupRef.current.position.y = 0;
       surfaceGroupRef.current.scale.setScalar(1);
     }
-  }, [size.height, size.width]);
+  }, [
+    phase2.dockScale,
+    phase2.safariAddressScale,
+    phase2.safariChromeScale,
+    phase2.safariControlsScale,
+    size.height,
+    size.width,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -872,10 +903,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       textureHeight,
       sourceWidth,
       sourceHeight,
+      phase2,
     );
     const chromeTexture = createBrowserChromeTexture({
       sourceWidth,
       sourceHeight,
+      tuning: phase2,
     });
     const pageMask = createPageMask(textureWidth, textureHeight, layout);
 

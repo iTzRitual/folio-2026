@@ -57,7 +57,6 @@ export const CONFIG = {
         REVEAL_CAMERA_FILL: 0.88,
         BROWSER_SAFE_MARGIN_MULT: 0.045,
         DOCK_HEIGHT_MULT: 0.11,
-        DOCK_WIDTH_MULT: 0.72,
         DOCK_SAFE_GAP_MULT: 0.26,
         DOCK_ITEM_COUNT: 8,
         DOCK_ITEM_GAP_MULT: 0.11,
