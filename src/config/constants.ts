@@ -44,7 +44,7 @@ export const CONFIG = {
         VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
     },
     phase2: {
-        REVEAL_VIEWPORTS: 1,
+        REVEAL_VIEWPORTS: 1.75,
         PLANE_ASPECT: 4 / 3,
         PLANE_CURVE_DEPTH_MULT: 0.024,
         PLANE_SEGMENTS_X: 32,
@@ -54,7 +54,7 @@ export const CONFIG = {
         BROWSER_REVEAL_START: 0.01,
         PLANE_CURVE_START: 0.14,
         PLANE_CURVE_END: 1,
-        REVEAL_CAMERA_FILL: 0.88,
+        REVEAL_CAMERA_FILL: 0.42,
         BROWSER_SAFE_MARGIN_MULT: 0.045,
         DOCK_HEIGHT_MULT: 0.11,
         DOCK_ITEM_GAP_MULT: 0.11,
