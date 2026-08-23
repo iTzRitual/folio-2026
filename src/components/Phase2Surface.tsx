@@ -717,7 +717,7 @@ function getToolbarLayout(
   const height = textureWidth * 0.0167;
   const fontSize = height * 0.62;
   const leftPadding = height * 0.44;
-  const itemGap = height * 0.48;
+  const itemGap = height * 0.72;
   context.font = `300 ${fontSize}px Arial`;
   const brandWidth = context.measureText("NM").width;
   const appX = leftPadding + brandWidth + itemGap;
