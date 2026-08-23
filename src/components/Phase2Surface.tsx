@@ -857,37 +857,37 @@ function drawToolbar(renderer: ToolbarRenderer) {
   context.font = `400 ${layout.fontSize}px Arial`;
   context.fillText("Actions", layout.actionsX, layout.height / 2 + layout.fontSize * 0.03);
 
-  const batteryWidth = layout.height * 0.9;
+  const batteryWidth = layout.height * 0.72;
   const batteryHeight = layout.height * 0.4;
   const batteryX = canvas.width - layout.leftPadding - batteryWidth;
-  const batteryLabel = "100%";
   context.textAlign = "right";
-  const batteryLabelX = batteryX - layout.itemGap;
-  context.fillText(batteryLabel, batteryLabelX, layout.height / 2 + layout.fontSize * 0.03);
-  const dateX =
-    batteryLabelX - context.measureText(batteryLabel).width - layout.itemGap;
+  const dateX = batteryX - layout.itemGap;
   context.fillText(renderer.timestamp, dateX, layout.height / 2 + layout.fontSize * 0.03);
-  context.strokeStyle = "#f4f4f5";
+  const batteryY = (layout.height - batteryHeight) / 2;
+  const batteryRadius = batteryHeight * 0.22;
+  context.fillStyle = "rgba(34, 37, 34, 0.92)";
+  context.beginPath();
+  context.roundRect(batteryX, batteryY, batteryWidth, batteryHeight, batteryRadius);
+  context.fill();
+  context.strokeStyle = "rgba(236, 239, 238, 0.72)";
   context.lineWidth = Math.max(1, layout.height * 0.045);
-  context.strokeRect(
-    batteryX,
-    (layout.height - batteryHeight) / 2,
-    batteryWidth,
-    batteryHeight,
-  );
+  context.stroke();
   context.fillStyle = "#f4f4f5";
   context.fillRect(
     batteryX + batteryWidth,
     (layout.height - batteryHeight * 0.4) / 2,
-    batteryWidth * 0.11,
+    batteryWidth * 0.13,
     batteryHeight * 0.4,
   );
-  context.fillRect(
-    batteryX + layout.height * 0.08,
-    (layout.height - batteryHeight) / 2 + layout.height * 0.08,
-    batteryWidth - layout.height * 0.16,
-    batteryHeight - layout.height * 0.16,
+  context.beginPath();
+  context.roundRect(
+    batteryX + layout.height * 0.09,
+    batteryY + layout.height * 0.09,
+    batteryWidth * 0.23,
+    batteryHeight - layout.height * 0.18,
+    batteryHeight * 0.1,
   );
+  context.fill();
 
   if (renderer.menuOpen) {
     drawToolbarMenu(context, renderer);
