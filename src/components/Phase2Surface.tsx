@@ -78,6 +78,15 @@ type WindowRuntime = {
   animation: WindowAnimation | null;
 };
 
+type ReturnBridge = {
+  sourceApp: Exclude<WindowAppId, "safari"> | null;
+  sourceAmount: number;
+  safariStartAmount: number;
+  safariVisible: boolean;
+  vscodeVisible: boolean;
+  cameraStart: number;
+};
+
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
     width,
@@ -1695,6 +1704,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   });
   const activeAppRef = useRef<WindowAppId | null>("safari");
   const pendingAppRef = useRef<WindowAppId | null>(null);
+  const returnBridgeRef = useRef<ReturnBridge | null>(null);
+  const previousRevealRef = useRef<number | null>(null);
   const sourceLoadStartedRef = useRef(false);
   const sourceRefreshPendingRef = useRef(false);
   const vscodeScrollbarDragRef = useRef<VSCodeScrollbarDrag | null>(null);
@@ -1837,6 +1848,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     };
     activeAppRef.current = "safari";
     pendingAppRef.current = null;
+    returnBridgeRef.current = null;
+    previousRevealRef.current = null;
     sourceLoadStartedRef.current = false;
     sourceRefreshPendingRef.current = false;
     vscodeScrollbarDragRef.current = null;
@@ -1932,6 +1945,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         !renderer ||
         !interactionMesh ||
         !capturedRef.current ||
+        returnBridgeRef.current !== null ||
         activeAppRef.current !== "vscode" ||
         windowRuntimesRef.current.vscode.state !== "open"
       ) {
@@ -2007,6 +2021,88 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           setVSCodeLoadError(vscodeRendererRef.current);
         }
       });
+  };
+
+  const beginReturnBridge = () => {
+    const safariRuntime = windowRuntimesRef.current.safari;
+    const activeApp = activeAppRef.current;
+    const safariIsReady =
+      activeApp === "safari" &&
+      safariRuntime.state === "open" &&
+      windowGroupRef.current?.visible === true;
+
+    if (safariIsReady) return;
+
+    const browserLayout = browserLayoutRef.current;
+    const dockRenderer = dockRendererRef.current;
+    if (browserLayout && dockRenderer) {
+      updateDockRenderer(
+        dockRenderer,
+        phase2.dockMagnification,
+        null,
+        false,
+        1,
+      );
+      configureGenieGeometry(
+        genieUniforms,
+        browserLayout,
+        dockRenderer,
+        planeWidth,
+        planeHeight,
+        SAFARI_DOCK_INDEX,
+      );
+      configureGenieGeometry(
+        vscodeGenieUniforms,
+        browserLayout,
+        dockRenderer,
+        planeWidth,
+        planeHeight,
+        VSCODE_DOCK_INDEX,
+      );
+    }
+
+    const sourceApp = activeApp === "vscode" ? activeApp : null;
+    const sourceAmount = sourceApp
+      ? windowRuntimesRef.current[sourceApp].amount
+      : 1;
+    const safariStartAmount = activeApp === "safari" ? safariRuntime.amount : 1;
+    const cameraStart = sourceApp
+      ? CONFIG.phase2.RETURN_BRIDGE_SAFARI_GENIE_END
+      : CONFIG.phase2.RETURN_BRIDGE_SAFARI_DIRECT_END;
+
+    returnBridgeRef.current = {
+      sourceApp,
+      sourceAmount,
+      safariStartAmount,
+      safariVisible: windowGroupRef.current?.visible === true,
+      vscodeVisible: vscodeWindowGroupRef.current?.visible === true,
+      cameraStart,
+    };
+
+    if (windowGroupRef.current) windowGroupRef.current.visible = true;
+    setGeniePresentation(genieUniforms, safariStartAmount, prefersReducedMotion);
+  };
+
+  const restoreReturnBridge = (bridge: ReturnBridge) => {
+    const safariRuntime = windowRuntimesRef.current.safari;
+    const vscodeRuntime = windowRuntimesRef.current.vscode;
+
+    setGeniePresentation(
+      genieUniforms,
+      safariRuntime.amount,
+      prefersReducedMotion,
+    );
+    setGeniePresentation(
+      vscodeGenieUniforms,
+      vscodeRuntime.amount,
+      prefersReducedMotion,
+    );
+    if (windowGroupRef.current) {
+      windowGroupRef.current.visible = bridge.safariVisible;
+    }
+    if (vscodeWindowGroupRef.current) {
+      vscodeWindowGroupRef.current.visible = bridge.vscodeVisible;
+    }
   };
 
   const animateWindowTo = (appId: WindowAppId, target: 0 | 1) => {
@@ -2116,6 +2212,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   };
 
   useFrame((_, delta) => {
+    if (returnBridgeRef.current) return;
+
     for (const appId of ["safari", "vscode"] as const) {
       const runtime = windowRuntimesRef.current[appId];
       const animation = runtime.animation;
@@ -2164,11 +2262,87 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
   useFrame(() => {
     const scrollReveal = THREE.MathUtils.clamp(revealProgressRef.current, 0, 1);
+    const previousReveal = previousRevealRef.current;
+    const bridgeEpsilon = CONFIG.phase2.RETURN_BRIDGE_TRIGGER_EPSILON;
+
+    if (
+      !returnBridgeRef.current &&
+      previousReveal !== null &&
+      scrollReveal < previousReveal &&
+      scrollReveal < 1 - bridgeEpsilon
+    ) {
+      beginReturnBridge();
+    }
+
+    let bridge = returnBridgeRef.current;
+    const exitProgress = 1 - scrollReveal;
+
+    if (bridge && exitProgress <= bridgeEpsilon) {
+      restoreReturnBridge(bridge);
+      returnBridgeRef.current = null;
+      bridge = null;
+    }
+
+    if (bridge) {
+      const safariStart = bridge.sourceApp
+        ? CONFIG.phase2.RETURN_BRIDGE_APP_GENIE_END
+        : 0;
+      const safariEnd = bridge.sourceApp
+        ? CONFIG.phase2.RETURN_BRIDGE_SAFARI_GENIE_END
+        : CONFIG.phase2.RETURN_BRIDGE_SAFARI_DIRECT_END;
+      const safariProgress = THREE.MathUtils.clamp(
+        (exitProgress - safariStart) / (safariEnd - safariStart),
+        0,
+        1,
+      );
+      const safariAmount = THREE.MathUtils.lerp(
+        bridge.safariStartAmount,
+        0,
+        easeInOutQuint(safariProgress),
+      );
+
+      if (bridge.sourceApp) {
+        const sourceProgress = THREE.MathUtils.clamp(
+          exitProgress / CONFIG.phase2.RETURN_BRIDGE_APP_GENIE_END,
+          0,
+          1,
+        );
+        const sourceAmount = THREE.MathUtils.lerp(
+          bridge.sourceAmount,
+          1,
+          easeInOutQuint(sourceProgress),
+        );
+        const sourceGroup = getWindowGroup(bridge.sourceApp);
+        if (sourceGroup) sourceGroup.visible = sourceProgress < 1;
+        setGeniePresentation(
+          getWindowGenie(bridge.sourceApp),
+          sourceAmount,
+          prefersReducedMotion,
+        );
+      }
+
+      if (windowGroupRef.current) windowGroupRef.current.visible = true;
+      setGeniePresentation(
+        genieUniforms,
+        safariAmount,
+        prefersReducedMotion,
+      );
+    }
+
+    previousRevealRef.current = scrollReveal;
+    const visualScrollReveal = bridge
+      ? 1 -
+        THREE.MathUtils.clamp(
+          (exitProgress - bridge.cameraStart) / (1 - bridge.cameraStart),
+          0,
+          1,
+        )
+      : scrollReveal;
     const reveal = prefersReducedMotion
-      ? scrollReveal > 0
+      ? visualScrollReveal > 0
         ? 1
         : 0
-      : scrollReveal;
+      : visualScrollReveal;
     const hideHtmlOverlays = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
 
     if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
@@ -2255,6 +2429,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useFrame((state, delta) => {
     if (
       !capturedRef.current ||
+      returnBridgeRef.current !== null ||
       revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START ||
       !interactionMeshRef.current ||
       !pageUvBoundsRef.current ||
@@ -2588,6 +2763,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   }, 0.5);
 
   const handlePageClick = (event: ThreeEvent<MouseEvent>) => {
+    if (returnBridgeRef.current) {
+      event.stopPropagation();
+      return;
+    }
+
     if (suppressVSCodeClickRef.current) {
       suppressVSCodeClickRef.current = false;
       event.stopPropagation();
@@ -2758,6 +2938,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (
       !pageUv ||
       !renderer ||
+      returnBridgeRef.current !== null ||
       activeAppRef.current !== "vscode" ||
       windowRuntimesRef.current.vscode.state !== "open"
     ) {
