@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "generate:sources": "node scripts/generate-source-manifest.mjs",
+    "predev": "npm run generate:sources",
     "dev": "next dev",
+    "prebuild": "npm run generate:sources",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

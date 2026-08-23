@@ -12,6 +12,16 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useTheme } from "@/context/ThemeContext";
+import {
+  createVSCodeRenderer,
+  handleVSCodeClick,
+  handleVSCodeWheel,
+  loadSourceManifest,
+  setVSCodeLoadError,
+  setVSCodeSources,
+  updateVSCodeHover,
+  type VSCodeRenderer,
+} from "@/lib/vscodeRenderer";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
@@ -22,18 +32,46 @@ type DockApp = {
   id: string;
   label: string;
   icon: "finder" | "safari" | "vscode" | "codex" | "gaming" | "notes" | "music" | "mail";
+  isRunning: boolean;
 };
 
 const DOCK_APPS: DockApp[] = [
-  { id: "finder", label: "Finder", icon: "finder" },
-  { id: "safari", label: "Safari — Folio-2026", icon: "safari" },
-  { id: "vscode", label: "Visual Studio Code", icon: "vscode" },
-  { id: "codex", label: "Codex", icon: "codex" },
-  { id: "gaming", label: "Gaming", icon: "gaming" },
-  { id: "notes", label: "Notes — About me", icon: "notes" },
-  { id: "music", label: "Music", icon: "music" },
-  { id: "mail", label: "Mail — Contact", icon: "mail" },
+  { id: "finder", label: "Finder", icon: "finder", isRunning: true },
+  { id: "safari", label: "Safari — Folio-2026", icon: "safari", isRunning: true },
+  { id: "vscode", label: "Visual Studio Code", icon: "vscode", isRunning: false },
+  { id: "codex", label: "Codex", icon: "codex", isRunning: false },
+  { id: "gaming", label: "Gaming", icon: "gaming", isRunning: false },
+  { id: "notes", label: "Notes — About me", icon: "notes", isRunning: false },
+  { id: "music", label: "Music", icon: "music", isRunning: false },
+  { id: "mail", label: "Mail — Contact", icon: "mail", isRunning: false },
 ];
+
+const SAFARI_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "safari");
+const VSCODE_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "vscode");
+
+type WindowAppId = "safari" | "vscode";
+
+type GenieUniforms = {
+  progress: { value: number };
+  opacity: { value: number };
+  window: { value: THREE.Vector4 };
+  target: { value: THREE.Vector3 };
+};
+
+type WindowAnimation = {
+  from: number;
+  to: number;
+  elapsed: number;
+  duration: number;
+};
+
+type WindowState = "open" | "closed" | "minimized" | "animating";
+
+type WindowRuntime = {
+  state: WindowState;
+  amount: number;
+  animation: WindowAnimation | null;
+};
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
@@ -162,6 +200,101 @@ function getBrowserLayout(
     contentHeight,
     chromeHeight: height - contentHeight,
   };
+}
+
+function getBrowserControlHit(
+  layout: ReturnType<typeof getBrowserLayout>,
+  tuning: Phase2Tuning,
+  pointerX: number,
+  pointerY: number,
+  textureToCssScale: number,
+) {
+  const controlRadius =
+    layout.chromeHeight *
+    CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT *
+    tuning.safariControlsScale;
+  const sidePadding =
+    layout.chromeHeight * CONFIG.phase2.BROWSER_SIDE_PADDING_MULT;
+  const controlGap =
+    layout.chromeHeight *
+    CONFIG.phase2.BROWSER_CONTROL_GAP_MULT *
+    tuning.safariControlsScale;
+  const controlY = layout.y + layout.chromeHeight / 2;
+  const firstControlX = layout.x + sidePadding;
+  const hitRadius = Math.max(controlRadius * 1.8, 22 * textureToCssScale);
+  let closestIndex = -1;
+  let closestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < CONFIG.phase2.BROWSER_LIGHTS.length; index += 1) {
+    const controlX = firstControlX + index * (controlRadius * 2 + controlGap);
+    const distance = Math.abs(pointerX - controlX);
+
+    if (distance < closestDistance) {
+      closestIndex = index;
+      closestDistance = distance;
+    }
+  }
+
+  if (
+    closestIndex < 0 ||
+    closestDistance > hitRadius ||
+    Math.abs(pointerY - controlY) > hitRadius
+  ) {
+    return null;
+  }
+
+  return closestIndex === 0 ? "close" : "minimize";
+}
+
+function easeInOutQuint(value: number) {
+  return value < 0.5
+    ? 16 * value ** 5
+    : 1 - (-2 * value + 2) ** 5 / 2;
+}
+
+function configureGenieGeometry(
+  genie: GenieUniforms,
+  browserLayout: ReturnType<typeof getBrowserLayout>,
+  dockRenderer: DockRenderer,
+  planeWidth: number,
+  planeHeight: number,
+  dockIndex: number,
+) {
+  const { canvas } = dockRenderer;
+  const windowCenterX = browserLayout.x + browserLayout.width / 2;
+  const windowCenterY = browserLayout.y + browserLayout.height / 2;
+  const safari = getDockItemBounds(
+    dockRenderer.layout,
+    dockRenderer.scales,
+    dockRenderer.x,
+    dockIndex,
+  );
+  const targetCenterX = safari.x + safari.width / 2;
+  const targetCenterY = safari.y + safari.height / 2;
+  const toLocalX = (value: number) => (value / canvas.width - 0.5) * planeWidth;
+  const toLocalY = (value: number) => (0.5 - value / canvas.height) * planeHeight;
+
+  genie.window.value.set(
+    toLocalX(windowCenterX),
+    toLocalY(windowCenterY),
+    (browserLayout.width / canvas.width) * planeWidth,
+    (browserLayout.height / canvas.height) * planeHeight,
+  );
+  genie.target.value.set(
+    toLocalX(targetCenterX),
+    toLocalY(targetCenterY),
+    (safari.width / browserLayout.width) *
+      CONFIG.phase2.GENIE_TARGET_SCALE_MULT,
+  );
+}
+
+function setGeniePresentation(
+  genie: GenieUniforms,
+  amount: number,
+  prefersReducedMotion: boolean,
+) {
+  genie.progress.value = prefersReducedMotion ? 0 : amount;
+  genie.opacity.value = prefersReducedMotion ? 1 - amount : 1;
 }
 
 function getDockItemBounds(
@@ -459,6 +592,25 @@ function drawDockAppIcon(
   context.stroke();
 }
 
+function drawDockRunningIndicator(
+  context: CanvasRenderingContext2D,
+  layout: ReturnType<typeof getDockLayout>,
+  item: ReturnType<typeof getDockItemBounds>,
+) {
+  context.save();
+  context.fillStyle = "rgba(232, 232, 234, 0.88)";
+  context.beginPath();
+  context.arc(
+    item.x + item.width / 2,
+    layout.y + layout.height * (1 - CONFIG.phase2.DOCK_RUNNING_DOT_BOTTOM_MULT),
+    layout.height * CONFIG.phase2.DOCK_RUNNING_DOT_RADIUS_MULT,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+  context.restore();
+}
+
 function drawDock(
   context: CanvasRenderingContext2D,
   layout: ReturnType<typeof getDockLayout>,
@@ -487,6 +639,10 @@ function drawDock(
   for (let index = 0; index < DOCK_APPS.length; index += 1) {
     const item = getDockItemBounds(layout, scales, x, index);
     drawDockAppIcon(context, DOCK_APPS[index], item);
+
+    if (DOCK_APPS[index].isRunning) {
+      drawDockRunningIndicator(context, layout, item);
+    }
   }
 
   context.restore();
@@ -512,6 +668,32 @@ type DockRenderer = {
   smoothedPointerX: number | null;
   hoveredIndex: number | null;
 };
+
+function redrawDockRenderer(renderer: DockRenderer, activeScale: number) {
+  const { canvas, context, layout } = renderer;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  drawDock(
+    context,
+    layout,
+    renderer.scales,
+    renderer.x,
+    renderer.width,
+    renderer.hoveredIndex,
+    activeScale,
+  );
+  renderer.texture.needsUpdate = true;
+}
+
+function setDockAppRunning(
+  renderer: DockRenderer,
+  appId: string,
+  activeScale: number,
+) {
+  const app = DOCK_APPS.find((candidate) => candidate.id === appId);
+  if (!app || app.isRunning) return;
+  app.isRunning = true;
+  redrawDockRenderer(renderer, activeScale);
+}
 
 function getDockTarget(
   layout: ReturnType<typeof getDockLayout>,
@@ -684,18 +866,7 @@ function updateDockRenderer(
 
   if (!changed) return;
 
-  const { canvas, context, layout } = renderer;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  drawDock(
-    context,
-    layout,
-    renderer.scales,
-    renderer.x,
-    renderer.width,
-    renderer.hoveredIndex,
-    1 + magnification,
-  );
-  renderer.texture.needsUpdate = true;
+  redrawDockRenderer(renderer, 1 + magnification);
 }
 
 function createBrowserChromeTexture({
@@ -718,8 +889,6 @@ function createBrowserChromeTexture({
 
   textureCanvas.width = textureWidth;
   textureCanvas.height = textureHeight;
-  textureContext.fillStyle = "#000000";
-  textureContext.fillRect(0, 0, textureWidth, textureHeight);
 
   const layout = getBrowserLayout(
     textureWidth,
@@ -1268,16 +1437,50 @@ function affordableAberrationTaps(width: number, height: number) {
   );
 }
 
-const PAGE_ABERRATION_VERTEX_SHADER = `
-varying vec2 vUv;
+const GENIE_VERTEX_DEFORMATION = `
+uniform float u_genieProgress;
+uniform vec4 u_genieWindow;
+uniform vec3 u_genieTarget;
 
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+vec3 applyGenie(vec3 sourcePosition) {
+  float windowY = clamp(
+    (sourcePosition.y - (u_genieWindow.y - u_genieWindow.w * 0.5)) /
+      u_genieWindow.w,
+    0.0,
+    1.0
+  );
+  float pull = smoothstep(
+    0.0,
+    1.0,
+    clamp(
+      u_genieProgress * (1.0 + ${CONFIG.phase2.GENIE_ROW_STAGGER.toFixed(2)}) -
+        windowY * ${CONFIG.phase2.GENIE_ROW_STAGGER.toFixed(2)},
+      0.0,
+      1.0
+    )
+  );
+  vec2 relativePosition = sourcePosition.xy - u_genieWindow.xy;
+  vec2 minimizedPosition = u_genieTarget.xy + relativePosition * u_genieTarget.z;
+  float waist = 1.0 - sin(pull * 3.14159265) * (1.0 - windowY) * 0.16;
+  vec3 result = sourcePosition;
+  result.x = mix(sourcePosition.x, minimizedPosition.x, pull);
+  result.x = u_genieTarget.x + (result.x - u_genieTarget.x) * waist;
+  result.y = mix(sourcePosition.y, minimizedPosition.y, pull);
+  return result;
 }
 `;
 
-function createPageAberrationMaterial(taps: number) {
+const PAGE_ABERRATION_VERTEX_SHADER = `
+varying vec2 vUv;
+${GENIE_VERTEX_DEFORMATION}
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(applyGenie(position), 1.0);
+}
+`;
+
+function createPageAberrationMaterial(taps: number, genie: GenieUniforms) {
   return new THREE.ShaderMaterial({
     uniforms: {
       u_pageTexture: { value: null },
@@ -1299,12 +1502,17 @@ function createPageAberrationMaterial(taps: number) {
           CONFIG.customAberration.SCROLL_VIGNETTE_FLOOR,
         ),
       },
+      u_genieProgress: genie.progress,
+      u_genieWindow: genie.window,
+      u_genieTarget: genie.target,
+      u_windowOpacity: genie.opacity,
     },
     vertexShader: PAGE_ABERRATION_VERTEX_SHADER,
     fragmentShader: `
 uniform sampler2D u_pageTexture;
 uniform sampler2D u_pageMask;
 uniform vec4 u_pageBounds;
+uniform float u_windowOpacity;
 varying vec2 vUv;
 
 ${buildCustomAberrationProgram(taps)}
@@ -1317,8 +1525,45 @@ void main() {
   if (texture2D(u_pageMask, vUv).r < 0.5) discard;
   vec2 pageUv = (vUv - u_pageBounds.xy) / u_pageBounds.zw;
   gl_FragColor = applyCustomAberration(pageUv);
+  gl_FragColor.a *= u_windowOpacity;
 }
 `,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
+function createWindowChromeMaterial(genie: GenieUniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      u_texture: { value: null },
+      u_genieProgress: genie.progress,
+      u_genieWindow: genie.window,
+      u_genieTarget: genie.target,
+      u_windowOpacity: genie.opacity,
+    },
+    vertexShader: `
+varying vec2 vUv;
+${GENIE_VERTEX_DEFORMATION}
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(applyGenie(position), 1.0);
+}
+`,
+    fragmentShader: `
+uniform sampler2D u_texture;
+uniform float u_windowOpacity;
+varying vec2 vUv;
+
+void main() {
+  vec4 color = texture2D(u_texture, vUv);
+  if (color.a < 0.001) discard;
+  gl_FragColor = vec4(color.rgb, color.a * u_windowOpacity);
+}
+`,
+    transparent: true,
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
@@ -1413,13 +1658,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
-  const chromeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const windowGroupRef = useRef<THREE.Group>(null);
+  const vscodeWindowGroupRef = useRef<THREE.Group>(null);
+  const chromeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const vscodeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const toolbarMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const pageMeshRef = useRef<THREE.Mesh>(null);
+  const interactionMeshRef = useRef<THREE.Mesh>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const vscodeTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const vscodeRendererRef = useRef<VSCodeRenderer | null>(null);
   const dockTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const dockRendererRef = useRef<DockRenderer | null>(null);
   const toolbarTextureRef = useRef<THREE.CanvasTexture | null>(null);
@@ -1433,6 +1683,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const lastCurveDepthRef = useRef(-1);
   const htmlOverlayHiddenRef = useRef(false);
   const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
+  const browserLayoutRef = useRef<ReturnType<typeof getBrowserLayout> | null>(null);
+  const windowRuntimesRef = useRef<Record<WindowAppId, WindowRuntime>>({
+    safari: { state: "open", amount: 0, animation: null },
+    vscode: { state: "closed", amount: 0, animation: null },
+  });
+  const activeAppRef = useRef<WindowAppId | null>("safari");
+  const pendingAppRef = useRef<WindowAppId | null>(null);
+  const sourceLoadStartedRef = useRef(false);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
@@ -1446,9 +1704,35 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     affordableAberrationTaps(size.width, size.height),
     inputMode === "coarse" ? 4 : CONFIG.customAberration.SCROLL_TAPS,
   );
+  const genieUniforms = useMemo<GenieUniforms>(
+    () => ({
+      progress: { value: 0 },
+      opacity: { value: 1 },
+      window: { value: new THREE.Vector4(0, 0, 1, 1) },
+      target: { value: new THREE.Vector3(0, 0, 0.05) },
+    }),
+    [],
+  );
+  const vscodeGenieUniforms = useMemo<GenieUniforms>(
+    () => ({
+      progress: { value: 0 },
+      opacity: { value: 1 },
+      window: { value: new THREE.Vector4(0, 0, 1, 1) },
+      target: { value: new THREE.Vector3(0, 0, 0.05) },
+    }),
+    [],
+  );
   const pageAberrationMaterial = useMemo(
-    () => createPageAberrationMaterial(taps),
-    [taps],
+    () => createPageAberrationMaterial(taps, genieUniforms),
+    [genieUniforms, taps],
+  );
+  const windowChromeMaterial = useMemo(
+    () => createWindowChromeMaterial(genieUniforms),
+    [genieUniforms],
+  );
+  const vscodeWindowMaterial = useMemo(
+    () => createWindowChromeMaterial(vscodeGenieUniforms),
+    [vscodeGenieUniforms],
   );
 
   const planeWidth = Math.max(
@@ -1472,6 +1756,26 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => pageAberrationMaterial.dispose();
   }, [pageAberrationMaterial]);
+
+  useEffect(() => {
+    chromeMaterialRef.current = windowChromeMaterial;
+    return () => {
+      if (chromeMaterialRef.current === windowChromeMaterial) {
+        chromeMaterialRef.current = null;
+      }
+      windowChromeMaterial.dispose();
+    };
+  }, [windowChromeMaterial]);
+
+  useEffect(() => {
+    vscodeMaterialRef.current = vscodeWindowMaterial;
+    return () => {
+      if (vscodeMaterialRef.current === vscodeWindowMaterial) {
+        vscodeMaterialRef.current = null;
+      }
+      vscodeWindowMaterial.dispose();
+    };
+  }, [vscodeWindowMaterial]);
 
   useEffect(() => {
     pageAberrationMaterialRef.current = pageAberrationMaterial;
@@ -1505,6 +1809,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     targetRef.current = null;
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = null;
+    vscodeTextureRef.current?.dispose();
+    vscodeTextureRef.current = null;
+    vscodeRendererRef.current = null;
     dockTextureRef.current?.dispose();
     dockTextureRef.current = null;
     dockRendererRef.current = null;
@@ -1515,6 +1822,16 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     pageMaskRef.current = null;
     surfaceTransformRef.current = null;
     pageUvBoundsRef.current = null;
+    browserLayoutRef.current = null;
+    windowRuntimesRef.current = {
+      safari: { state: "open", amount: 0, animation: null },
+      vscode: { state: "closed", amount: 0, animation: null },
+    };
+    activeAppRef.current = "safari";
+    pendingAppRef.current = null;
+    sourceLoadStartedRef.current = false;
+    setGeniePresentation(genieUniforms, 0, false);
+    setGeniePresentation(vscodeGenieUniforms, 0, false);
     previousScrollYRef.current = null;
     scrollVelocityRef.current = 0;
 
@@ -1524,7 +1841,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       surfaceGroupRef.current.position.y = 0;
       surfaceGroupRef.current.scale.setScalar(1);
     }
+    if (windowGroupRef.current) windowGroupRef.current.visible = true;
+    if (vscodeWindowGroupRef.current) vscodeWindowGroupRef.current.visible = false;
   }, [
+    genieUniforms,
     phase2.dockScale,
     phase2.dockOffsetX,
     phase2.dockOffsetY,
@@ -1534,12 +1854,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     phase2.safariControlsScale,
     size.height,
     size.width,
+    vscodeGenieUniforms,
   ]);
 
   useEffect(() => {
     return () => {
       targetRef.current?.dispose();
       chromeTextureRef.current?.dispose();
+      vscodeTextureRef.current?.dispose();
+      vscodeRendererRef.current = null;
       dockTextureRef.current?.dispose();
       dockRendererRef.current = null;
       toolbarTextureRef.current?.dispose();
@@ -1552,6 +1875,185 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       );
     };
   }, [events, gl]);
+
+  const getWindowGroup = (appId: WindowAppId) =>
+    appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
+
+  const getWindowGenie = (appId: WindowAppId) =>
+    appId === "safari" ? genieUniforms : vscodeGenieUniforms;
+
+  const getWindowDockIndex = (appId: WindowAppId) =>
+    appId === "safari" ? SAFARI_DOCK_INDEX : VSCODE_DOCK_INDEX;
+
+  const startSourceLoad = () => {
+    if (sourceLoadStartedRef.current) return;
+    sourceLoadStartedRef.current = true;
+
+    loadSourceManifest()
+      .then((manifest) => {
+        if (vscodeRendererRef.current) {
+          setVSCodeSources(vscodeRendererRef.current, manifest);
+        }
+      })
+      .catch(() => {
+        if (vscodeRendererRef.current) {
+          setVSCodeLoadError(vscodeRendererRef.current);
+        }
+      });
+  };
+
+  const animateWindowTo = (appId: WindowAppId, target: 0 | 1) => {
+    const browserLayout = browserLayoutRef.current;
+    const dockRenderer = dockRendererRef.current;
+    const group = getWindowGroup(appId);
+    const genie = getWindowGenie(appId);
+    const runtime = windowRuntimesRef.current[appId];
+
+    if (!browserLayout || !dockRenderer || !group) return;
+
+    configureGenieGeometry(
+      genie,
+      browserLayout,
+      dockRenderer,
+      planeWidth,
+      planeHeight,
+      getWindowDockIndex(appId),
+    );
+    group.visible = true;
+    runtime.state = "animating";
+    const distance = Math.abs(target - runtime.amount);
+    const baseDuration = prefersReducedMotion
+      ? CONFIG.phase2.GENIE_REDUCED_DURATION
+      : target === 1
+        ? CONFIG.phase2.GENIE_DURATION
+        : CONFIG.phase2.GENIE_RESTORE_DURATION;
+    runtime.animation = {
+      from: runtime.amount,
+      to: target,
+      elapsed: 0,
+      duration: Math.max(0.08, baseDuration * distance),
+    };
+  };
+
+  const showWindow = (appId: WindowAppId) => {
+    const group = getWindowGroup(appId);
+    if (!group) return;
+    const runtime = windowRuntimesRef.current[appId];
+    activeAppRef.current = appId;
+
+    if (appId === "vscode") startSourceLoad();
+
+    if (
+      runtime.state === "minimized" ||
+      (runtime.state === "animating" && runtime.animation?.to === 1)
+    ) {
+      animateWindowTo(appId, 0);
+      return;
+    }
+
+    runtime.animation = null;
+    runtime.amount = 0;
+    runtime.state = "open";
+    setGeniePresentation(getWindowGenie(appId), 0, false);
+    group.visible = true;
+  };
+
+  const switchToApp = (appId: WindowAppId) => {
+    const dockRenderer = dockRendererRef.current;
+    if (dockRenderer) {
+      setDockAppRunning(
+        dockRenderer,
+        appId,
+        1 + phase2.dockMagnification,
+      );
+    }
+    if (appId === "vscode") startSourceLoad();
+
+    const activeApp = activeAppRef.current;
+    if (activeApp === appId) {
+      const runtime = windowRuntimesRef.current[appId];
+      if (runtime.state === "animating" && runtime.animation?.to === 1) {
+        pendingAppRef.current = null;
+        animateWindowTo(appId, 0);
+      }
+      return;
+    }
+
+    if (activeApp) {
+      const activeRuntime = windowRuntimesRef.current[activeApp];
+      const activeGroup = getWindowGroup(activeApp);
+
+      if (
+        activeGroup?.visible &&
+        activeRuntime.state !== "closed" &&
+        activeRuntime.state !== "minimized"
+      ) {
+        pendingAppRef.current = appId;
+        animateWindowTo(activeApp, 1);
+        return;
+      }
+    }
+
+    showWindow(appId);
+  };
+
+  const closeWindow = (appId: WindowAppId) => {
+    const runtime = windowRuntimesRef.current[appId];
+    runtime.animation = null;
+    runtime.amount = 0;
+    runtime.state = "closed";
+    setGeniePresentation(getWindowGenie(appId), 0, false);
+    const group = getWindowGroup(appId);
+    if (group) group.visible = false;
+    if (activeAppRef.current === appId) activeAppRef.current = null;
+  };
+
+  useFrame((_, delta) => {
+    for (const appId of ["safari", "vscode"] as const) {
+      const runtime = windowRuntimesRef.current[appId];
+      const animation = runtime.animation;
+
+      if (!animation) continue;
+
+      animation.elapsed += delta;
+      const time = THREE.MathUtils.clamp(
+        animation.elapsed / animation.duration,
+        0,
+        1,
+      );
+      const amount = THREE.MathUtils.lerp(
+        animation.from,
+        animation.to,
+        easeInOutQuint(time),
+      );
+      runtime.amount = amount;
+      setGeniePresentation(
+        getWindowGenie(appId),
+        amount,
+        prefersReducedMotion,
+      );
+
+      if (time < 1) continue;
+
+      runtime.animation = null;
+
+      if (animation.to === 1) {
+        runtime.state = "minimized";
+        const group = getWindowGroup(appId);
+        if (group) group.visible = false;
+        if (activeAppRef.current === appId) activeAppRef.current = null;
+
+        const pendingApp = pendingAppRef.current;
+        if (pendingApp) {
+          pendingAppRef.current = null;
+          showWindow(pendingApp);
+        }
+      } else {
+        runtime.state = "open";
+        activeAppRef.current = appId;
+      }
+    }
+  });
 
   useFrame(() => {
     const scrollReveal = THREE.MathUtils.clamp(revealProgressRef.current, 0, 1);
@@ -1647,7 +2149,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (
       !capturedRef.current ||
       revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START ||
-      !pageMeshRef.current ||
+      !interactionMeshRef.current ||
       !pageUvBoundsRef.current ||
       !pageAberrationMaterialRef.current
     ) {
@@ -1657,7 +2159,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const intersections = intersectionsRef.current;
     intersections.length = 0;
     state.raycaster.setFromCamera(state.pointer, state.camera);
-    state.raycaster.intersectObject(pageMeshRef.current, false, intersections);
+    state.raycaster.intersectObject(interactionMeshRef.current, false, intersections);
     const pageUv = intersections[0]?.uv;
     const bounds = pageUvBoundsRef.current;
     const mouseX = pageUv ? (pageUv.x - bounds.x) / bounds.width : -1;
@@ -1676,6 +2178,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const toolbarRenderer = toolbarRendererRef.current;
     if (toolbarRenderer) {
       updateToolbarRenderer(toolbarRenderer, pointerX, pointerY);
+    }
+    const vscodeRenderer = vscodeRendererRef.current;
+    if (vscodeRenderer) {
+      updateVSCodeHover(
+        vscodeRenderer,
+        activeAppRef.current === "vscode" ? pointerX : null,
+        activeAppRef.current === "vscode" ? pointerY : null,
+      );
     }
     const pointerInsideDockContainer =
       dockRenderer !== null &&
@@ -1869,14 +2379,22 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       tuning: phase2,
     });
     const toolbarRenderer = createToolbarRenderer({ sourceWidth, sourceHeight });
+    const vscodeRenderer = createVSCodeRenderer({
+      width: textureWidth,
+      height: textureHeight,
+      layout,
+      controlsScale: phase2.safariControlsScale,
+    });
     const pageMask = createPageMask(textureWidth, textureHeight, layout);
 
     if (
       !chromeTexture ||
       !dockRenderer ||
       !toolbarRenderer ||
+      !vscodeRenderer ||
       !pageMask ||
       !chromeMaterialRef.current ||
+      !vscodeMaterialRef.current ||
       !dockMaterialRef.current ||
       !toolbarMaterialRef.current
     ) {
@@ -1885,16 +2403,20 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = chromeTexture;
+    vscodeTextureRef.current?.dispose();
+    vscodeTextureRef.current = vscodeRenderer.texture;
+    vscodeRendererRef.current = vscodeRenderer;
     dockTextureRef.current?.dispose();
     dockTextureRef.current = dockRenderer.texture;
     dockRendererRef.current = dockRenderer;
+    browserLayoutRef.current = layout;
     toolbarTextureRef.current?.dispose();
     toolbarTextureRef.current = toolbarRenderer.texture;
     toolbarRendererRef.current = toolbarRenderer;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = pageMask;
-    chromeMaterialRef.current.map = chromeTexture;
-    chromeMaterialRef.current.needsUpdate = true;
+    chromeMaterialRef.current.uniforms.u_texture.value = chromeTexture;
+    vscodeMaterialRef.current.uniforms.u_texture.value = vscodeRenderer.texture;
     dockMaterialRef.current.map = dockRenderer.texture;
     dockMaterialRef.current.needsUpdate = true;
     toolbarMaterialRef.current.map = toolbarRenderer.texture;
@@ -1909,6 +2431,22 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       height: layout.contentHeight / textureHeight,
     };
     pageUvBoundsRef.current = bounds;
+    configureGenieGeometry(
+      genieUniforms,
+      layout,
+      dockRenderer,
+      planeWidth,
+      planeHeight,
+      SAFARI_DOCK_INDEX,
+    );
+    configureGenieGeometry(
+      vscodeGenieUniforms,
+      layout,
+      dockRenderer,
+      planeWidth,
+      planeHeight,
+      VSCODE_DOCK_INDEX,
+    );
     configurePageAberrationMaterial(
       pageAberrationMaterial,
       target,
@@ -1939,6 +2477,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     surfaceGroupRef.current.scale.setScalar(scale);
     surfaceGroupRef.current.position.y = -contentCenterY * scale;
     surfaceGroupRef.current.visible = true;
+    if (vscodeWindowGroupRef.current) vscodeWindowGroupRef.current.visible = false;
   }, 0.5);
 
   const handlePageClick = (event: ThreeEvent<MouseEvent>) => {
@@ -1948,10 +2487,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (!pageUv || !bounds) return;
 
     const toolbarRenderer = toolbarRendererRef.current;
+    const dockRenderer = dockRendererRef.current;
+    const textureWidth =
+      dockRenderer?.canvas.width ?? toolbarRenderer?.canvas.width;
+    const textureHeight =
+      dockRenderer?.canvas.height ?? toolbarRenderer?.canvas.height;
+
+    if (!textureWidth || !textureHeight) return;
+
+    const pointerX = pageUv.x * textureWidth;
+    const pointerY = (1 - pageUv.y) * textureHeight;
 
     if (toolbarRenderer) {
-      const pointerX = pageUv.x * toolbarRenderer.canvas.width;
-      const pointerY = (1 - pageUv.y) * toolbarRenderer.canvas.height;
       const toolbarHit = getToolbarHit(
         toolbarRenderer.layout,
         toolbarRenderer.menuType,
@@ -1995,6 +2542,81 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       }
     }
 
+    if (dockRenderer) {
+      const dockIndex = getDockHoveredIndex(
+        dockRenderer.layout,
+        dockRenderer.scales,
+        dockRenderer.x,
+        pointerX,
+      );
+      const dockItem = getDockItemBounds(
+        dockRenderer.layout,
+        dockRenderer.scales,
+        dockRenderer.x,
+        dockIndex,
+      );
+      const dockItemHit =
+        pointerX >= dockItem.x &&
+        pointerX <= dockItem.x + dockItem.width &&
+        pointerY >= dockItem.y &&
+        pointerY <= dockRenderer.layout.y + dockRenderer.layout.height;
+
+      if (dockItemHit) {
+        event.stopPropagation();
+
+        const appId = DOCK_APPS[dockIndex].id;
+        if (appId === "safari" || appId === "vscode") {
+          switchToApp(appId);
+        }
+        return;
+      }
+    }
+
+    const browserLayout = browserLayoutRef.current;
+    const activeApp = activeAppRef.current;
+    const activeGroup = activeApp ? getWindowGroup(activeApp) : null;
+    const windowIsVisible = activeGroup?.visible === true;
+
+    if (browserLayout && activeApp && windowIsVisible) {
+      const browserControl = getBrowserControlHit(
+        browserLayout,
+        phase2,
+        pointerX,
+        pointerY,
+        textureWidth / size.width,
+      );
+
+      if (browserControl === "close") {
+        event.stopPropagation();
+        closeWindow(activeApp);
+        return;
+      }
+
+      if (browserControl === "minimize") {
+        event.stopPropagation();
+
+        if (windowRuntimesRef.current[activeApp].animation?.to !== 1) {
+          animateWindowTo(activeApp, 1);
+        }
+        return;
+      }
+    }
+
+    if (!activeApp || windowRuntimesRef.current[activeApp].state !== "open") {
+      return;
+    }
+
+    if (
+      activeApp === "vscode" &&
+      vscodeRendererRef.current &&
+      handleVSCodeClick(vscodeRendererRef.current, pointerX, pointerY)
+    ) {
+      event.stopPropagation();
+      return;
+    }
+
+    if (activeApp !== "safari") return;
+
     const pageX = (pageUv.x - bounds.x) / bounds.width;
     const pageY = (pageUv.y - bounds.y) / bounds.height;
 
@@ -2016,6 +2638,28 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     setTheme(theme === "Light" ? "Dark" : "Light");
   };
 
+  const handlePageWheel = (event: ThreeEvent<WheelEvent>) => {
+    const pageUv = event.uv;
+    const renderer = vscodeRendererRef.current;
+
+    if (!pageUv || !renderer || activeAppRef.current !== "vscode") return;
+
+    const pointerX = pageUv.x * renderer.canvas.width;
+    const pointerY = (1 - pageUv.y) * renderer.canvas.height;
+
+    if (
+      handleVSCodeWheel(
+        renderer,
+        pointerX,
+        pointerY,
+        event.deltaX,
+        event.deltaY,
+      )
+    ) {
+      event.stopPropagation();
+    }
+  };
+
   return (
     <group>
       <group ref={pageGroupRef}>{children}</group>
@@ -2027,28 +2671,45 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       >
         <mesh
           geometry={planeGeometry}
-          renderOrder={10}
+          renderOrder={9}
           frustumCulled={false}
           raycast={() => null}
         >
           <meshBasicMaterial
-            ref={chromeMaterialRef}
-            color="#ffffff"
-            transparent
+            color="#000000"
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
-        <mesh
-          ref={pageMeshRef}
-          geometry={planeGeometry}
-          renderOrder={11}
-          frustumCulled={false}
-          onClick={handlePageClick}
-        >
-          <primitive object={pageAberrationMaterial} attach="material" />
-        </mesh>
+        <group ref={windowGroupRef}>
+          <mesh
+            geometry={planeGeometry}
+            renderOrder={10}
+            frustumCulled={false}
+            raycast={() => null}
+          >
+            <primitive object={windowChromeMaterial} attach="material" />
+          </mesh>
+          <mesh
+            geometry={planeGeometry}
+            renderOrder={11}
+            frustumCulled={false}
+            raycast={() => null}
+          >
+            <primitive object={pageAberrationMaterial} attach="material" />
+          </mesh>
+        </group>
+        <group ref={vscodeWindowGroupRef} visible={false}>
+          <mesh
+            geometry={planeGeometry}
+            renderOrder={11}
+            frustumCulled={false}
+            raycast={() => null}
+          >
+            <primitive object={vscodeWindowMaterial} attach="material" />
+          </mesh>
+        </group>
         <mesh
           geometry={planeGeometry}
           renderOrder={12}
@@ -2074,6 +2735,21 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             ref={toolbarMaterialRef}
             color="#ffffff"
             transparent
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh
+          ref={interactionMeshRef}
+          geometry={planeGeometry}
+          renderOrder={14}
+          frustumCulled={false}
+          onClick={handlePageClick}
+          onWheel={handlePageWheel}
+        >
+          <meshBasicMaterial
+            colorWrite={false}
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
