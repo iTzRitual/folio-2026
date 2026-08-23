@@ -60,7 +60,7 @@ export function Subtitle({
 
       <Html
         as="div"
-        className="-translate-x-1/2 -translate-y-full whitespace-pre-line text-center m-0 p-0 text-red-500/0 pointer-events-auto font-karla font-extrabold leading-none"
+        className="-translate-x-1/2 -translate-y-full whitespace-nowrap text-center m-0 p-0 text-red-500/0 pointer-events-auto font-karla font-extrabold leading-none"
         style={{
           fontSize: `${pixelFontSize}px`,
           letterSpacing: `${CONFIG.subtitle.LETTER_SPACING}em`,
