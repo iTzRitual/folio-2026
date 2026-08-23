@@ -13,13 +13,17 @@ import { caseStudyStage } from "@/lib/caseStudyStage";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
+  beginVSCodeScrollbarDrag,
   createVSCodeRenderer,
+  endVSCodeScrollbarDrag,
   handleVSCodeClick,
   handleVSCodeWheel,
   loadSourceManifest,
   setVSCodeLoadError,
   setVSCodeSources,
   updateVSCodeHover,
+  updateVSCodeScrollbarDrag,
+  type VSCodeScrollbarDrag,
   type VSCodeRenderer,
 } from "@/lib/vscodeRenderer";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
@@ -1691,6 +1695,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const activeAppRef = useRef<WindowAppId | null>("safari");
   const pendingAppRef = useRef<WindowAppId | null>(null);
   const sourceLoadStartedRef = useRef(false);
+  const vscodeScrollbarDragRef = useRef<VSCodeScrollbarDrag | null>(null);
+  const suppressVSCodeClickRef = useRef(false);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
@@ -1830,6 +1836,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     activeAppRef.current = "safari";
     pendingAppRef.current = null;
     sourceLoadStartedRef.current = false;
+    vscodeScrollbarDragRef.current = null;
+    suppressVSCodeClickRef.current = false;
     setGeniePresentation(genieUniforms, 0, false);
     setGeniePresentation(vscodeGenieUniforms, 0, false);
     previousScrollYRef.current = null;
@@ -2481,6 +2489,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   }, 0.5);
 
   const handlePageClick = (event: ThreeEvent<MouseEvent>) => {
+    if (suppressVSCodeClickRef.current) {
+      suppressVSCodeClickRef.current = false;
+      event.stopPropagation();
+      return;
+    }
+
     const pageUv = event.uv;
     const bounds = pageUvBoundsRef.current;
 
@@ -2638,6 +2652,67 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     setTheme(theme === "Light" ? "Dark" : "Light");
   };
 
+  const handlePagePointerDown = (event: ThreeEvent<PointerEvent>) => {
+    const pageUv = event.uv;
+    const renderer = vscodeRendererRef.current;
+
+    if (
+      !pageUv ||
+      !renderer ||
+      activeAppRef.current !== "vscode" ||
+      windowRuntimesRef.current.vscode.state !== "open"
+    ) {
+      return;
+    }
+
+    const pointerX = pageUv.x * renderer.canvas.width;
+    const pointerY = (1 - pageUv.y) * renderer.canvas.height;
+    const drag = beginVSCodeScrollbarDrag(renderer, pointerX, pointerY);
+
+    if (!drag) return;
+
+    vscodeScrollbarDragRef.current = drag;
+    suppressVSCodeClickRef.current = true;
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+    const target = event.nativeEvent.target;
+    if (target instanceof Element) {
+      target.setPointerCapture(event.pointerId);
+    }
+  };
+
+  const handlePagePointerMove = (event: ThreeEvent<PointerEvent>) => {
+    const drag = vscodeScrollbarDragRef.current;
+    const renderer = vscodeRendererRef.current;
+    const pageUv = event.uv;
+
+    if (!drag || !renderer || !pageUv) return;
+
+    updateVSCodeScrollbarDrag(
+      renderer,
+      drag,
+      pageUv.x * renderer.canvas.width,
+      (1 - pageUv.y) * renderer.canvas.height,
+    );
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+  };
+
+  const finishVSCodeScrollbarDrag = (event: ThreeEvent<PointerEvent>) => {
+    const renderer = vscodeRendererRef.current;
+
+    if (!vscodeScrollbarDragRef.current || !renderer) return;
+
+    vscodeScrollbarDragRef.current = null;
+    endVSCodeScrollbarDrag(renderer);
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+    const target = event.nativeEvent.target;
+    if (target instanceof Element && target.hasPointerCapture(event.pointerId)) {
+      target.releasePointerCapture(event.pointerId);
+    }
+  };
+
   const handlePageWheel = (event: ThreeEvent<WheelEvent>) => {
     const pageUv = event.uv;
     const renderer = vscodeRendererRef.current;
@@ -2657,6 +2732,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       )
     ) {
       event.stopPropagation();
+      event.nativeEvent.preventDefault();
     }
   };
 
@@ -2746,6 +2822,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           renderOrder={14}
           frustumCulled={false}
           onClick={handlePageClick}
+          onPointerDown={handlePagePointerDown}
+          onPointerMove={handlePagePointerMove}
+          onPointerUp={finishVSCodeScrollbarDrag}
+          onPointerCancel={finishVSCodeScrollbarDrag}
+          onLostPointerCapture={finishVSCodeScrollbarDrag}
           onWheel={handlePageWheel}
         >
           <meshBasicMaterial

@@ -10,6 +10,13 @@ export type SourceManifest = {
   files: SourceFile[];
 };
 
+export type VSCodeScrollbarKind = "tree-y" | "editor-y" | "editor-x";
+
+export type VSCodeScrollbarDrag = {
+  kind: VSCodeScrollbarKind;
+  grabOffset: number;
+};
+
 export type EditorWindowLayout = {
   x: number;
   y: number;
@@ -68,7 +75,20 @@ export type VSCodeRenderer = {
   treeScroll: number;
   editorScrollY: number;
   editorScrollX: number;
+  hoveredScrollbar: VSCodeScrollbarKind | null;
+  activeScrollbar: VSCodeScrollbarKind | null;
   loadState: "loading" | "ready" | "error";
+};
+
+type ScrollbarGeometry = {
+  kind: VSCodeScrollbarKind;
+  orientation: "horizontal" | "vertical";
+  crossPosition: number;
+  trackStart: number;
+  trackLength: number;
+  thumbStart: number;
+  thumbLength: number;
+  maxScroll: number;
 };
 
 const keywordPattern = /^(?:as|async|await|break|case|catch|class|const|continue|default|delete|do|else|export|extends|false|finally|for|from|function|if|implements|import|in|instanceof|interface|let|new|null|of|private|protected|public|return|static|super|switch|throw|true|try|type|typeof|undefined|var|void|while|with|yield)$/;
@@ -344,22 +364,134 @@ function drawFileBadge(
   context.fillText(extension ?? "•", x + size * 0.42, y);
 }
 
-function drawScrollbar(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  height: number,
+function createScrollbarGeometry(
+  renderer: VSCodeRenderer,
+  kind: VSCodeScrollbarKind,
+  orientation: ScrollbarGeometry["orientation"],
+  crossPosition: number,
+  trackStart: number,
+  trackLength: number,
   visibleAmount: number,
   totalAmount: number,
   scroll: number,
 ) {
-  if (totalAmount <= visibleAmount || totalAmount <= 0) return;
+  if (totalAmount <= visibleAmount || totalAmount <= 0) return null;
 
-  const thumbHeight = Math.max(height * (visibleAmount / totalAmount), 18);
+  const thumbLength = Math.max(
+    trackLength * (visibleAmount / totalAmount),
+    renderer.layout.chromeHeight *
+      CONFIG.phase2.VSCODE_SCROLLBAR_MIN_THUMB_MULT,
+  );
   const maxScroll = totalAmount - visibleAmount;
-  const thumbY = y + (height - thumbHeight) * (scroll / maxScroll);
-  context.fillStyle = "rgba(121, 121, 121, 0.38)";
-  context.fillRect(x - 3, thumbY, 3, thumbHeight);
+  const thumbStart =
+    trackStart + (trackLength - thumbLength) * (scroll / maxScroll);
+
+  return {
+    kind,
+    orientation,
+    crossPosition,
+    trackStart,
+    trackLength,
+    thumbStart,
+    thumbLength,
+    maxScroll,
+  } satisfies ScrollbarGeometry;
+}
+
+function getSelectedLines(renderer: VSCodeRenderer) {
+  const selected = renderer.selectedPath
+    ? findFile(renderer.root, renderer.selectedPath)
+    : null;
+  return selected?.file
+    ? selected.file.content.replaceAll("\r\n", "\n").split("\n")
+    : [];
+}
+
+function getScrollbarGeometries(
+  renderer: VSCodeRenderer,
+  metrics = getMetrics(renderer),
+) {
+  const treeVisibleRows =
+    (metrics.treeBottom - metrics.treeTop) / metrics.treeRowHeight;
+  const lines = getSelectedLines(renderer);
+  const editorVisibleLines =
+    (metrics.codeBottom - metrics.codeTop) / metrics.codeLineHeight;
+  const longestLine = lines.reduce(
+    (longest, line) => Math.max(longest, line.length),
+    0,
+  );
+  const estimatedWidth = longestLine * metrics.codeFontSize * 0.61;
+  const availableWidth =
+    metrics.editorWidth - metrics.lineNumberWidth - metrics.codePadding * 2;
+
+  return [
+    createScrollbarGeometry(
+      renderer,
+      "tree-y",
+      "vertical",
+      metrics.sidebarX + metrics.sidebarWidth,
+      metrics.treeTop,
+      metrics.treeBottom - metrics.treeTop,
+      treeVisibleRows,
+      renderer.rows.length,
+      renderer.treeScroll,
+    ),
+    createScrollbarGeometry(
+      renderer,
+      "editor-y",
+      "vertical",
+      metrics.editorX + metrics.editorWidth,
+      metrics.codeTop,
+      metrics.codeBottom - metrics.codeTop,
+      editorVisibleLines,
+      lines.length,
+      renderer.editorScrollY,
+    ),
+    createScrollbarGeometry(
+      renderer,
+      "editor-x",
+      "horizontal",
+      metrics.codeBottom,
+      metrics.editorX + metrics.lineNumberWidth,
+      metrics.editorWidth - metrics.lineNumberWidth,
+      availableWidth,
+      estimatedWidth,
+      renderer.editorScrollX,
+    ),
+  ].filter((geometry): geometry is ScrollbarGeometry => geometry !== null);
+}
+
+function drawScrollbar(
+  renderer: VSCodeRenderer,
+  geometry: ScrollbarGeometry,
+) {
+  const { context } = renderer;
+  const thickness =
+    renderer.layout.chromeHeight *
+    CONFIG.phase2.VSCODE_SCROLLBAR_THICKNESS_MULT;
+  const alpha =
+    renderer.activeScrollbar === geometry.kind
+      ? CONFIG.phase2.VSCODE_SCROLLBAR_ACTIVE_ALPHA
+      : renderer.hoveredScrollbar === geometry.kind
+        ? CONFIG.phase2.VSCODE_SCROLLBAR_HOVER_ALPHA
+        : CONFIG.phase2.VSCODE_SCROLLBAR_IDLE_ALPHA;
+  context.fillStyle = `rgba(151, 151, 151, ${alpha})`;
+
+  if (geometry.orientation === "vertical") {
+    context.fillRect(
+      geometry.crossPosition - thickness,
+      geometry.thumbStart,
+      thickness,
+      geometry.thumbLength,
+    );
+  } else {
+    context.fillRect(
+      geometry.thumbStart,
+      geometry.crossPosition - thickness,
+      geometry.thumbLength,
+      thickness,
+    );
+  }
 }
 
 function clampTreeScroll(renderer: VSCodeRenderer, metrics: EditorMetrics) {
@@ -471,15 +603,10 @@ function drawSidebar(renderer: VSCodeRenderer, metrics: EditorMetrics) {
   }
 
   context.restore();
-  drawScrollbar(
-    context,
-    sidebarRight,
-    metrics.treeTop,
-    metrics.treeBottom - metrics.treeTop,
-    (metrics.treeBottom - metrics.treeTop) / metrics.treeRowHeight,
-    renderer.rows.length,
-    renderer.treeScroll,
+  const treeScrollbar = getScrollbarGeometries(renderer, metrics).find(
+    (geometry) => geometry.kind === "tree-y",
   );
+  if (treeScrollbar) drawScrollbar(renderer, treeScrollbar);
 
   if (renderer.loadState !== "ready") {
     context.fillStyle = "#9d9d9d";
@@ -696,15 +823,9 @@ function drawEditor(renderer: VSCodeRenderer, metrics: EditorMetrics) {
   }
 
   context.restore();
-  drawScrollbar(
-    context,
-    metrics.editorX + metrics.editorWidth,
-    metrics.codeTop,
-    metrics.codeBottom - metrics.codeTop,
-    (metrics.codeBottom - metrics.codeTop) / metrics.codeLineHeight,
-    lines.length,
-    renderer.editorScrollY,
-  );
+  for (const scrollbar of getScrollbarGeometries(renderer, metrics)) {
+    if (scrollbar.kind !== "tree-y") drawScrollbar(renderer, scrollbar);
+  }
 }
 
 export function drawVSCodeRenderer(renderer: VSCodeRenderer) {
@@ -775,6 +896,8 @@ export function createVSCodeRenderer({
     treeScroll: 0,
     editorScrollY: 0,
     editorScrollX: 0,
+    hoveredScrollbar: null,
+    activeScrollbar: null,
     loadState: "loading",
   };
   drawVSCodeRenderer(renderer);
@@ -820,13 +943,137 @@ function getTreeRowAt(
   return renderer.rows[index] ?? null;
 }
 
+function getScrollbarAt(
+  renderer: VSCodeRenderer,
+  x: number,
+  y: number,
+) {
+  const hitRadius =
+    renderer.layout.chromeHeight * CONFIG.phase2.VSCODE_SCROLLBAR_HIT_MULT;
+
+  return (
+    getScrollbarGeometries(renderer).find((geometry) => {
+      if (geometry.orientation === "vertical") {
+        return (
+          Math.abs(x - geometry.crossPosition) <= hitRadius &&
+          y >= geometry.trackStart &&
+          y <= geometry.trackStart + geometry.trackLength
+        );
+      }
+
+      return (
+        Math.abs(y - geometry.crossPosition) <= hitRadius &&
+        x >= geometry.trackStart &&
+        x <= geometry.trackStart + geometry.trackLength
+      );
+    }) ?? null
+  );
+}
+
+function setScrollbarScroll(
+  renderer: VSCodeRenderer,
+  kind: VSCodeScrollbarKind,
+  scroll: number,
+) {
+  const metrics = getMetrics(renderer);
+
+  if (kind === "tree-y") {
+    renderer.treeScroll = scroll;
+    clampTreeScroll(renderer, metrics);
+    return;
+  }
+
+  if (kind === "editor-y") {
+    renderer.editorScrollY = scroll;
+  } else {
+    renderer.editorScrollX = scroll;
+  }
+
+  clampEditorScroll(renderer, metrics, getSelectedLines(renderer));
+}
+
+function updateScrollbarFromPointer(
+  renderer: VSCodeRenderer,
+  drag: VSCodeScrollbarDrag,
+  x: number,
+  y: number,
+) {
+  const geometry = getScrollbarGeometries(renderer).find(
+    (candidate) => candidate.kind === drag.kind,
+  );
+  if (!geometry) return false;
+
+  const pointerPosition = geometry.orientation === "vertical" ? y : x;
+  const thumbTravel = geometry.trackLength - geometry.thumbLength;
+  const thumbStart = THREE.MathUtils.clamp(
+    pointerPosition - drag.grabOffset,
+    geometry.trackStart,
+    geometry.trackStart + thumbTravel,
+  );
+  const scroll =
+    thumbTravel > 0
+      ? ((thumbStart - geometry.trackStart) / thumbTravel) * geometry.maxScroll
+      : 0;
+  setScrollbarScroll(renderer, drag.kind, scroll);
+  drawVSCodeRenderer(renderer);
+  return true;
+}
+
+export function beginVSCodeScrollbarDrag(
+  renderer: VSCodeRenderer,
+  x: number,
+  y: number,
+) {
+  const geometry = getScrollbarAt(renderer, x, y);
+  if (!geometry) return null;
+
+  const pointerPosition = geometry.orientation === "vertical" ? y : x;
+  const insideThumb =
+    pointerPosition >= geometry.thumbStart &&
+    pointerPosition <= geometry.thumbStart + geometry.thumbLength;
+  const drag = {
+    kind: geometry.kind,
+    grabOffset: insideThumb
+      ? pointerPosition - geometry.thumbStart
+      : geometry.thumbLength / 2,
+  } satisfies VSCodeScrollbarDrag;
+  renderer.activeScrollbar = geometry.kind;
+  renderer.hoveredScrollbar = geometry.kind;
+
+  if (!insideThumb) {
+    updateScrollbarFromPointer(renderer, drag, x, y);
+  } else {
+    drawVSCodeRenderer(renderer);
+  }
+
+  return drag;
+}
+
+export function updateVSCodeScrollbarDrag(
+  renderer: VSCodeRenderer,
+  drag: VSCodeScrollbarDrag,
+  x: number,
+  y: number,
+) {
+  return updateScrollbarFromPointer(renderer, drag, x, y);
+}
+
+export function endVSCodeScrollbarDrag(renderer: VSCodeRenderer) {
+  if (!renderer.activeScrollbar) return;
+  renderer.activeScrollbar = null;
+  drawVSCodeRenderer(renderer);
+}
+
 export function updateVSCodeHover(
   renderer: VSCodeRenderer,
   x: number | null,
   y: number | null,
 ) {
   const metrics = getMetrics(renderer);
+  const scrollbar =
+    x !== null && y !== null ? getScrollbarAt(renderer, x, y) : null;
   const row =
+    !scrollbar &&
     x !== null &&
     y !== null &&
     x >= metrics.sidebarX &&
@@ -834,9 +1081,16 @@ export function updateVSCodeHover(
       ? getTreeRowAt(renderer, metrics, y)
       : null;
   const hoveredPath = row?.node.path ?? null;
+  const hoveredScrollbar = scrollbar?.kind ?? null;
 
-  if (hoveredPath === renderer.hoveredPath) return;
+  if (
+    hoveredPath === renderer.hoveredPath &&
+    hoveredScrollbar === renderer.hoveredScrollbar
+  ) {
+    return;
+  }
   renderer.hoveredPath = hoveredPath;
+  renderer.hoveredScrollbar = hoveredScrollbar;
   drawVSCodeRenderer(renderer);
 }
 
