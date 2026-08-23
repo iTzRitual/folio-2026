@@ -678,6 +678,276 @@ function createDockRenderer({
   return renderer;
 }
 
+type ToolbarRenderer = {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  texture: THREE.CanvasTexture;
+  layout: ReturnType<typeof getToolbarLayout>;
+  menuOpen: boolean;
+  hoveredMenuItem: number | null;
+  timestamp: string;
+};
+
+function formatToolbarTimestamp(date: Date) {
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  return `${weekdays[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${String(
+    date.getHours(),
+  ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function getToolbarLayout(
+  textureWidth: number,
+  context: CanvasRenderingContext2D,
+) {
+  const height = textureWidth * 0.0167;
+  const fontSize = height * 0.62;
+  const leftPadding = height * 0.44;
+  const brandWidth = height * 1.15;
+  const appX = leftPadding + brandWidth;
+  context.font = `600 ${fontSize}px Arial`;
+  const appWidth = context.measureText("Folio-2026").width;
+  const actionsX = appX + appWidth + height * 0.78;
+  context.font = `400 ${fontSize}px Arial`;
+  const actionsWidth = context.measureText("Actions").width + height * 0.58;
+  const menuX = actionsX - height * 0.34;
+  const menuY = height + height * 0.16;
+  const menuWidth = height * 7.4;
+  const menuPadding = height * 0.28;
+  const menuItemHeight = height * 1.08;
+
+  return {
+    height,
+    fontSize,
+    leftPadding,
+    appX,
+    actionsX,
+    actionsWidth,
+    menuX,
+    menuY,
+    menuWidth,
+    menuPadding,
+    menuItemHeight,
+    menuHeight: menuPadding * 2 + menuItemHeight * 3,
+  };
+}
+
+function getToolbarHit(
+  layout: ReturnType<typeof getToolbarLayout>,
+  x: number,
+  y: number,
+) {
+  if (
+    x >= layout.actionsX - layout.height * 0.18 &&
+    x <= layout.actionsX + layout.actionsWidth + layout.height * 0.18 &&
+    y >= 0 &&
+    y <= layout.height * 1.5
+  ) {
+    return { type: "actions" as const };
+  }
+
+  if (
+    x < layout.menuX ||
+    x > layout.menuX + layout.menuWidth ||
+    y < layout.menuY + layout.menuPadding ||
+    y > layout.menuY + layout.menuHeight - layout.menuPadding
+  ) {
+    return null;
+  }
+
+  const itemIndex = Math.floor(
+    (y - layout.menuY - layout.menuPadding) / layout.menuItemHeight,
+  );
+
+  return itemIndex >= 0 && itemIndex < 3
+    ? { type: "menu-item" as const, index: itemIndex }
+    : null;
+}
+
+function drawToolbarMenu(
+  context: CanvasRenderingContext2D,
+  renderer: ToolbarRenderer,
+) {
+  const { layout } = renderer;
+  const radius = layout.height * 0.22;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.5)";
+  context.shadowBlur = layout.height * 0.22;
+  context.shadowOffsetY = layout.height * 0.1;
+  context.fillStyle = "rgba(65, 67, 62, 0.96)";
+  context.strokeStyle = "rgba(0, 0, 0, 0.9)";
+  context.lineWidth = Math.max(1, layout.height * 0.035);
+  context.beginPath();
+  context.roundRect(
+    layout.menuX,
+    layout.menuY,
+    layout.menuWidth,
+    layout.menuHeight,
+    radius,
+  );
+  context.fill();
+  context.stroke();
+  context.shadowColor = "transparent";
+
+  const labels = ["Go to Top", "Toggle Theme", "Close Folio-2026"];
+  context.font = `400 ${layout.fontSize}px Arial`;
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+
+  for (let index = 0; index < labels.length; index += 1) {
+    const itemY = layout.menuY + layout.menuPadding + index * layout.menuItemHeight;
+
+    if (renderer.hoveredMenuItem === index) {
+      context.fillStyle = "rgba(255, 255, 255, 0.14)";
+      context.beginPath();
+      context.roundRect(
+        layout.menuX + layout.height * 0.12,
+        itemY,
+        layout.menuWidth - layout.height * 0.24,
+        layout.menuItemHeight,
+        layout.height * 0.12,
+      );
+      context.fill();
+    }
+
+    context.fillStyle = "#f4f4f6";
+    context.fillText(
+      labels[index],
+      layout.menuX + layout.height * 0.46,
+      itemY + layout.menuItemHeight / 2,
+    );
+  }
+
+  context.restore();
+}
+
+function drawToolbar(renderer: ToolbarRenderer) {
+  const { canvas, context, layout } = renderer;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#3d4038";
+  context.fillRect(0, 0, canvas.width, layout.height);
+  context.fillStyle = "rgba(255, 255, 255, 0.11)";
+  context.fillRect(0, layout.height - Math.max(1, layout.height * 0.045), canvas.width, 1);
+
+  context.textBaseline = "middle";
+  context.fillStyle = "#f4f4f5";
+  context.font = `300 ${layout.fontSize}px Arial`;
+  context.textAlign = "left";
+  context.fillText("NM", layout.leftPadding, layout.height / 2 + layout.fontSize * 0.03);
+  context.font = `600 ${layout.fontSize}px Arial`;
+  context.fillText("Folio-2026", layout.appX, layout.height / 2 + layout.fontSize * 0.03);
+  context.font = `400 ${layout.fontSize}px Arial`;
+  context.fillText("Actions", layout.actionsX, layout.height / 2 + layout.fontSize * 0.03);
+
+  const batteryWidth = layout.height * 0.9;
+  const batteryHeight = layout.height * 0.4;
+  const batteryX = canvas.width - layout.leftPadding - batteryWidth;
+  const batteryLabelX = batteryX - layout.height * 0.3;
+  const dateX = batteryLabelX - layout.height * 0.4;
+  context.textAlign = "right";
+  context.fillText(renderer.timestamp, dateX, layout.height / 2 + layout.fontSize * 0.03);
+  context.fillText("100%", batteryLabelX, layout.height / 2 + layout.fontSize * 0.03);
+  context.strokeStyle = "#f4f4f5";
+  context.lineWidth = Math.max(1, layout.height * 0.045);
+  context.strokeRect(
+    batteryX,
+    (layout.height - batteryHeight) / 2,
+    batteryWidth,
+    batteryHeight,
+  );
+  context.fillStyle = "#f4f4f5";
+  context.fillRect(
+    batteryX + batteryWidth,
+    (layout.height - batteryHeight * 0.4) / 2,
+    batteryWidth * 0.11,
+    batteryHeight * 0.4,
+  );
+  context.fillRect(
+    batteryX + layout.height * 0.08,
+    (layout.height - batteryHeight) / 2 + layout.height * 0.08,
+    batteryWidth - layout.height * 0.16,
+    batteryHeight - layout.height * 0.16,
+  );
+
+  if (renderer.menuOpen) {
+    drawToolbarMenu(context, renderer);
+  }
+
+  renderer.texture.needsUpdate = true;
+}
+
+function updateToolbarRenderer(
+  renderer: ToolbarRenderer,
+  pointerX: number | null,
+  pointerY: number | null,
+) {
+  const timestamp = formatToolbarTimestamp(new Date());
+  const hit =
+    renderer.menuOpen && pointerX !== null && pointerY !== null
+      ? getToolbarHit(renderer.layout, pointerX, pointerY)
+      : null;
+  const hoveredMenuItem = hit?.type === "menu-item" ? hit.index : null;
+
+  if (
+    renderer.timestamp === timestamp &&
+    renderer.hoveredMenuItem === hoveredMenuItem
+  ) {
+    return;
+  }
+
+  renderer.timestamp = timestamp;
+  renderer.hoveredMenuItem = hoveredMenuItem;
+  drawToolbar(renderer);
+}
+
+function createToolbarRenderer({
+  sourceWidth,
+  sourceHeight,
+}: {
+  sourceWidth: number;
+  sourceHeight: number;
+}) {
+  const { width, height } = getTextureDimensions(sourceWidth, sourceHeight);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) return null;
+
+  canvas.width = width;
+  canvas.height = height;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  const renderer: ToolbarRenderer = {
+    canvas,
+    context,
+    texture,
+    layout: getToolbarLayout(width, context),
+    menuOpen: false,
+    hoveredMenuItem: null,
+    timestamp: formatToolbarTimestamp(new Date()),
+  };
+
+  drawToolbar(renderer);
+  return renderer;
+}
+
 function createPageMask(
   textureWidth: number,
   textureHeight: number,
@@ -897,12 +1167,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const chromeMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const toolbarMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const pageMeshRef = useRef<THREE.Mesh>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const dockTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const dockRendererRef = useRef<DockRenderer | null>(null);
+  const toolbarTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const toolbarRendererRef = useRef<ToolbarRenderer | null>(null);
   const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
   const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
     null,
@@ -987,6 +1260,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     dockTextureRef.current?.dispose();
     dockTextureRef.current = null;
     dockRendererRef.current = null;
+    toolbarTextureRef.current?.dispose();
+    toolbarTextureRef.current = null;
+    toolbarRendererRef.current = null;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = null;
     surfaceTransformRef.current = null;
@@ -1018,6 +1294,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       chromeTextureRef.current?.dispose();
       dockTextureRef.current?.dispose();
       dockRendererRef.current = null;
+      toolbarTextureRef.current?.dispose();
+      toolbarRendererRef.current = null;
       pageMaskRef.current?.dispose();
       setHtmlOverlayVisibility(
         events.connected as HTMLElement | null,
@@ -1147,6 +1425,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       pageUv && dockRenderer
         ? (1 - pageUv.y) * dockRenderer.canvas.height
         : null;
+    const toolbarRenderer = toolbarRendererRef.current;
+    if (toolbarRenderer) {
+      updateToolbarRenderer(toolbarRenderer, pointerX, pointerY);
+    }
     const pointerInsideDockContainer =
       dockRenderer !== null &&
       pointerX !== null &&
@@ -1338,14 +1620,17 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       sourceHeight,
       tuning: phase2,
     });
+    const toolbarRenderer = createToolbarRenderer({ sourceWidth, sourceHeight });
     const pageMask = createPageMask(textureWidth, textureHeight, layout);
 
     if (
       !chromeTexture ||
       !dockRenderer ||
+      !toolbarRenderer ||
       !pageMask ||
       !chromeMaterialRef.current ||
-      !dockMaterialRef.current
+      !dockMaterialRef.current ||
+      !toolbarMaterialRef.current
     ) {
       return;
     }
@@ -1355,12 +1640,17 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     dockTextureRef.current?.dispose();
     dockTextureRef.current = dockRenderer.texture;
     dockRendererRef.current = dockRenderer;
+    toolbarTextureRef.current?.dispose();
+    toolbarTextureRef.current = toolbarRenderer.texture;
+    toolbarRendererRef.current = toolbarRenderer;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = pageMask;
     chromeMaterialRef.current.map = chromeTexture;
     chromeMaterialRef.current.needsUpdate = true;
     dockMaterialRef.current.map = dockRenderer.texture;
     dockMaterialRef.current.needsUpdate = true;
+    toolbarMaterialRef.current.map = toolbarRenderer.texture;
+    toolbarMaterialRef.current.needsUpdate = true;
     const bounds = {
       x: layout.x / textureWidth,
       y:
@@ -1408,6 +1698,47 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const bounds = pageUvBoundsRef.current;
 
     if (!pageUv || !bounds) return;
+
+    const toolbarRenderer = toolbarRendererRef.current;
+
+    if (toolbarRenderer) {
+      const pointerX = pageUv.x * toolbarRenderer.canvas.width;
+      const pointerY = (1 - pageUv.y) * toolbarRenderer.canvas.height;
+      const toolbarHit = getToolbarHit(toolbarRenderer.layout, pointerX, pointerY);
+
+      if (toolbarHit?.type === "actions") {
+        event.stopPropagation();
+        toolbarRenderer.menuOpen = !toolbarRenderer.menuOpen;
+        toolbarRenderer.hoveredMenuItem = null;
+        drawToolbar(toolbarRenderer);
+        return;
+      }
+
+      if (toolbarHit?.type === "menu-item") {
+        event.stopPropagation();
+        toolbarRenderer.menuOpen = false;
+        toolbarRenderer.hoveredMenuItem = null;
+
+        if (toolbarHit.index === 0) {
+          window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+        }
+
+        if (toolbarHit.index === 1) {
+          setTheme(theme === "Light" ? "Dark" : "Light");
+        }
+
+        drawToolbar(toolbarRenderer);
+        return;
+      }
+
+      if (toolbarRenderer.menuOpen) {
+        event.stopPropagation();
+        toolbarRenderer.menuOpen = false;
+        toolbarRenderer.hoveredMenuItem = null;
+        drawToolbar(toolbarRenderer);
+        return;
+      }
+    }
 
     const pageX = (pageUv.x - bounds.x) / bounds.width;
     const pageY = (pageUv.y - bounds.y) / bounds.height;
@@ -1471,6 +1802,21 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         >
           <meshBasicMaterial
             ref={dockMaterialRef}
+            color="#ffffff"
+            transparent
+            depthTest={false}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh
+          geometry={planeGeometry}
+          renderOrder={13}
+          frustumCulled={false}
+          raycast={() => null}
+        >
+          <meshBasicMaterial
+            ref={toolbarMaterialRef}
             color="#ffffff"
             transparent
             depthTest={false}
