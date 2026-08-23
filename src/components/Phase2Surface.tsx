@@ -717,11 +717,13 @@ function getToolbarLayout(
   const height = textureWidth * 0.0167;
   const fontSize = height * 0.62;
   const leftPadding = height * 0.44;
-  const brandWidth = height * 1.15;
-  const appX = leftPadding + brandWidth;
+  const itemGap = height * 0.48;
+  context.font = `300 ${fontSize}px Arial`;
+  const brandWidth = context.measureText("NM").width;
+  const appX = leftPadding + brandWidth + itemGap;
   context.font = `600 ${fontSize}px Arial`;
   const appWidth = context.measureText("Folio-2026").width;
-  const actionsX = appX + appWidth + height * 0.78;
+  const actionsX = appX + appWidth + itemGap;
   context.font = `400 ${fontSize}px Arial`;
   const actionsWidth = context.measureText("Actions").width + height * 0.58;
   const menuX = actionsX - height * 0.34;
@@ -734,6 +736,7 @@ function getToolbarLayout(
     height,
     fontSize,
     leftPadding,
+    itemGap,
     appX,
     actionsX,
     actionsWidth,
@@ -857,11 +860,13 @@ function drawToolbar(renderer: ToolbarRenderer) {
   const batteryWidth = layout.height * 0.9;
   const batteryHeight = layout.height * 0.4;
   const batteryX = canvas.width - layout.leftPadding - batteryWidth;
-  const batteryLabelX = batteryX - layout.height * 0.3;
-  const dateX = batteryLabelX - layout.height * 0.4;
+  const batteryLabel = "100%";
   context.textAlign = "right";
+  const batteryLabelX = batteryX - layout.itemGap;
+  context.fillText(batteryLabel, batteryLabelX, layout.height / 2 + layout.fontSize * 0.03);
+  const dateX =
+    batteryLabelX - context.measureText(batteryLabel).width - layout.itemGap;
   context.fillText(renderer.timestamp, dateX, layout.height / 2 + layout.fontSize * 0.03);
-  context.fillText("100%", batteryLabelX, layout.height / 2 + layout.fontSize * 0.03);
   context.strokeStyle = "#f4f4f5";
   context.lineWidth = Math.max(1, layout.height * 0.045);
   context.strokeRect(
