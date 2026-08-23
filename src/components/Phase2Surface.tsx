@@ -18,10 +18,22 @@ import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 
 type Phase2Tuning = DebugSettings["phase2"];
 
-const DOCK_ITEM_LABELS = Array.from(
-  { length: CONFIG.phase2.DOCK_ITEM_COUNT },
-  () => "Visual Studio Code",
-);
+type DockApp = {
+  id: string;
+  label: string;
+  icon: "finder" | "safari" | "vscode" | "codex" | "gaming" | "notes" | "music" | "mail";
+};
+
+const DOCK_APPS: DockApp[] = [
+  { id: "finder", label: "Finder", icon: "finder" },
+  { id: "safari", label: "Safari — Folio-2026", icon: "safari" },
+  { id: "vscode", label: "Visual Studio Code", icon: "vscode" },
+  { id: "codex", label: "Codex", icon: "codex" },
+  { id: "gaming", label: "Gaming", icon: "gaming" },
+  { id: "notes", label: "Notes — About me", icon: "notes" },
+  { id: "music", label: "Music", icon: "music" },
+  { id: "mail", label: "Mail — Contact", icon: "mail" },
+];
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
@@ -85,8 +97,7 @@ function getDockLayout(
   const horizontalPadding = height * 0.16;
   const itemSize = height - horizontalPadding * 2;
   const itemsWidth =
-    itemSize * CONFIG.phase2.DOCK_ITEM_COUNT +
-    itemGap * (CONFIG.phase2.DOCK_ITEM_COUNT - 1);
+    itemSize * DOCK_APPS.length + itemGap * (DOCK_APPS.length - 1);
   const width = itemsWidth + horizontalPadding * 2;
   const x = (textureWidth - width) / 2 + tuning.dockOffsetX * screenUnit;
   const y =
@@ -184,7 +195,7 @@ function getDockHoveredIndex(
   let hoveredIndex = 0;
   let closestDistance = Number.POSITIVE_INFINITY;
 
-  for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
+  for (let index = 0; index < DOCK_APPS.length; index += 1) {
     const item = getDockItemBounds(layout, scales, x, index);
     const distance = Math.abs(pointerX - (item.x + item.width / 2));
 
@@ -206,7 +217,7 @@ function drawDockTooltip(
   activeScale: number,
 ) {
   const item = getDockItemBounds(layout, scales, x, index);
-  const label = DOCK_ITEM_LABELS[index];
+  const label = DOCK_APPS[index].label;
   const fontSize = Math.max(12, layout.itemSize * 0.45);
   const paddingX = fontSize * 0.55;
   const paddingY = fontSize * 0.32;
@@ -256,6 +267,198 @@ function drawDockTooltip(
   context.restore();
 }
 
+function drawDockAppIcon(
+  context: CanvasRenderingContext2D,
+  app: DockApp,
+  item: { x: number; y: number; width: number; height: number },
+) {
+  const radius = item.width * 0.24;
+  const centerX = item.x + item.width / 2;
+  const centerY = item.y + item.height / 2;
+
+  context.save();
+  context.beginPath();
+  context.roundRect(item.x, item.y, item.width, item.height, radius);
+  context.clip();
+
+  if (app.icon === "finder") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x, item.y + item.height);
+    gradient.addColorStop(0, "#70d7ff");
+    gradient.addColorStop(1, "#2189e9");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "rgba(9, 74, 166, 0.48)";
+    context.fillRect(item.x, item.y, item.width * 0.5, item.height);
+    context.strokeStyle = "rgba(5, 30, 79, 0.92)";
+    context.lineWidth = item.width * 0.055;
+    context.beginPath();
+    context.moveTo(centerX, item.y + item.height * 0.16);
+    context.lineTo(centerX, item.y + item.height * 0.73);
+    context.moveTo(item.x + item.width * 0.23, item.y + item.height * 0.36);
+    context.lineTo(item.x + item.width * 0.23, item.y + item.height * 0.48);
+    context.moveTo(item.x + item.width * 0.73, item.y + item.height * 0.36);
+    context.lineTo(item.x + item.width * 0.73, item.y + item.height * 0.48);
+    context.moveTo(item.x + item.width * 0.23, item.y + item.height * 0.64);
+    context.quadraticCurveTo(centerX, item.y + item.height * 0.81, item.x + item.width * 0.77, item.y + item.height * 0.64);
+    context.stroke();
+  }
+
+  if (app.icon === "safari") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x, item.y + item.height);
+    gradient.addColorStop(0, "#f8fbfe");
+    gradient.addColorStop(1, "#d5e4ef");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "#45a7e9";
+    context.beginPath();
+    context.arc(centerX, centerY, item.width * 0.37, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "rgba(255, 255, 255, 0.96)";
+    context.lineWidth = item.width * 0.038;
+    context.stroke();
+    context.fillStyle = "#ee4e5f";
+    context.beginPath();
+    context.moveTo(centerX, centerY - item.height * 0.27);
+    context.lineTo(centerX + item.width * 0.12, centerY + item.height * 0.04);
+    context.lineTo(centerX, centerY);
+    context.fill();
+    context.fillStyle = "#f7fbff";
+    context.beginPath();
+    context.moveTo(centerX, centerY + item.height * 0.27);
+    context.lineTo(centerX - item.width * 0.12, centerY - item.height * 0.04);
+    context.lineTo(centerX, centerY);
+    context.fill();
+  }
+
+  if (app.icon === "vscode") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x + item.width, item.y + item.height);
+    gradient.addColorStop(0, "#1594e8");
+    gradient.addColorStop(1, "#0574d1");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "#d9f4ff";
+    context.beginPath();
+    context.moveTo(item.x + item.width * 0.24, centerY);
+    context.lineTo(item.x + item.width * 0.46, item.y + item.height * 0.25);
+    context.lineTo(item.x + item.width * 0.77, item.y + item.height * 0.12);
+    context.lineTo(item.x + item.width * 0.77, item.y + item.height * 0.88);
+    context.lineTo(item.x + item.width * 0.46, item.y + item.height * 0.75);
+    context.closePath();
+    context.fill();
+    context.fillStyle = "#0879d6";
+    context.beginPath();
+    context.moveTo(item.x + item.width * 0.37, centerY);
+    context.lineTo(item.x + item.width * 0.54, item.y + item.height * 0.36);
+    context.lineTo(item.x + item.width * 0.54, item.y + item.height * 0.64);
+    context.closePath();
+    context.fill();
+  }
+
+  if (app.icon === "codex") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x + item.width, item.y + item.height);
+    gradient.addColorStop(0, "#261c67");
+    gradient.addColorStop(1, "#6255cd");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.strokeStyle = "#f7f6ff";
+    context.lineWidth = item.width * 0.09;
+    for (let index = 0; index < 6; index += 1) {
+      context.beginPath();
+      context.arc(
+        centerX + Math.cos((Math.PI * 2 * index) / 6) * item.width * 0.15,
+        centerY + Math.sin((Math.PI * 2 * index) / 6) * item.height * 0.15,
+        item.width * 0.19,
+        ((Math.PI * 2 * index) / 6) + Math.PI * 0.15,
+        ((Math.PI * 2 * index) / 6) + Math.PI * 0.85,
+      );
+      context.stroke();
+    }
+  }
+
+  if (app.icon === "gaming") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x, item.y + item.height);
+    gradient.addColorStop(0, "#f9fbff");
+    gradient.addColorStop(1, "#e4eaf1");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    const circles = [
+      [0.38, 0.37, "#4fc6fc"],
+      [0.62, 0.37, "#ffd24e"],
+      [0.38, 0.62, "#f15baf"],
+      [0.62, 0.62, "#7567e5"],
+    ] as const;
+    context.globalAlpha = 0.86;
+    for (const [x, y, color] of circles) {
+      context.fillStyle = color;
+      context.beginPath();
+      context.arc(item.x + item.width * x, item.y + item.height * y, item.width * 0.22, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+
+  if (app.icon === "notes") {
+    context.fillStyle = "#fcfcfb";
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "#f6c744";
+    context.fillRect(item.x, item.y, item.width, item.height * 0.24);
+    context.strokeStyle = "#c8cdd2";
+    context.lineWidth = item.width * 0.03;
+    for (let index = 0; index < 4; index += 1) {
+      const y = item.y + item.height * (0.43 + index * 0.13);
+      context.beginPath();
+      context.moveTo(item.x + item.width * 0.18, y);
+      context.lineTo(item.x + item.width * 0.82, y);
+      context.stroke();
+    }
+  }
+
+  if (app.icon === "music") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x + item.width, item.y + item.height);
+    gradient.addColorStop(0, "#fd6f8b");
+    gradient.addColorStop(1, "#e62f57");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.arc(item.x + item.width * 0.38, item.y + item.height * 0.7, item.width * 0.13, 0, Math.PI * 2);
+    context.arc(item.x + item.width * 0.66, item.y + item.height * 0.61, item.width * 0.13, 0, Math.PI * 2);
+    context.fill();
+    context.fillRect(item.x + item.width * 0.5, item.y + item.height * 0.23, item.width * 0.09, item.height * 0.42);
+    context.fillRect(item.x + item.width * 0.58, item.y + item.height * 0.23, item.width * 0.2, item.height * 0.08);
+    context.fillRect(item.x + item.width * 0.69, item.y + item.height * 0.3, item.width * 0.09, item.height * 0.26);
+  }
+
+  if (app.icon === "mail") {
+    const gradient = context.createLinearGradient(item.x, item.y, item.x, item.y + item.height);
+    gradient.addColorStop(0, "#59c5ff");
+    gradient.addColorStop(1, "#167ee0");
+    context.fillStyle = gradient;
+    context.fillRect(item.x, item.y, item.width, item.height);
+    context.fillStyle = "#f8fcff";
+    context.beginPath();
+    context.moveTo(item.x + item.width * 0.16, item.y + item.height * 0.27);
+    context.lineTo(item.x + item.width * 0.84, item.y + item.height * 0.27);
+    context.lineTo(item.x + item.width * 0.84, item.y + item.height * 0.74);
+    context.lineTo(item.x + item.width * 0.16, item.y + item.height * 0.74);
+    context.closePath();
+    context.fill();
+    context.strokeStyle = "#5ea6e7";
+    context.lineWidth = item.width * 0.035;
+    context.beginPath();
+    context.moveTo(item.x + item.width * 0.16, item.y + item.height * 0.3);
+    context.lineTo(centerX, item.y + item.height * 0.58);
+    context.lineTo(item.x + item.width * 0.84, item.y + item.height * 0.3);
+    context.stroke();
+  }
+
+  context.restore();
+  context.strokeStyle = "rgba(255, 255, 255, 0.34)";
+  context.lineWidth = Math.max(1, item.width * 0.032);
+  context.beginPath();
+  context.roundRect(item.x, item.y, item.width, item.height, radius);
+  context.stroke();
+}
+
 function drawDock(
   context: CanvasRenderingContext2D,
   layout: ReturnType<typeof getDockLayout>,
@@ -281,29 +484,9 @@ function drawDock(
   context.lineWidth = Math.max(1, height * 0.018);
   context.stroke();
 
-  for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
+  for (let index = 0; index < DOCK_APPS.length; index += 1) {
     const item = getDockItemBounds(layout, scales, x, index);
-    const gradient = context.createLinearGradient(
-      item.x,
-      item.y,
-      item.x + item.width,
-      item.y + item.height,
-    );
-    gradient.addColorStop(0, "#d9d9d9");
-    gradient.addColorStop(1, "#8a8a8a");
-    context.fillStyle = gradient;
-    context.beginPath();
-    context.roundRect(
-      item.x,
-      item.y,
-      item.width,
-      item.height,
-      item.width * 0.24,
-    );
-    context.fill();
-    context.strokeStyle = "rgba(255, 255, 255, 0.3)";
-    context.lineWidth = Math.max(1, item.width * 0.035);
-    context.stroke();
+    drawDockAppIcon(context, DOCK_APPS[index], item);
   }
 
   context.restore();
@@ -339,7 +522,7 @@ function getDockTarget(
   rightAnchor: number,
 ) {
   const { itemGap, itemSize } = layout;
-  const count = CONFIG.phase2.DOCK_ITEM_COUNT;
+  const count = DOCK_APPS.length;
   const radius = itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
 
   if (pointerX === null || magnification === 0) {
@@ -662,7 +845,7 @@ function createDockRenderer({
     context,
     texture,
     layout,
-    scales: Array.from({ length: CONFIG.phase2.DOCK_ITEM_COUNT }, () => 1),
+    scales: Array.from({ length: DOCK_APPS.length }, () => 1),
     x: layout.x,
     width: layout.width,
     anchor: null,
@@ -683,7 +866,7 @@ type ToolbarRenderer = {
   context: CanvasRenderingContext2D;
   texture: THREE.CanvasTexture;
   layout: ReturnType<typeof getToolbarLayout>;
-  menuOpen: boolean;
+  menuType: "actions" | "go" | null;
   hoveredMenuItem: number | null;
   timestamp: string;
 };
@@ -726,7 +909,8 @@ function getToolbarLayout(
   const actionsX = appX + appWidth + itemGap;
   context.font = `400 ${fontSize}px Arial`;
   const actionsWidth = context.measureText("Actions").width + height * 0.58;
-  const menuX = actionsX - height * 0.34;
+  const goX = actionsX + actionsWidth + itemGap;
+  const goWidth = context.measureText("Go").width + height * 0.58;
   const menuY = height + height * 0.16;
   const menuWidth = height * 7.4;
   const menuPadding = height * 0.28;
@@ -740,17 +924,41 @@ function getToolbarLayout(
     appX,
     actionsX,
     actionsWidth,
-    menuX,
+    goX,
+    goWidth,
     menuY,
     menuWidth,
     menuPadding,
     menuItemHeight,
-    menuHeight: menuPadding * 2 + menuItemHeight * 3,
+  };
+}
+
+function getToolbarMenuItems(menuType: "actions" | "go") {
+  return menuType === "actions"
+    ? ["Go to Top", "Toggle Theme", "Close Folio-2026"]
+    : DOCK_APPS.map((app) => app.label);
+}
+
+function getToolbarMenuBounds(
+  layout: ReturnType<typeof getToolbarLayout>,
+  menuType: "actions" | "go",
+) {
+  const menuX =
+    (menuType === "actions" ? layout.actionsX : layout.goX) -
+    layout.height * 0.34;
+  const itemCount = getToolbarMenuItems(menuType).length;
+
+  return {
+    x: menuX,
+    y: layout.menuY,
+    width: layout.menuWidth,
+    height: layout.menuPadding * 2 + layout.menuItemHeight * itemCount,
   };
 }
 
 function getToolbarHit(
   layout: ReturnType<typeof getToolbarLayout>,
+  menuType: ToolbarRenderer["menuType"],
   x: number,
   y: number,
 ) {
@@ -764,19 +972,33 @@ function getToolbarHit(
   }
 
   if (
-    x < layout.menuX ||
-    x > layout.menuX + layout.menuWidth ||
-    y < layout.menuY + layout.menuPadding ||
-    y > layout.menuY + layout.menuHeight - layout.menuPadding
+    x >= layout.goX - layout.height * 0.18 &&
+    x <= layout.goX + layout.goWidth + layout.height * 0.18 &&
+    y >= 0 &&
+    y <= layout.height * 1.5
+  ) {
+    return { type: "go" as const };
+  }
+
+  if (!menuType) return null;
+
+  const menu = getToolbarMenuBounds(layout, menuType);
+  const menuItemCount = getToolbarMenuItems(menuType).length;
+
+  if (
+    x < menu.x ||
+    x > menu.x + menu.width ||
+    y < menu.y + layout.menuPadding ||
+    y > menu.y + menu.height - layout.menuPadding
   ) {
     return null;
   }
 
   const itemIndex = Math.floor(
-    (y - layout.menuY - layout.menuPadding) / layout.menuItemHeight,
+    (y - menu.y - layout.menuPadding) / layout.menuItemHeight,
   );
 
-  return itemIndex >= 0 && itemIndex < 3
+  return itemIndex >= 0 && itemIndex < menuItemCount
     ? { type: "menu-item" as const, index: itemIndex }
     : null;
 }
@@ -785,7 +1007,11 @@ function drawToolbarMenu(
   context: CanvasRenderingContext2D,
   renderer: ToolbarRenderer,
 ) {
-  const { layout } = renderer;
+  const { layout, menuType } = renderer;
+  if (!menuType) return;
+
+  const menu = getToolbarMenuBounds(layout, menuType);
+  const labels = getToolbarMenuItems(menuType);
   const radius = layout.height * 0.22;
 
   context.save();
@@ -797,31 +1023,30 @@ function drawToolbarMenu(
   context.lineWidth = Math.max(1, layout.height * 0.035);
   context.beginPath();
   context.roundRect(
-    layout.menuX,
-    layout.menuY,
-    layout.menuWidth,
-    layout.menuHeight,
+    menu.x,
+    menu.y,
+    menu.width,
+    menu.height,
     radius,
   );
   context.fill();
   context.stroke();
   context.shadowColor = "transparent";
 
-  const labels = ["Go to Top", "Toggle Theme", "Close Folio-2026"];
   context.font = `400 ${layout.fontSize}px Arial`;
   context.textAlign = "left";
   context.textBaseline = "middle";
 
   for (let index = 0; index < labels.length; index += 1) {
-    const itemY = layout.menuY + layout.menuPadding + index * layout.menuItemHeight;
+    const itemY = menu.y + layout.menuPadding + index * layout.menuItemHeight;
 
     if (renderer.hoveredMenuItem === index) {
       context.fillStyle = "rgba(255, 255, 255, 0.14)";
       context.beginPath();
       context.roundRect(
-        layout.menuX + layout.height * 0.12,
+        menu.x + layout.height * 0.12,
         itemY,
-        layout.menuWidth - layout.height * 0.24,
+        menu.width - layout.height * 0.24,
         layout.menuItemHeight,
         layout.height * 0.12,
       );
@@ -829,9 +1054,22 @@ function drawToolbarMenu(
     }
 
     context.fillStyle = "#f4f4f6";
+    const iconSize = layout.menuItemHeight * 0.58;
+    const labelX =
+      menu.x + layout.height * 0.46 + (menuType === "go" ? iconSize + layout.height * 0.26 : 0);
+
+    if (menuType === "go") {
+      drawDockAppIcon(context, DOCK_APPS[index], {
+        x: menu.x + layout.height * 0.34,
+        y: itemY + (layout.menuItemHeight - iconSize) / 2,
+        width: iconSize,
+        height: iconSize,
+      });
+    }
+
     context.fillText(
       labels[index],
-      layout.menuX + layout.height * 0.46,
+      labelX,
       itemY + layout.menuItemHeight / 2,
     );
   }
@@ -856,6 +1094,7 @@ function drawToolbar(renderer: ToolbarRenderer) {
   context.fillText("Folio-2026", layout.appX, layout.height / 2 + layout.fontSize * 0.03);
   context.font = `400 ${layout.fontSize}px Arial`;
   context.fillText("Actions", layout.actionsX, layout.height / 2 + layout.fontSize * 0.03);
+  context.fillText("Go", layout.goX, layout.height / 2 + layout.fontSize * 0.03);
 
   const batteryWidth = layout.height * 0.72;
   const batteryHeight = layout.height * 0.4;
@@ -890,7 +1129,7 @@ function drawToolbar(renderer: ToolbarRenderer) {
   );
   context.fill();
 
-  if (renderer.menuOpen) {
+  if (renderer.menuType) {
     drawToolbarMenu(context, renderer);
   }
 
@@ -904,8 +1143,8 @@ function updateToolbarRenderer(
 ) {
   const timestamp = formatToolbarTimestamp(new Date());
   const hit =
-    renderer.menuOpen && pointerX !== null && pointerY !== null
-      ? getToolbarHit(renderer.layout, pointerX, pointerY)
+    renderer.menuType && pointerX !== null && pointerY !== null
+      ? getToolbarHit(renderer.layout, renderer.menuType, pointerX, pointerY)
       : null;
   const hoveredMenuItem = hit?.type === "menu-item" ? hit.index : null;
 
@@ -945,7 +1184,7 @@ function createToolbarRenderer({
     context,
     texture,
     layout: getToolbarLayout(width, context),
-    menuOpen: false,
+    menuType: null,
     hoveredMenuItem: null,
     timestamp: formatToolbarTimestamp(new Date()),
   };
@@ -1710,11 +1949,17 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (toolbarRenderer) {
       const pointerX = pageUv.x * toolbarRenderer.canvas.width;
       const pointerY = (1 - pageUv.y) * toolbarRenderer.canvas.height;
-      const toolbarHit = getToolbarHit(toolbarRenderer.layout, pointerX, pointerY);
+      const toolbarHit = getToolbarHit(
+        toolbarRenderer.layout,
+        toolbarRenderer.menuType,
+        pointerX,
+        pointerY,
+      );
 
-      if (toolbarHit?.type === "actions") {
+      if (toolbarHit?.type === "actions" || toolbarHit?.type === "go") {
         event.stopPropagation();
-        toolbarRenderer.menuOpen = !toolbarRenderer.menuOpen;
+        toolbarRenderer.menuType =
+          toolbarRenderer.menuType === toolbarHit.type ? null : toolbarHit.type;
         toolbarRenderer.hoveredMenuItem = null;
         drawToolbar(toolbarRenderer);
         return;
@@ -1722,14 +1967,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
       if (toolbarHit?.type === "menu-item") {
         event.stopPropagation();
-        toolbarRenderer.menuOpen = false;
+        const menuType = toolbarRenderer.menuType;
+        toolbarRenderer.menuType = null;
         toolbarRenderer.hoveredMenuItem = null;
 
-        if (toolbarHit.index === 0) {
+        if (menuType === "actions" && toolbarHit.index === 0) {
           window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
         }
 
-        if (toolbarHit.index === 1) {
+        if (menuType === "actions" && toolbarHit.index === 1) {
           setTheme(theme === "Light" ? "Dark" : "Light");
         }
 
@@ -1737,9 +1983,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (toolbarRenderer.menuOpen) {
+      if (toolbarRenderer.menuType) {
         event.stopPropagation();
-        toolbarRenderer.menuOpen = false;
+        toolbarRenderer.menuType = null;
         toolbarRenderer.hoveredMenuItem = null;
         drawToolbar(toolbarRenderer);
         return;
