@@ -859,10 +859,11 @@ function drawToolbar(renderer: ToolbarRenderer) {
 
   const batteryWidth = layout.height * 0.72;
   const batteryHeight = layout.height * 0.4;
-  const batteryX = canvas.width - layout.leftPadding - batteryWidth;
+  const dateX = canvas.width - layout.leftPadding;
   context.textAlign = "right";
-  const dateX = batteryX - layout.itemGap;
   context.fillText(renderer.timestamp, dateX, layout.height / 2 + layout.fontSize * 0.03);
+  const batteryX =
+    dateX - context.measureText(renderer.timestamp).width - layout.itemGap - batteryWidth;
   const batteryY = (layout.height - batteryHeight) / 2;
   const batteryRadius = batteryHeight * 0.22;
   context.fillStyle = "rgba(34, 37, 34, 0.92)";
