@@ -1920,6 +1920,69 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const intersections: THREE.Intersection[] = [];
+    const onWheel = (event: WheelEvent) => {
+      const renderer = vscodeRendererRef.current;
+      const interactionMesh = interactionMeshRef.current;
+
+      if (
+        !renderer ||
+        !interactionMesh ||
+        !capturedRef.current ||
+        activeAppRef.current !== "vscode" ||
+        windowRuntimesRef.current.vscode.state !== "open"
+      ) {
+        return;
+      }
+
+      const bounds = gl.domElement.getBoundingClientRect();
+      if (
+        event.clientX < bounds.left ||
+        event.clientX > bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY > bounds.bottom
+      ) {
+        return;
+      }
+
+      pointer.set(
+        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      intersections.length = 0;
+      raycaster.intersectObject(interactionMesh, false, intersections);
+      const pageUv = intersections[0]?.uv;
+
+      if (
+        !pageUv ||
+        !handleVSCodeWheel(
+          renderer,
+          pageUv.x * renderer.canvas.width,
+          (1 - pageUv.y) * renderer.canvas.height,
+          event.deltaX,
+          event.deltaY,
+        )
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+
+    window.addEventListener("wheel", onWheel, {
+      capture: true,
+      passive: false,
+    });
+    return () =>
+      window.removeEventListener("wheel", onWheel, { capture: true });
+  }, [camera, gl]);
+
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
 
@@ -2749,29 +2812,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
   };
 
-  const handlePageWheel = (event: ThreeEvent<WheelEvent>) => {
-    const pageUv = event.uv;
-    const renderer = vscodeRendererRef.current;
-
-    if (!pageUv || !renderer || activeAppRef.current !== "vscode") return;
-
-    const pointerX = pageUv.x * renderer.canvas.width;
-    const pointerY = (1 - pageUv.y) * renderer.canvas.height;
-
-    if (
-      handleVSCodeWheel(
-        renderer,
-        pointerX,
-        pointerY,
-        event.deltaX,
-        event.deltaY,
-      )
-    ) {
-      event.stopPropagation();
-      event.nativeEvent.preventDefault();
-    }
-  };
-
   return (
     <group>
       <group ref={pageGroupRef}>{children}</group>
@@ -2863,7 +2903,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           onPointerUp={finishVSCodeScrollbarDrag}
           onPointerCancel={finishVSCodeScrollbarDrag}
           onLostPointerCapture={finishVSCodeScrollbarDrag}
-          onWheel={handlePageWheel}
         >
           <meshBasicMaterial
             colorWrite={false}
