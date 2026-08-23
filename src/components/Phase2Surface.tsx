@@ -19,6 +19,7 @@ import {
   handleVSCodeClick,
   handleVSCodeWheel,
   loadSourceManifest,
+  loadSourceManifestVersion,
   setVSCodeLoadError,
   setVSCodeSources,
   updateVSCodeHover,
@@ -1695,6 +1696,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const activeAppRef = useRef<WindowAppId | null>("safari");
   const pendingAppRef = useRef<WindowAppId | null>(null);
   const sourceLoadStartedRef = useRef(false);
+  const sourceRefreshPendingRef = useRef(false);
   const vscodeScrollbarDragRef = useRef<VSCodeScrollbarDrag | null>(null);
   const suppressVSCodeClickRef = useRef(false);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
@@ -1836,6 +1838,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     activeAppRef.current = "safari";
     pendingAppRef.current = null;
     sourceLoadStartedRef.current = false;
+    sourceRefreshPendingRef.current = false;
     vscodeScrollbarDragRef.current = null;
     suppressVSCodeClickRef.current = false;
     setGeniePresentation(genieUniforms, 0, false);
@@ -1883,6 +1886,39 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       );
     };
   }, [events, gl]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+
+    const refreshSources = async () => {
+      const renderer = vscodeRendererRef.current;
+      if (
+        !sourceLoadStartedRef.current ||
+        !renderer ||
+        sourceRefreshPendingRef.current
+      ) {
+        return;
+      }
+
+      sourceRefreshPendingRef.current = true;
+      try {
+        const version = await loadSourceManifestVersion();
+        if (renderer.sourceVersion !== version) {
+          setVSCodeSources(renderer, await loadSourceManifest(true));
+        }
+      } catch {
+        return;
+      } finally {
+        sourceRefreshPendingRef.current = false;
+      }
+    };
+    const interval = window.setInterval(
+      refreshSources,
+      CONFIG.phase2.VSCODE_SOURCE_REFRESH_MS,
+    );
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;

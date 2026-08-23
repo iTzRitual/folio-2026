@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
 const output = path.join(root, "public", "source-manifest.json");
+const versionOutput = path.join(root, "public", "source-manifest.version");
 const ignoredDirectories = new Set([
   ".agents",
   ".claude",
@@ -72,5 +74,16 @@ async function collect(directory, files) {
 const files = [];
 await collect(root, files);
 files.sort((a, b) => a.path.localeCompare(b.path));
+const hash = createHash("sha256");
+for (const file of files) {
+  hash.update(file.path);
+  hash.update("\0");
+  hash.update(file.content);
+  hash.update("\0");
+}
+const version = hash.digest("hex").slice(0, 16);
 await mkdir(path.dirname(output), { recursive: true });
-await writeFile(output, JSON.stringify({ files }), "utf8");
+await Promise.all([
+  writeFile(output, JSON.stringify({ version, files }), "utf8"),
+  writeFile(versionOutput, version, "utf8"),
+]);

@@ -7,6 +7,7 @@ export type SourceFile = {
 };
 
 export type SourceManifest = {
+  version?: string;
   files: SourceFile[];
 };
 
@@ -77,6 +78,7 @@ export type VSCodeRenderer = {
   editorScrollX: number;
   hoveredScrollbar: VSCodeScrollbarKind | null;
   activeScrollbar: VSCodeScrollbarKind | null;
+  sourceVersion: string | null;
   loadState: "loading" | "ready" | "error";
 };
 
@@ -898,6 +900,7 @@ export function createVSCodeRenderer({
     editorScrollX: 0,
     hoveredScrollbar: null,
     activeScrollbar: null,
+    sourceVersion: null,
     loadState: "loading",
   };
   drawVSCodeRenderer(renderer);
@@ -908,11 +911,18 @@ export function setVSCodeSources(
   renderer: VSCodeRenderer,
   manifest: SourceManifest,
 ) {
+  if (manifest.version && renderer.sourceVersion === manifest.version) return;
+
+  const previousSelectedPath = renderer.selectedPath;
   renderer.root = buildTree(manifest.files);
+  renderer.sourceVersion = manifest.version ?? null;
   renderer.loadState = "ready";
-  const preferredPath = manifest.files.some((file) => file.path === "src/app/page.tsx")
-    ? "src/app/page.tsx"
-    : manifest.files[0]?.path ?? null;
+  const preferredPath =
+    previousSelectedPath && findFile(renderer.root, previousSelectedPath)?.file
+      ? previousSelectedPath
+      : manifest.files.some((file) => file.path === "src/app/page.tsx")
+        ? "src/app/page.tsx"
+        : manifest.files[0]?.path ?? null;
   renderer.selectedPath = preferredPath;
 
   if (preferredPath) {
@@ -1153,9 +1163,11 @@ export function handleVSCodeWheel(
   return true;
 }
 
-export function loadSourceManifest() {
-  if (!sourceManifestPromise) {
-    sourceManifestPromise = fetch(sourceManifestUrl).then(async (response) => {
+export function loadSourceManifest(force = false) {
+  if (force || !sourceManifestPromise) {
+    sourceManifestPromise = fetch(sourceManifestUrl, {
+      cache: "no-store",
+    }).then(async (response) => {
       if (!response.ok) throw new Error("Source manifest unavailable");
       const manifest = (await response.json()) as SourceManifest;
       if (!Array.isArray(manifest.files)) throw new Error("Invalid source manifest");
@@ -1164,4 +1176,12 @@ export function loadSourceManifest() {
   }
 
   return sourceManifestPromise;
+}
+
+export async function loadSourceManifestVersion() {
+  const response = await fetch("/source-manifest.version", {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Source manifest version unavailable");
+  return (await response.text()).trim();
 }
