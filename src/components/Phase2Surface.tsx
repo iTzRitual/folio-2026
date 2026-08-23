@@ -18,6 +18,11 @@ import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 
 type Phase2Tuning = DebugSettings["phase2"];
 
+const DOCK_ITEM_LABELS = Array.from(
+  { length: CONFIG.phase2.DOCK_ITEM_COUNT },
+  () => "Visual Studio Code",
+);
+
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
   return new THREE.PlaneGeometry(
     width,
@@ -148,14 +153,105 @@ function getBrowserLayout(
   };
 }
 
+function getDockItemBounds(
+  layout: ReturnType<typeof getDockLayout>,
+  scales: number[],
+  x: number,
+  index: number,
+) {
+  const itemSize = layout.itemSize * scales[index];
+  const itemX =
+    x +
+    layout.height * 0.16 +
+    scales
+      .slice(0, index)
+      .reduce((offset, scale) => offset + layout.itemSize * scale + layout.itemGap, 0);
+
+  return {
+    x: itemX,
+    y: layout.y + layout.height - layout.height * 0.16 - itemSize,
+    width: itemSize,
+    height: itemSize,
+  };
+}
+
+function getDockHoveredIndex(
+  layout: ReturnType<typeof getDockLayout>,
+  scales: number[],
+  x: number,
+  pointerX: number,
+) {
+  for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
+    const item = getDockItemBounds(layout, scales, x, index);
+
+    if (pointerX >= item.x && pointerX <= item.x + item.width) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function drawDockTooltip(
+  context: CanvasRenderingContext2D,
+  layout: ReturnType<typeof getDockLayout>,
+  scales: number[],
+  x: number,
+  index: number,
+) {
+  const item = getDockItemBounds(layout, scales, x, index);
+  const label = DOCK_ITEM_LABELS[index];
+  const fontSize = Math.max(12, layout.itemSize * 0.45);
+  const paddingX = fontSize * 0.55;
+  const paddingY = fontSize * 0.32;
+  const arrowWidth = fontSize * 0.58;
+  const arrowHeight = fontSize * 0.35;
+
+  context.save();
+  context.font = `400 ${fontSize}px Arial`;
+  const width = context.measureText(label).width + paddingX * 2;
+  const height = fontSize + paddingY * 2;
+  const centerX = item.x + item.width / 2;
+  const tooltipX = THREE.MathUtils.clamp(
+    centerX - width / 2,
+    2,
+    context.canvas.width - width - 2,
+  );
+  const tooltipY = item.y - layout.itemSize * 0.24 - arrowHeight - height;
+  const radius = height * 0.2;
+
+  context.fillStyle = "#2d2d2f";
+  context.strokeStyle = "#080808";
+  context.lineWidth = Math.max(1, height * 0.045);
+  context.beginPath();
+  context.moveTo(centerX - arrowWidth / 2, tooltipY + height - radius / 3);
+  context.lineTo(centerX, tooltipY + height + arrowHeight);
+  context.lineTo(centerX + arrowWidth / 2, tooltipY + height - radius / 3);
+  context.closePath();
+  context.fill();
+  context.stroke();
+
+  context.beginPath();
+  context.roundRect(tooltipX, tooltipY, width, height, radius);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "#f5f5f7";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(label, tooltipX + width / 2, tooltipY + height / 2 + fontSize * 0.03);
+  context.restore();
+}
+
 function drawDock(
   context: CanvasRenderingContext2D,
   layout: ReturnType<typeof getDockLayout>,
   scales: number[],
   x: number,
   width: number,
+  hoveredIndex: number | null,
 ) {
-  const { y, height, itemGap, itemSize } = layout;
+  const { y, height } = layout;
   const radius = height * 0.27;
 
   context.save();
@@ -171,36 +267,36 @@ function drawDock(
   context.lineWidth = Math.max(1, height * 0.018);
   context.stroke();
 
-  let currentX = x + height * 0.16;
-
   for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
-    const currentItemSize = itemSize * scales[index];
-    const currentY = y + height - height * 0.16 - currentItemSize;
+    const item = getDockItemBounds(layout, scales, x, index);
     const gradient = context.createLinearGradient(
-      currentX,
-      currentY,
-      currentX + currentItemSize,
-      currentY + currentItemSize,
+      item.x,
+      item.y,
+      item.x + item.width,
+      item.y + item.height,
     );
     gradient.addColorStop(0, "#d9d9d9");
     gradient.addColorStop(1, "#8a8a8a");
     context.fillStyle = gradient;
     context.beginPath();
     context.roundRect(
-      currentX,
-      currentY,
-      currentItemSize,
-      currentItemSize,
-      currentItemSize * 0.24,
+      item.x,
+      item.y,
+      item.width,
+      item.height,
+      item.width * 0.24,
     );
     context.fill();
     context.strokeStyle = "rgba(255, 255, 255, 0.3)";
-    context.lineWidth = Math.max(1, currentItemSize * 0.035);
+    context.lineWidth = Math.max(1, item.width * 0.035);
     context.stroke();
-    currentX += currentItemSize + itemGap;
   }
 
   context.restore();
+
+  if (hoveredIndex !== null) {
+    drawDockTooltip(context, layout, scales, x, hoveredIndex);
+  }
 }
 
 type DockRenderer = {
@@ -217,6 +313,7 @@ type DockRenderer = {
   isHovering: boolean;
   entrySettled: boolean;
   smoothedPointerX: number | null;
+  hoveredIndex: number | null;
 };
 
 function getDockTarget(
@@ -275,15 +372,20 @@ function updateDockRenderer(
   renderer: DockRenderer,
   magnification: number,
   pointerX: number | null,
+  showTooltip: boolean,
   delta: number,
 ) {
+  let changed = false;
+
   if (pointerX === null) {
+    changed = renderer.hoveredIndex !== null;
     renderer.anchor = null;
     renderer.leftAnchor = renderer.layout.x;
     renderer.rightAnchor = renderer.layout.x + renderer.layout.width;
     renderer.isHovering = false;
     renderer.entrySettled = false;
     renderer.smoothedPointerX = null;
+    renderer.hoveredIndex = null;
   } else {
     renderer.isHovering = true;
     if (renderer.smoothedPointerX === null) {
@@ -328,7 +430,6 @@ function updateDockRenderer(
   );
   const target = pointerTarget;
   const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
-  let changed = false;
 
   for (let index = 0; index < renderer.scales.length; index += 1) {
     const next = THREE.MathUtils.lerp(
@@ -365,11 +466,25 @@ function updateDockRenderer(
     renderer.entrySettled = true;
   }
 
+  const hoveredIndex =
+    showTooltip && pointerX !== null
+      ? getDockHoveredIndex(renderer.layout, renderer.scales, renderer.x, pointerX)
+      : null;
+  changed ||= hoveredIndex !== renderer.hoveredIndex;
+  renderer.hoveredIndex = hoveredIndex;
+
   if (!changed) return;
 
   const { canvas, context, layout } = renderer;
   context.clearRect(0, 0, canvas.width, canvas.height);
-  drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
+  drawDock(
+    context,
+    layout,
+    renderer.scales,
+    renderer.x,
+    renderer.width,
+    renderer.hoveredIndex,
+  );
   renderer.texture.needsUpdate = true;
 }
 
@@ -529,9 +644,10 @@ function createDockRenderer({
     isHovering: false,
     entrySettled: false,
     smoothedPointerX: null,
+    hoveredIndex: null,
   };
 
-  drawDock(context, layout, renderer.scales, renderer.x, renderer.width);
+  drawDock(context, layout, renderer.scales, renderer.x, renderer.width, null);
   return renderer;
 }
 
@@ -1038,6 +1154,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         dockRenderer,
         phase2.dockMagnification,
         pointerInsideDock ? pointerX : null,
+        inputMode === "fine",
         delta,
       );
     }
