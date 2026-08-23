@@ -181,15 +181,20 @@ function getDockHoveredIndex(
   x: number,
   pointerX: number,
 ) {
+  let hoveredIndex = 0;
+  let closestDistance = Number.POSITIVE_INFINITY;
+
   for (let index = 0; index < CONFIG.phase2.DOCK_ITEM_COUNT; index += 1) {
     const item = getDockItemBounds(layout, scales, x, index);
+    const distance = Math.abs(pointerX - (item.x + item.width / 2));
 
-    if (pointerX >= item.x && pointerX <= item.x + item.width) {
-      return index;
+    if (distance < closestDistance) {
+      hoveredIndex = index;
+      closestDistance = distance;
     }
   }
 
-  return null;
+  return hoveredIndex;
 }
 
 function drawDockTooltip(
@@ -340,19 +345,31 @@ function getDockTarget(
     const center = layout.itemX + index * (itemSize + itemGap) + itemSize / 2;
     return THREE.MathUtils.clamp(1 - Math.abs(pointerX - center) / radius, 0, 1) ** 2;
   };
+  const activeIndex = THREE.MathUtils.clamp(
+    Math.round((pointerX - layout.itemX - itemSize / 2) / (itemSize + itemGap)),
+    0,
+    count - 1,
+  );
   const virtualRange = Math.ceil(radius / (itemSize + itemGap)) + 1;
-  let fullInfluence = 0;
+  let neighborInfluence = 0;
 
   for (let index = -virtualRange; index < count + virtualRange; index += 1) {
-    fullInfluence += influence(index);
+    if (index !== activeIndex) {
+      neighborInfluence += influence(index);
+    }
   }
 
-  const extraScale =
-    (magnification * CONFIG.phase2.DOCK_MAGNIFICATION_TOTAL_MULT) /
-    Math.max(fullInfluence, 0.0001);
+  const activeExtraScale = magnification;
+  const neighborExtraScale =
+    (magnification * CONFIG.phase2.DOCK_MAGNIFICATION_TOTAL_MULT -
+      activeExtraScale) /
+    Math.max(neighborInfluence, 0.0001);
   const scales = Array.from(
     { length: count },
-    (_, index) => 1 + influence(index) * extraScale,
+    (_, index) =>
+      index === activeIndex
+        ? 1 + activeExtraScale
+        : 1 + influence(index) * neighborExtraScale,
   );
   const width =
     scales.reduce((total, scale) => total + itemSize * scale, 0) +
