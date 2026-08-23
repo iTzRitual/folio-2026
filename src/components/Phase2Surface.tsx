@@ -1228,6 +1228,9 @@ function createPageMask(
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.NoColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
   return texture;
 }
@@ -1307,7 +1310,7 @@ varying vec2 vUv;
 ${buildCustomAberrationProgram(taps)}
 
 vec4 inputSample(vec2 uv) {
-  return texture2D(u_pageTexture, uv);
+  return texture2D(u_pageTexture, clamp(uv, vec2(0.002), vec2(0.998)));
 }
 
 void main() {
