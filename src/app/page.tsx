@@ -14,6 +14,10 @@ import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
 import { caseStudyStage } from "@/lib/caseStudyStage";
+import {
+    rootScrollLock,
+    subscribeRootScrollLock,
+} from "@/lib/rootScrollLock";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { useTheme } from "@/context/ThemeContext";
 import {
@@ -91,13 +95,37 @@ export default function Home() {
 
     useEffect(() => {
         if (!removeLoader || prefersReducedMotion) return;
+        const instance = lenisRef.current?.lenis;
+        if (!instance) return;
 
-        const update = (time: number) =>
-            lenisRef.current?.lenis?.raf(time * 1000);
+        let wasLocked = false;
+        const syncLock = () => {
+            if (rootScrollLock.active) {
+                if (!wasLocked) instance.stop();
+                wasLocked = true;
+                window.scrollTo(0, rootScrollLock.y);
+                return;
+            }
+
+            if (wasLocked) instance.start();
+            wasLocked = false;
+        };
+        const unsubscribe = subscribeRootScrollLock(syncLock);
+        syncLock();
+        const update = (time: number) => {
+            if (rootScrollLock.active) {
+                window.scrollTo(0, rootScrollLock.y);
+                return;
+            }
+
+            instance.raf(time * 1000);
+        };
         gsap.ticker.add(update);
         gsap.ticker.lagSmoothing(0);
 
         return () => {
+            unsubscribe();
+            if (wasLocked) instance.start();
             gsap.ticker.remove(update);
         };
     }, [removeLoader, prefersReducedMotion]);
