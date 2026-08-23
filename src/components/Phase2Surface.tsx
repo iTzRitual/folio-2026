@@ -203,6 +203,7 @@ function drawDockTooltip(
   scales: number[],
   x: number,
   index: number,
+  activeScale: number,
 ) {
   const item = getDockItemBounds(layout, scales, x, index);
   const label = DOCK_ITEM_LABELS[index];
@@ -222,7 +223,14 @@ function drawDockTooltip(
     2,
     context.canvas.width - width - 2,
   );
-  const tooltipY = item.y - layout.itemSize * 0.24 - arrowHeight - height;
+  const tooltipY =
+    layout.y +
+    layout.height -
+    layout.height * 0.16 -
+    layout.itemSize * activeScale -
+    layout.itemSize * 0.24 -
+    arrowHeight -
+    height;
   const radius = height * 0.2;
 
   context.fillStyle = "#2d2d2f";
@@ -255,6 +263,7 @@ function drawDock(
   x: number,
   width: number,
   hoveredIndex: number | null,
+  activeScale: number,
 ) {
   const { y, height } = layout;
   const radius = height * 0.27;
@@ -300,7 +309,7 @@ function drawDock(
   context.restore();
 
   if (hoveredIndex !== null) {
-    drawDockTooltip(context, layout, scales, x, hoveredIndex);
+    drawDockTooltip(context, layout, scales, x, hoveredIndex, activeScale);
   }
 }
 
@@ -501,6 +510,7 @@ function updateDockRenderer(
     renderer.x,
     renderer.width,
     renderer.hoveredIndex,
+    1 + magnification,
   );
   renderer.texture.needsUpdate = true;
 }
@@ -664,7 +674,7 @@ function createDockRenderer({
     hoveredIndex: null,
   };
 
-  drawDock(context, layout, renderer.scales, renderer.x, renderer.width, null);
+  drawDock(context, layout, renderer.scales, renderer.x, renderer.width, null, 1);
   return renderer;
 }
 
