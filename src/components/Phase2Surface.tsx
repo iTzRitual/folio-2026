@@ -2191,6 +2191,32 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
   };
 
+  const commitReturnBridge = (bridge: ReturnBridge) => {
+    const safariRuntime = windowRuntimesRef.current.safari;
+
+    safariRuntime.animation = null;
+    safariRuntime.amount = 0;
+    safariRuntime.state = "open";
+    activeAppRef.current = "safari";
+    pendingAppRef.current = null;
+    setGeniePresentation(genieUniforms, 0, prefersReducedMotion);
+    if (windowGroupRef.current) windowGroupRef.current.visible = true;
+
+    if (!bridge.sourceApp) return;
+
+    const sourceRuntime = windowRuntimesRef.current[bridge.sourceApp];
+    sourceRuntime.animation = null;
+    sourceRuntime.amount = 1;
+    sourceRuntime.state = "minimized";
+    setGeniePresentation(
+      getWindowGenie(bridge.sourceApp),
+      1,
+      prefersReducedMotion,
+    );
+    const sourceGroup = getWindowGroup(bridge.sourceApp);
+    if (sourceGroup) sourceGroup.visible = false;
+  };
+
   const animateWindowTo = (appId: WindowAppId, target: 0 | 1) => {
     const browserLayout = browserLayoutRef.current;
     const dockRenderer = dockRendererRef.current;
@@ -2465,6 +2491,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         safariAmount,
         prefersReducedMotion,
       );
+
+      if (returnProgress >= 1) {
+        commitReturnBridge(bridge);
+        releaseRootScroll();
+        returnBridgeRef.current = null;
+        bridge = null;
+      }
     }
 
     previousRevealRef.current = scrollReveal;
