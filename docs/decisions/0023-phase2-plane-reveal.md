@@ -39,10 +39,12 @@ desktop occupies them.
   follows the current viewport plus its browser chrome.
 - That browser window uses contain fitting inside the 4:3 plane: it is centered,
   maximized within the available surface, and never cropped.
-- On coarse or narrow viewports, the browser window preserves the device's
-  portrait aspect ratio and the page keeps its narrow responsive composition.
-- Mobile does not switch to a desktop page layout just because it is displayed
-  inside the 4:3 plane.
+- On phone-sized coarse and narrow viewports, the browser window uses a
+  standard landscape aspect ratio and opens a responsive-device toolbar above
+  the centered portrait page viewport.
+- The mobile page keeps its narrow responsive composition inside that device
+  viewport; it does not switch to a desktop page layout just because it is
+  displayed inside the 4:3 plane.
 - At the reveal boundary, the portfolio is rendered continuously into a GPU
   texture while its document scroll remains clamped at the end of About me.
   Safari chrome and the temporary black plane area are rendered on the same
