@@ -54,6 +54,7 @@ const DOCK_APPS: DockApp[] = [
 
 const SAFARI_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "safari");
 const VSCODE_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "vscode");
+const PHASE2_WALLPAPER_SRC = "/media/phase2/wallpaper.jpeg";
 
 type WindowAppId = "safari" | "vscode";
 
@@ -1680,6 +1681,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const windowGroupRef = useRef<THREE.Group>(null);
   const vscodeWindowGroupRef = useRef<THREE.Group>(null);
+  const wallpaperMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const chromeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const vscodeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -1781,6 +1783,44 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => pageAberrationMaterial.dispose();
   }, [pageAberrationMaterial]);
+
+  useEffect(() => {
+    let wallpaperTexture: THREE.Texture | null = null;
+    let cancelled = false;
+
+    new THREE.TextureLoader().load(PHASE2_WALLPAPER_SRC, (texture) => {
+      if (cancelled) {
+        texture.dispose();
+        return;
+      }
+
+      const imageAspect = texture.image.width / texture.image.height;
+      const planeAspect = CONFIG.phase2.PLANE_ASPECT;
+      const repeatX = Math.min(1, planeAspect / imageAspect);
+      const repeatY = Math.min(1, imageAspect / planeAspect);
+
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(repeatX, repeatY);
+      texture.offset.set((1 - repeatX) / 2, (1 - repeatY) / 2);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      texture.needsUpdate = true;
+      wallpaperTexture = texture;
+
+      if (wallpaperMaterialRef.current) {
+        wallpaperMaterialRef.current.map = texture;
+        wallpaperMaterialRef.current.needsUpdate = true;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      wallpaperTexture?.dispose();
+    };
+  }, []);
 
   useEffect(() => {
     chromeMaterialRef.current = windowChromeMaterial;
@@ -3082,7 +3122,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           raycast={() => null}
         >
           <meshBasicMaterial
-            color="#000000"
+            ref={wallpaperMaterialRef}
+            color="#ffffff"
             depthTest={false}
             depthWrite={false}
             toneMapped={false}
