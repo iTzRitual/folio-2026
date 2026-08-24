@@ -95,11 +95,18 @@ export default function Home() {
 
     useEffect(() => {
         if (!removeLoader || prefersReducedMotion) return;
-        const instance = lenisRef.current?.lenis;
-        if (!instance) return;
 
         let wasLocked = false;
+        let activeInstance: { start: () => void } | null = null;
+        const getInstance = () => {
+            const instance = lenisRef.current?.lenis;
+            if (instance) activeInstance = instance;
+            return instance;
+        };
         const syncLock = () => {
+            const instance = getInstance();
+            if (!instance) return;
+
             if (rootScrollLock.active) {
                 if (!wasLocked) instance.stop();
                 wasLocked = true;
@@ -113,11 +120,20 @@ export default function Home() {
         const unsubscribe = subscribeRootScrollLock(syncLock);
         syncLock();
         const update = (time: number) => {
+            const instance = getInstance();
+            if (!instance) return;
+
             if (rootScrollLock.active) {
+                if (!wasLocked) instance.stop();
+                wasLocked = true;
                 window.scrollTo(0, rootScrollLock.y);
                 return;
             }
 
+            if (wasLocked) {
+                instance.start();
+                wasLocked = false;
+            }
             instance.raf(time * 1000);
         };
         gsap.ticker.add(update);
@@ -125,7 +141,7 @@ export default function Home() {
 
         return () => {
             unsubscribe();
-            if (wasLocked) instance.start();
+            if (wasLocked) activeInstance?.start();
             gsap.ticker.remove(update);
         };
     }, [removeLoader, prefersReducedMotion]);
