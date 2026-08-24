@@ -80,18 +80,22 @@ type WindowRuntime = {
   animation: WindowAnimation | null;
 };
 
+type ReturnBridgeAutoScroll = {
+  elapsed: number;
+  duration: number;
+  startY: number;
+  targetY: number;
+};
+
 type ReturnBridge = {
   sourceApp: Exclude<WindowAppId, "safari"> | null;
   sourceAmount: number;
   safariStartAmount: number;
   safariVisible: boolean;
   vscodeVisible: boolean;
-  elapsed: number;
-  appDuration: number;
-  duration: number;
-  direction: -1 | 0 | 1;
-  playing: boolean;
-  lockY: number;
+  idleElapsed: number;
+  lastScrollY: number;
+  autoScroll: ReturnBridgeAutoScroll | null;
 };
 
 function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry {
@@ -1987,16 +1991,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const intersections: THREE.Intersection[] = [];
     const onWheel = (event: WheelEvent) => {
       const bridge = returnBridgeRef.current;
-      if (
-        bridge?.playing &&
-        Math.abs(event.deltaY) >= Math.abs(event.deltaX) &&
-        event.deltaY !== 0
-      ) {
-        bridge.direction = event.deltaY < 0 ? 1 : -1;
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        return;
+      if (bridge?.autoScroll) {
+        bridge.autoScroll = null;
+        bridge.idleElapsed = 0;
+        releaseRootScroll();
       }
 
       const renderer = vscodeRendererRef.current;
@@ -2050,12 +2048,33 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       event.stopImmediatePropagation();
     };
 
+    const cancelAutoScroll = () => {
+      const bridge = returnBridgeRef.current;
+      if (!bridge?.autoScroll) return;
+      bridge.autoScroll = null;
+      bridge.idleElapsed = 0;
+      releaseRootScroll();
+    };
+
     window.addEventListener("wheel", onWheel, {
       capture: true,
       passive: false,
     });
-    return () =>
+    window.addEventListener("touchstart", cancelAutoScroll, { capture: true });
+    window.addEventListener("pointerdown", cancelAutoScroll, { capture: true });
+    window.addEventListener("keydown", cancelAutoScroll, { capture: true });
+    return () => {
       window.removeEventListener("wheel", onWheel, { capture: true });
+      window.removeEventListener("touchstart", cancelAutoScroll, {
+        capture: true,
+      });
+      window.removeEventListener("pointerdown", cancelAutoScroll, {
+        capture: true,
+      });
+      window.removeEventListener("keydown", cancelAutoScroll, {
+        capture: true,
+      });
+    };
   }, [camera, gl]);
 
   const getWindowGroup = (appId: WindowAppId) =>
@@ -2084,25 +2103,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       });
   };
 
-  const getReturnBridgeLockY = (scrollReveal: number) =>
-    window.scrollY +
-    (CONFIG.phase2.RETURN_BRIDGE_REVEAL_BREAKPOINT - scrollReveal) *
+  const getReturnBridgeTargetY = (scrollReveal: number) =>
+    window.scrollY -
+    scrollReveal *
       size.height *
       CONFIG.phase2.REVEAL_VIEWPORTS;
 
-  const playReturnBridge = (
-    bridge: ReturnBridge,
-    direction: -1 | 1,
-    scrollReveal: number,
-  ) => {
-    bridge.direction = direction;
-    bridge.playing = true;
-    bridge.lockY = getReturnBridgeLockY(scrollReveal);
-    lockRootScroll(bridge.lockY);
-    window.scrollTo(0, bridge.lockY);
-  };
-
-  const beginReturnBridge = (scrollReveal: number) => {
+  const beginReturnBridge = () => {
     const safariRuntime = windowRuntimesRef.current.safari;
     const activeApp = activeAppRef.current;
     const safariIsReady =
@@ -2145,35 +2152,20 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       ? windowRuntimesRef.current[sourceApp].amount
       : 1;
     const safariStartAmount = activeApp === "safari" ? safariRuntime.amount : 1;
-    const appDuration = sourceApp
-      ? prefersReducedMotion
-        ? CONFIG.phase2.RETURN_BRIDGE_REDUCED_DURATION
-        : CONFIG.phase2.RETURN_BRIDGE_APP_DURATION
-      : 0;
-    const safariDuration = prefersReducedMotion
-      ? CONFIG.phase2.RETURN_BRIDGE_REDUCED_DURATION
-      : CONFIG.phase2.RETURN_BRIDGE_SAFARI_DURATION;
-    const lockY = getReturnBridgeLockY(scrollReveal);
-
     const bridge: ReturnBridge = {
       sourceApp,
       sourceAmount,
       safariStartAmount,
       safariVisible: windowGroupRef.current?.visible === true,
       vscodeVisible: vscodeWindowGroupRef.current?.visible === true,
-      elapsed: 0,
-      appDuration,
-      duration: appDuration + safariDuration,
-      direction: 1,
-      playing: true,
-      lockY,
+      idleElapsed: 0,
+      lastScrollY: window.scrollY,
+      autoScroll: null,
     };
     returnBridgeRef.current = bridge;
 
     if (windowGroupRef.current) windowGroupRef.current.visible = true;
     setGeniePresentation(genieUniforms, safariStartAmount, prefersReducedMotion);
-    lockRootScroll(lockY);
-    window.scrollTo(0, lockY);
     return true;
   };
 
@@ -2365,34 +2357,79 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       previousReveal > breakpoint &&
       scrollReveal <= breakpoint
     ) {
-      beginReturnBridge(scrollReveal);
+      beginReturnBridge();
     }
 
     let bridge = returnBridgeRef.current;
     if (
       bridge &&
-      !bridge.playing &&
-      bridge.elapsed >= bridge.duration &&
       previousReveal !== null &&
-      previousReveal <= breakpoint &&
+      previousReveal < breakpoint &&
       scrollReveal > breakpoint
     ) {
-      playReturnBridge(bridge, -1, scrollReveal);
+      restoreReturnBridge(bridge);
+      releaseRootScroll();
+      returnBridgeRef.current = null;
+      bridge = null;
     }
 
     if (bridge) {
-      if (bridge.playing) {
-        bridge.elapsed = THREE.MathUtils.clamp(
-          bridge.elapsed + delta * bridge.direction,
+      const returnProgress = THREE.MathUtils.clamp(
+        (breakpoint - scrollReveal) / breakpoint,
+        0,
+        1,
+      );
+      const currentScrollY = window.scrollY;
+
+      if (bridge.autoScroll) {
+        bridge.autoScroll.elapsed += delta;
+        const progress = THREE.MathUtils.clamp(
+          bridge.autoScroll.elapsed / bridge.autoScroll.duration,
           0,
-          bridge.duration,
+          1,
         );
-        window.scrollTo(0, bridge.lockY);
+        const scrollY = THREE.MathUtils.lerp(
+          bridge.autoScroll.startY,
+          bridge.autoScroll.targetY,
+          easeInOutQuint(progress),
+        );
+        bridge.lastScrollY = scrollY;
+        lockRootScroll(scrollY);
+        window.scrollTo(0, scrollY);
+
+        if (progress >= 1) {
+          bridge.autoScroll = null;
+          bridge.idleElapsed = 0;
+          releaseRootScroll();
+        }
+      } else if (returnProgress < 1) {
+        const scrollSpeed = Math.abs(currentScrollY - bridge.lastScrollY) / delta;
+        bridge.lastScrollY = currentScrollY;
+        bridge.idleElapsed =
+          scrollSpeed < CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_MIN_SPEED
+            ? bridge.idleElapsed + delta
+            : 0;
+
+        if (
+          bridge.idleElapsed >= CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_DELAY
+        ) {
+          bridge.autoScroll = {
+            elapsed: 0,
+            duration: prefersReducedMotion
+              ? CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_REDUCED_DURATION
+              : CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_DURATION,
+            startY: currentScrollY,
+            targetY: getReturnBridgeTargetY(scrollReveal),
+          };
+          lockRootScroll(currentScrollY);
+        }
       }
 
+      const appSpan = bridge.sourceApp
+        ? CONFIG.phase2.RETURN_BRIDGE_APP_SCROLL_SPAN
+        : 0;
       const safariProgress = THREE.MathUtils.clamp(
-        (bridge.elapsed - bridge.appDuration) /
-          (bridge.duration - bridge.appDuration),
+        (returnProgress - appSpan) / (1 - appSpan),
         0,
         1,
       );
@@ -2404,7 +2441,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
       if (bridge.sourceApp) {
         const sourceProgress = THREE.MathUtils.clamp(
-          bridge.elapsed / bridge.appDuration,
+          returnProgress / appSpan,
           0,
           1,
         );
@@ -2428,34 +2465,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         safariAmount,
         prefersReducedMotion,
       );
-
-      if (
-        bridge.playing &&
-        bridge.direction === 1 &&
-        bridge.elapsed >= bridge.duration
-      ) {
-        bridge.direction = 0;
-        bridge.playing = false;
-        releaseRootScroll();
-      } else if (
-        bridge.playing &&
-        bridge.direction === -1 &&
-        bridge.elapsed <= 0
-      ) {
-        restoreReturnBridge(bridge);
-        releaseRootScroll();
-        returnBridgeRef.current = null;
-        bridge = null;
-      }
     }
 
     previousRevealRef.current = scrollReveal;
-    const visualScrollReveal = bridge?.playing ? breakpoint : scrollReveal;
     const reveal = prefersReducedMotion
-      ? visualScrollReveal > 0
+      ? scrollReveal > 0
         ? 1
         : 0
-      : visualScrollReveal;
+      : scrollReveal;
     const hideHtmlOverlays = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
 
     if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
