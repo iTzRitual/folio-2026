@@ -80,6 +80,8 @@ type WindowRuntime = {
   animation: WindowAnimation | null;
 };
 
+type WindowRuntimeSnapshot = WindowRuntime;
+
 type ReturnBridgeAutoScroll = {
   elapsed: number;
   duration: number;
@@ -93,6 +95,10 @@ type ReturnBridge = {
   safariStartAmount: number;
   safariVisible: boolean;
   vscodeVisible: boolean;
+  safariRuntime: WindowRuntimeSnapshot;
+  vscodeRuntime: WindowRuntimeSnapshot;
+  activeApp: WindowAppId | null;
+  pendingApp: WindowAppId | null;
   idleElapsed: number;
   lastScrollY: number;
   autoScroll: ReturnBridgeAutoScroll | null;
@@ -2111,7 +2117,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
   const beginReturnBridge = () => {
     const safariRuntime = windowRuntimesRef.current.safari;
-    const activeApp = activeAppRef.current;
+    const vscodeRuntime = windowRuntimesRef.current.vscode;
+    const vscodeIsVisible =
+      vscodeWindowGroupRef.current?.visible === true &&
+      vscodeRuntime.state !== "closed" &&
+      vscodeRuntime.state !== "minimized";
+    const activeApp = vscodeIsVisible ? "vscode" : activeAppRef.current;
     const safariIsReady =
       activeApp === "safari" &&
       safariRuntime.state === "open" &&
@@ -2158,11 +2169,32 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       safariStartAmount,
       safariVisible: windowGroupRef.current?.visible === true,
       vscodeVisible: vscodeWindowGroupRef.current?.visible === true,
+      safariRuntime: {
+        ...safariRuntime,
+        animation: safariRuntime.animation
+          ? { ...safariRuntime.animation }
+          : null,
+      },
+      vscodeRuntime: {
+        ...vscodeRuntime,
+        animation: vscodeRuntime.animation
+          ? { ...vscodeRuntime.animation }
+          : null,
+      },
+      activeApp: activeAppRef.current,
+      pendingApp: pendingAppRef.current,
       idleElapsed: 0,
       lastScrollY: window.scrollY,
       autoScroll: null,
     };
     returnBridgeRef.current = bridge;
+
+    safariRuntime.animation = null;
+    if (sourceApp) {
+      const sourceRuntime = windowRuntimesRef.current[sourceApp];
+      sourceRuntime.animation = null;
+      sourceRuntime.state = "open";
+    }
 
     if (windowGroupRef.current) windowGroupRef.current.visible = true;
     setGeniePresentation(genieUniforms, safariStartAmount, prefersReducedMotion);
@@ -2170,17 +2202,29 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   };
 
   const restoreReturnBridge = (bridge: ReturnBridge) => {
-    const safariRuntime = windowRuntimesRef.current.safari;
-    const vscodeRuntime = windowRuntimesRef.current.vscode;
+    windowRuntimesRef.current.safari = {
+      ...bridge.safariRuntime,
+      animation: bridge.safariRuntime.animation
+        ? { ...bridge.safariRuntime.animation }
+        : null,
+    };
+    windowRuntimesRef.current.vscode = {
+      ...bridge.vscodeRuntime,
+      animation: bridge.vscodeRuntime.animation
+        ? { ...bridge.vscodeRuntime.animation }
+        : null,
+    };
+    activeAppRef.current = bridge.activeApp;
+    pendingAppRef.current = bridge.pendingApp;
 
     setGeniePresentation(
       genieUniforms,
-      safariRuntime.amount,
+      bridge.safariRuntime.amount,
       prefersReducedMotion,
     );
     setGeniePresentation(
       vscodeGenieUniforms,
-      vscodeRuntime.amount,
+      bridge.vscodeRuntime.amount,
       prefersReducedMotion,
     );
     if (windowGroupRef.current) {
