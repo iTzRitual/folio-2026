@@ -185,7 +185,6 @@ function getBrowserLayout(
   sourceWidth: number,
   sourceHeight: number,
   tuning: Phase2Tuning,
-  mobileBrowserMode: boolean,
 ) {
   const margin =
     Math.min(textureWidth, textureHeight) *
@@ -193,13 +192,12 @@ function getBrowserLayout(
   const dock = getDockLayout(textureWidth, textureHeight, tuning);
   const availableWidth = textureWidth - margin * 2;
   const availableHeight = dock.safeTop - margin;
-  const browserAspect = mobileBrowserMode
-    ? CONFIG.phase2.MOBILE_BROWSER_ASPECT
-    : sourceWidth /
-      (sourceHeight *
-        (1 +
-          CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT *
-            tuning.safariChromeScale));
+  const browserAspect =
+    sourceWidth /
+    (sourceHeight *
+      (1 +
+        CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT *
+          tuning.safariChromeScale));
   let width = availableWidth;
   let height = width / browserAspect;
 
@@ -214,25 +212,6 @@ function getBrowserLayout(
     height /
     (1 +
       CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT * tuning.safariChromeScale);
-  const chromeHeight = height - contentHeight;
-  const debugToolbarHeight = mobileBrowserMode
-    ? contentHeight * CONFIG.phase2.MOBILE_DEVTOOLS_HEIGHT_MULT
-    : 0;
-  const pageAspect = sourceWidth / sourceHeight;
-  const deviceAreaHeight = contentHeight - debugToolbarHeight;
-  const pageHeight = mobileBrowserMode
-    ? Math.min(
-        deviceAreaHeight * CONFIG.phase2.MOBILE_DEVICE_HEIGHT_MULT,
-        (width * CONFIG.phase2.MOBILE_DEVICE_WIDTH_MULT) / pageAspect,
-      )
-    : contentHeight;
-  const pageWidth = mobileBrowserMode ? pageHeight * pageAspect : width;
-  const pageX = mobileBrowserMode
-    ? x + (width - pageWidth) / 2
-    : x;
-  const pageY = mobileBrowserMode
-    ? y + chromeHeight + debugToolbarHeight + (deviceAreaHeight - pageHeight) / 2
-    : y + chromeHeight;
 
   return {
     x,
@@ -240,12 +219,7 @@ function getBrowserLayout(
     width,
     height,
     contentHeight,
-    chromeHeight,
-    debugToolbarHeight,
-    pageX,
-    pageY,
-    pageWidth,
-    pageHeight,
+    chromeHeight: height - contentHeight,
   };
 }
 
@@ -919,17 +893,11 @@ function updateDockRenderer(
 function createBrowserChromeTexture({
   sourceWidth,
   sourceHeight,
-  deviceWidth,
-  deviceHeight,
   tuning,
-  mobileBrowserMode,
 }: {
   sourceWidth: number;
   sourceHeight: number;
-  deviceWidth: number;
-  deviceHeight: number;
   tuning: Phase2Tuning;
-  mobileBrowserMode: boolean;
 }) {
   const { width: textureWidth, height: textureHeight } = getTextureDimensions(
     sourceWidth,
@@ -949,7 +917,6 @@ function createBrowserChromeTexture({
     sourceWidth,
     sourceHeight,
     tuning,
-    mobileBrowserMode,
   );
   const {
     x: browserX,
@@ -958,10 +925,6 @@ function createBrowserChromeTexture({
     height: browserHeight,
     contentHeight,
     chromeHeight,
-    pageX,
-    pageY,
-    pageWidth,
-    pageHeight,
   } = layout;
   const cornerRadius = chromeHeight * 0.34;
 
@@ -978,23 +941,12 @@ function createBrowserChromeTexture({
 
   textureContext.fillStyle = CONFIG.phase2.BROWSER_BAR_COLOR;
   textureContext.fillRect(browserX, browserY, browserWidth, chromeHeight);
-
-  if (mobileBrowserMode) {
-    textureContext.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_BACKGROUND_COLOR;
-    textureContext.fillRect(
-      browserX,
-      browserY + chromeHeight,
-      browserWidth,
-      contentHeight,
-    );
-  } else {
-    textureContext.clearRect(
-      browserX,
-      browserY + chromeHeight,
-      browserWidth,
-      contentHeight,
-    );
-  }
+  textureContext.clearRect(
+    browserX,
+    browserY + chromeHeight,
+    browserWidth,
+    contentHeight,
+  );
 
   const controlRadius =
     chromeHeight *
@@ -1045,29 +997,6 @@ function createBrowserChromeTexture({
   textureContext.textAlign = "center";
   textureContext.textBaseline = "middle";
   textureContext.fillText("folio-2026", browserX + browserWidth / 2, controlY);
-
-  if (mobileBrowserMode) {
-    drawMobileDevToolsToolbar({
-      context: textureContext,
-      layout,
-      deviceWidth,
-      deviceHeight,
-    });
-
-    const framePadding =
-      pageWidth * CONFIG.phase2.MOBILE_DEVICE_FRAME_PADDING_MULT;
-    textureContext.shadowColor = "rgba(0, 0, 0, 0.3)";
-    textureContext.shadowBlur = framePadding * 3;
-    textureContext.fillStyle = CONFIG.phase2.MOBILE_DEVICE_FRAME_COLOR;
-    textureContext.fillRect(
-      pageX - framePadding,
-      pageY - framePadding,
-      pageWidth + framePadding * 2,
-      pageHeight + framePadding * 2,
-    );
-    textureContext.shadowColor = "transparent";
-  }
-
   textureContext.restore();
 
   const texture = new THREE.CanvasTexture(textureCanvas);
@@ -1076,98 +1005,6 @@ function createBrowserChromeTexture({
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
   return texture;
-}
-
-function drawMobileDevToolsToolbar({
-  context,
-  layout,
-  deviceWidth,
-  deviceHeight,
-}: {
-  context: CanvasRenderingContext2D;
-  layout: ReturnType<typeof getBrowserLayout>;
-  deviceWidth: number;
-  deviceHeight: number;
-}) {
-  const toolbarY = layout.y + layout.chromeHeight;
-  const toolbarHeight = layout.debugToolbarHeight;
-  const rulerHeight = toolbarHeight * 0.27;
-  const controlsHeight = toolbarHeight - rulerHeight;
-  const textY = toolbarY + controlsHeight / 2;
-  const fontSize = Math.max(8, controlsHeight * 0.28);
-  const compactFontSize = Math.max(7, controlsHeight * 0.235);
-  const leftPadding = controlsHeight * 0.52;
-  const gap = controlsHeight * 0.42;
-  let cursorX = layout.x + leftPadding;
-
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_BORDER_COLOR;
-  context.fillRect(layout.x, toolbarY + controlsHeight, layout.width, 1);
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_RULER_COLOR;
-  context.fillRect(
-    layout.x,
-    toolbarY + controlsHeight,
-    layout.width,
-    rulerHeight,
-  );
-  context.strokeStyle = "rgba(112, 143, 193, 0.38)";
-  context.lineWidth = Math.max(1, rulerHeight * 0.08);
-  for (
-    let x = layout.x + layout.width * 0.06;
-    x < layout.x + layout.width;
-    x += layout.width * 0.16
-  ) {
-    context.beginPath();
-    context.moveTo(x, toolbarY + controlsHeight + rulerHeight * 0.26);
-    context.lineTo(x, toolbarY + toolbarHeight - rulerHeight * 0.16);
-    context.stroke();
-  }
-
-  context.textBaseline = "middle";
-  context.textAlign = "left";
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_TEXT_COLOR;
-  context.font = `600 ${fontSize}px Arial`;
-  context.fillText("Dimensions:", cursorX, textY);
-  cursorX += context.measureText("Dimensions:").width + gap;
-
-  context.fillStyle = "rgba(255, 255, 255, 0.72)";
-  const deviceLabel = CONFIG.phase2.MOBILE_DEVTOOLS_DEVICE_LABEL;
-  const devicePillWidth = context.measureText(deviceLabel).width + controlsHeight * 1.05;
-  context.beginPath();
-  context.roundRect(
-    cursorX,
-    textY - controlsHeight * 0.36,
-    devicePillWidth,
-    controlsHeight * 0.72,
-    controlsHeight * 0.14,
-  );
-  context.fill();
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_TEXT_COLOR;
-  context.font = `500 ${compactFontSize}px Arial`;
-  context.fillText(deviceLabel, cursorX + controlsHeight * 0.38, textY);
-  context.fillText("⌄", cursorX + devicePillWidth - controlsHeight * 0.45, textY);
-  cursorX += devicePillWidth + gap;
-
-  context.font = `600 ${compactFontSize}px Arial`;
-  context.fillText(
-    `${Math.round(deviceWidth)} × ${Math.round(deviceHeight)}`,
-    cursorX,
-    textY,
-  );
-  cursorX += context.measureText(`${Math.round(deviceWidth)} × ${Math.round(deviceHeight)}`).width + gap;
-
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_MUTED_COLOR;
-  context.font = `500 ${compactFontSize}px Arial`;
-  context.fillText(CONFIG.phase2.MOBILE_DEVTOOLS_ZOOM_LABEL, cursorX, textY);
-  cursorX += context.measureText(CONFIG.phase2.MOBILE_DEVTOOLS_ZOOM_LABEL).width + gap;
-  context.fillText("No throttling", cursorX, textY);
-  cursorX += context.measureText("No throttling").width + gap;
-  context.fillText("'Save-Data': default", cursorX, textY);
-
-  context.fillStyle = CONFIG.phase2.MOBILE_DEVTOOLS_TEXT_COLOR;
-  context.font = `700 ${fontSize * 1.05}px Arial`;
-  context.textAlign = "right";
-  context.fillText("↻", layout.x + layout.width - leftPadding * 1.8, textY);
-  context.fillText("⋮", layout.x + layout.width - leftPadding * 0.55, textY);
 }
 
 function createDockRenderer({
@@ -1572,10 +1409,10 @@ function createPageMask(
   context.clip();
   context.fillStyle = "#ffffff";
   context.fillRect(
-    layout.pageX,
-    layout.pageY,
-    layout.pageWidth,
-    layout.pageHeight,
+    layout.x,
+    layout.y + layout.chromeHeight,
+    layout.width,
+    layout.contentHeight,
   );
   context.restore();
 
@@ -1839,7 +1676,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { scrollBlur: scroll, phase2 } = useDebugSettings();
   const { inputMode, layoutMode } = useSceneCapabilities();
-  const mobileBrowserMode = inputMode === "coarse" && layoutMode === "narrow";
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
@@ -2087,8 +1923,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     phase2.safariBottomSafeArea,
     phase2.safariChromeScale,
     phase2.safariControlsScale,
-    inputMode,
-    layoutMode,
     size.height,
     size.width,
     vscodeGenieUniforms,
@@ -2928,15 +2762,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       sourceWidth,
       sourceHeight,
       phase2,
-      mobileBrowserMode,
     );
     const chromeTexture = createBrowserChromeTexture({
       sourceWidth,
       sourceHeight,
-      deviceWidth: size.width,
-      deviceHeight: size.height,
       tuning: phase2,
-      mobileBrowserMode,
     });
     const dockRenderer = createDockRenderer({
       sourceWidth,
@@ -2987,13 +2817,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     toolbarMaterialRef.current.map = toolbarRenderer.texture;
     toolbarMaterialRef.current.needsUpdate = true;
     const bounds = {
-      x: layout.pageX / textureWidth,
+      x: layout.x / textureWidth,
       y:
         1 -
-        (layout.pageY + layout.pageHeight) /
+        (layout.y + layout.chromeHeight + layout.contentHeight) /
           textureHeight,
-      width: layout.pageWidth / textureWidth,
-      height: layout.pageHeight / textureHeight,
+      width: layout.width / textureWidth,
+      height: layout.contentHeight / textureHeight,
     };
     pageUvBoundsRef.current = bounds;
     configureGenieGeometry(
@@ -3028,7 +2858,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const contentCenterY =
       planeHeight *
       (0.5 -
-        (layout.pageY + layout.pageHeight / 2) / textureHeight);
+        (layout.y + layout.chromeHeight + layout.contentHeight / 2) /
+          textureHeight);
     const scale = restWidth / contentWidth;
 
     surfaceTransformRef.current = {
