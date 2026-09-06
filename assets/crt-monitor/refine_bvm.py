@@ -1,5 +1,10 @@
 import bmesh
 
+REAR_DEPTH_SCALE = 1.35
+LOWER_FASCIA_EXTRA = .025
+HANDLE_RADIUS = .0048
+HANDLE_UPPER_LIFT = .012
+
 def remove_parts(prefixes):
     for o in list(bpy.context.scene.objects):
         if any(o.name.startswith(p) for p in prefixes):
@@ -7,25 +12,25 @@ def remove_parts(prefixes):
 
 remove_parts(['CRT_ControlPanel', 'CRT_Buttons', 'CRT_Knobs', 'CRT_ControlTicks',
               'CRT_Trim', 'CRT_PowerSocket', 'CRT_StatusRing', 'CRT_StatusLight',
-              'CRT_Handles', 'CRT_Vents', 'CRT_RearConnect', 'CRT_RearVents', 'CRT_CaseFasteners'])
+              'CRT_StatusDisplay', 'CRT_Handles', 'CRT_Vents', 'CRT_RearConnect', 'CRT_RearVents', 'CRT_CaseFasteners'])
 
 for x in [-.217,.217]:
-    path=[(-.170,.039),(-.170,.053)]
+    path=[(-.170+HANDLE_UPPER_LIFT,.039),(-.170+HANDLE_UPPER_LIFT,.053)]
     for i in range(1,17):
         a=math.pi*.5*i/16
-        path.append((-.177+.007*math.cos(a),.053+.007*math.sin(a)))
+        path.append((-.177+HANDLE_UPPER_LIFT+.007*math.cos(a),.053+.007*math.sin(a)))
     path.append((-.214,.060))
     for i in range(1,17):
         a=math.pi*.5+math.pi*.5*i/16
         path.append((-.214+.007*math.cos(a),.053+.007*math.sin(a)))
-    path.append((-.221,.039))
+    path.append((-.221,.021))
     vertices=[];faces=[];sides=32
     for j,(y,z) in enumerate(path):
         previous=path[max(0,j-1)];following=path[min(len(path)-1,j+1)]
         dy=following[0]-previous[0];dz=following[1]-previous[1]
         length=math.hypot(dy,dz)
         for i in range(sides):
-            a=2*math.pi*i/sides;r=.004
+            a=2*math.pi*i/sides;r=HANDLE_RADIUS
             vertices.append((x+r*math.cos(a),y-r*dz/length*math.sin(a),z+r*dy/length*math.sin(a)))
         if j:
             for i in range(sides):
@@ -43,16 +48,26 @@ color_node.layer_name='HardwareTint'
 accent.node_tree.links.new(color_node.outputs['Color'],accent.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
 
 housing=bpy.data.objects['CRT_Housing']
-cutter=box('ControlBay_Cutter',(0,-.204,.051),(.419,.065,.094),black,.003,4)
+bm=bmesh.new();bm.from_mesh(housing.data)
+for coordinate,normal in [((0,0,.004),(0,0,1)),((0,-.171,0),(0,1,0))]:
+    bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),
+        dist=.0000001,plane_co=coordinate,plane_no=normal)
+cut=[f for f in bm.faces if f.calc_center_median().y<-.171 and f.calc_center_median().z>.004]
+bmesh.ops.delete(bm,geom=cut,context='FACES')
+for coordinate,normal in [((-.025,0,0),(1,0,0)),((.025,0,0),(1,0,0)),((0,.161,0),(0,1,0)),((0,.193,0),(0,1,0))]:
+    bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),
+        dist=.0000001,plane_co=coordinate,plane_no=normal)
+tally_cut=[f for f in bm.faces if -.025<f.calc_center_median().x<.025 and .161<f.calc_center_median().y<.193 and f.calc_center_median().z>.004]
+bmesh.ops.delete(bm,geom=tally_cut,context='FACES')
+bmesh.ops.dissolve_limit(bm,angle_limit=.0001,verts=list(bm.verts),edges=list(bm.edges),delimit=set())
+bmesh.ops.triangulate(bm,faces=[f for f in bm.faces if len(f.verts)>4])
+bm.to_mesh(housing.data);bm.free()
 bpy.context.view_layer.objects.active=housing
-mod=housing.modifiers.new('Recessed control bay','BOOLEAN')
-mod.operation='DIFFERENCE';mod.solver='EXACT';mod.object=cutter
-bpy.ops.object.modifier_apply(modifier=mod.name)
-bpy.data.objects.remove(cutter,do_unlink=True)
-loft('CRT_ControlBay',[(.420,.066,.003,-.204,.043),(.419,.064,.002,-.204,.041),
-     (.417,.062,.002,-.204,.027),(.416,.061,.002,-.204,.024)],plastic)
-box('CRT_ControlPanel_Reveal',(0,-.204,.020),(.416,.061,.004),black,.002,3)
-box('CRT_ControlPanel',(0,-.204,.023),(.413,.058,.003),plastic,.0012,3)
+bpy.ops.mesh.customdata_custom_splitnormals_clear()
+loft('CRT_TallyRecess',[(.050,.032,.0003,.177,.043),(.041,.024,.0003,.177,.034)],plastic)
+box('CRT_StatusDisplay',(0,.177,.0325),(.041,.024,.002),accent,.0004,3)
+box('CRT_ControlPanel_Reveal',(0,-.204,.020),(.453,.061,.004),black,.002,3)
+box('CRT_ControlPanel',(0,-.204,.023),(.450,.058,.003),plastic,.0012,3)
 
 for col in range(3):
     for row in range(2):
@@ -119,10 +134,15 @@ label('Serial Digital Interface',.157,.177,.0039,.044)
 bpy.ops.preferences.addon_enable(module='io_curve_svg')
 bpy.ops.object.select_all(action='DESELECT')
 before=set(bpy.context.scene.objects)
-bpy.ops.import_curve.svg(filepath=str(OUT/'sony-logo.svg'))
+svg=(OUT/'sony-logo.svg').read_text().replace('v -29.64479 c 24.6016', 'z M 456.0129,195.63518 c 24.6016')
+import tempfile
+with tempfile.NamedTemporaryFile(suffix='.svg',mode='w',delete=False) as source:
+    source.write(svg);source_path=source.name
+bpy.ops.import_curve.svg(filepath=source_path)
+Path(source_path).unlink()
 logos=[o for o in bpy.context.scene.objects if o not in before and o.type=='CURVE']
 for o in logos:
-    o.select_set(True);o.data.resolution_u=4
+    o.select_set(True);o.data.resolution_u=24
 bpy.context.view_layer.objects.active=logos[0]
 bpy.ops.object.convert(target='MESH');bpy.ops.object.join()
 logo=bpy.context.object;logo.name='CRT_SonyBadge'
@@ -132,8 +152,26 @@ high=Vector(tuple(max(p[i] for p in points) for i in range(3)))
 factor=.068/(high.x-low.x);center=(low+high)/2
 for v,p in zip(logo.data.vertices,points):v.co=Vector(((p.x-center.x)*factor,(p.y-center.y)*factor-.163,.045))
 logo.matrix_world=Matrix.Identity(4);logo.data.materials.clear();logo.data.materials.append(accent)
+bm=bmesh.new();bm.from_mesh(logo.data)
+xcenter=(456.0129-640)*factor
+removed=[v for v in bm.verts if (305-640)*factor<v.co.x<(607-640)*factor]
+bmesh.ops.delete(bm,geom=removed,context='VERTS')
+outer=[];inner=[]
+for i in range(192):
+    a=2*math.pi*i/192
+    outer.append(bm.verts.new((xcenter+150.15*factor*math.cos(a),-.163+112.64*factor*math.sin(a),.045)))
+    inner.append(bm.verts.new((xcenter+86.55*factor*math.cos(a),-.163+83*factor*math.sin(a),.045)))
+for i in range(192):
+    j=(i+1)%192
+    bm.faces.new((outer[i],outer[j],inner[j],inner[i]))
+bm.to_mesh(logo.data);bm.free()
+
 solid=logo.modifiers.new('Raised badge','SOLIDIFY');solid.thickness=.00065
 bpy.ops.object.modifier_apply(modifier=solid.name)
+for face in logo.data.polygons:
+    face.use_smooth=abs(face.normal.z)<.99
+logo['tint']=[.86,.86,.82,1]
+
 
 for side in [-1,1]:
     verts=[];faces=[]
@@ -158,9 +196,28 @@ for o in bpy.context.scene.objects:
     bpy.context.view_layer.objects.active=o
     bpy.ops.object.select_all(action='DESELECT');o.select_set(True)
     bpy.ops.object.transform_apply(location=True,rotation=True,scale=True)
+    for vertex in o.data.vertices:
+        if vertex.co.z<-.03:
+            vertex.co.z=-.03+(vertex.co.z+.03)*REAR_DEPTH_SCALE
+        if o.name.startswith('CRT_Handles'):
+            vertex.co.y-=LOWER_FASCIA_EXTRA
+        elif o.name=='CRT_SonyBadge':
+            vertex.co.y-=LOWER_FASCIA_EXTRA*.5
+        else:
+            t=max(0,min(1,(-vertex.co.y-.156)/.015))
+            vertex.co.y-=LOWER_FASCIA_EXTRA*t
+
     bm=bmesh.new();bm.from_mesh(o.data)
     bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=.000001)
     bmesh.ops.dissolve_degenerate(bm,edges=list(bm.edges),dist=.0000001)
     bm.to_mesh(o.data);bm.free()
+    if o.name.startswith(('CRT_Housing','CRT_Bezel','CRT_ControlBay','CRT_ControlPanel')):
+        o.data.update()
+        for face in o.data.polygons:
+            points=[o.data.vertices[i].co for i in face.vertices]
+            planar_axis=any(max(p[axis] for p in points)-min(p[axis] for p in points)<.000001 for axis in range(3))
+            if planar_axis or face.area>.000025:
+                face.use_smooth=False
+
 
 bpy.ops.object.select_all(action='DESELECT')

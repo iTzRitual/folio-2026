@@ -1,6 +1,6 @@
 {
-  "triangles": 56032,
-  "objects": 32,
+  "triangles": 63878,
+  "objects": 31,
   "materials": 4,
   "screen": {
     "width": 0.352,
@@ -10,19 +10,18 @@
     "axis": "+Z"
   },
   "object_triangles": {
-    "CRT_Housing": 2356,
+    "CRT_Housing": 2290,
     "CRT_Bezel": 1280,
     "CRT_RearCasing": 290,
     "CRT_CasingSeam": 256,
     "CRT_Screen": 13824,
     "CRT_Glass": 4096,
-    "CRT_StatusDisplay_Bezel": 428,
-    "CRT_StatusDisplay": 380,
     "CRT_RearServicePanel": 96,
     "CRT_RearPowerInlet": 90,
     "CRT_Stand": 704,
     "CRT_Handles": 4480,
-    "CRT_ControlBay": 768,
+    "CRT_TallyRecess": 256,
+    "CRT_StatusDisplay": 188,
     "CRT_ControlPanel_Reveal": 156,
     "CRT_ControlPanel": 188,
     "CRT_Buttons_Socket": 1128,
@@ -41,6 +40,6 @@
     "CRT_Legends": 3408,
     "CRT_PowerLegend": 24,
     "CRT_Vents": 840,
-    "CRT_SonyBadge": 1632
+    "CRT_SonyBadge": 10676
   }
 }

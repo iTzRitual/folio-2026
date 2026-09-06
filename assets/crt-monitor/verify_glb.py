@@ -29,6 +29,12 @@ def mesh_bounds(name):
     primitive=g['meshes'][node['mesh']]['primitives'][0]
     return g['accessors'][primitive['attributes']['POSITION']]
 assert mesh_bounds('CRT_ControlPanel')['max'][2] < mesh_bounds('CRT_Housing')['max'][2]-.01
+assert not any(n['name']=='CRT_ControlBay' for n in g['nodes'])
+assert mesh_bounds('CRT_StatusDisplay')['max'][2] < .034
+assert mesh_bounds('CRT_Housing')['min'][2] < -.45
+fascia=mesh_bounds('CRT_ControlPanel')
+assert fascia['max'][0] > .224 and fascia['min'][0] < -.224
+assert fascia['max'][2] < .025 and fascia['min'][2] > .021
 assert any(n['name']=='CRT_SonyBadge' for n in g['nodes'])
 buttons=next(n for n in g['nodes'] if n['name']=='CRT_Buttons')
 assert 'COLOR_0' in g['meshes'][buttons['mesh']]['primitives'][0]['attributes']
