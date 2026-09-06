@@ -7,7 +7,31 @@ def remove_parts(prefixes):
 
 remove_parts(['CRT_ControlPanel', 'CRT_Buttons', 'CRT_Knobs', 'CRT_ControlTicks',
               'CRT_Trim', 'CRT_PowerSocket', 'CRT_StatusRing', 'CRT_StatusLight',
-              'CRT_Vents', 'CRT_RearConnect', 'CRT_RearVents', 'CRT_CaseFasteners'])
+              'CRT_Handles', 'CRT_Vents', 'CRT_RearConnect', 'CRT_RearVents', 'CRT_CaseFasteners'])
+
+for x in [-.217,.217]:
+    path=[(-.170,.039),(-.170,.053)]
+    for i in range(1,17):
+        a=math.pi*.5*i/16
+        path.append((-.177+.007*math.cos(a),.053+.007*math.sin(a)))
+    path.append((-.214,.060))
+    for i in range(1,17):
+        a=math.pi*.5+math.pi*.5*i/16
+        path.append((-.214+.007*math.cos(a),.053+.007*math.sin(a)))
+    path.append((-.221,.039))
+    vertices=[];faces=[];sides=32
+    for j,(y,z) in enumerate(path):
+        previous=path[max(0,j-1)];following=path[min(len(path)-1,j+1)]
+        dy=following[0]-previous[0];dz=following[1]-previous[1]
+        length=math.hypot(dy,dz)
+        for i in range(sides):
+            a=2*math.pi*i/sides;r=.004
+            vertices.append((x+r*math.cos(a),y-r*dz/length*math.sin(a),z+r*dy/length*math.sin(a)))
+        if j:
+            for i in range(sides):
+                a=(j-1)*sides+i;b=(j-1)*sides+(i+1)%sides
+                faces.append((a,a+sides,b+sides,b))
+    mesh('CRT_Handles',vertices,faces,black)
 
 plastic.diffuse_color=(.095,.103,.096,1)
 plastic.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(.095,.103,.096,1)
@@ -25,10 +49,10 @@ mod=housing.modifiers.new('Recessed control bay','BOOLEAN')
 mod.operation='DIFFERENCE';mod.solver='EXACT';mod.object=cutter
 bpy.ops.object.modifier_apply(modifier=mod.name)
 bpy.data.objects.remove(cutter,do_unlink=True)
-loft('CRT_ControlBay',[(.420,.066,.003,-.204,.043),(.417,.063,.003,-.204,.042),
-     (.414,.060,.003,-.204,.035),(.407,.054,.003,-.204,.024)],plastic)
-box('CRT_ControlPanel_Reveal',(0,-.204,.020),(.410,.057,.004),black,.002,3)
-box('CRT_ControlPanel',(0,-.204,.023),(.405,.053,.003),plastic,.0012,3)
+loft('CRT_ControlBay',[(.420,.066,.003,-.204,.043),(.419,.064,.002,-.204,.041),
+     (.417,.062,.002,-.204,.027),(.416,.061,.002,-.204,.024)],plastic)
+box('CRT_ControlPanel_Reveal',(0,-.204,.020),(.416,.061,.004),black,.002,3)
+box('CRT_ControlPanel',(0,-.204,.023),(.413,.058,.003),plastic,.0012,3)
 
 for col in range(3):
     for row in range(2):

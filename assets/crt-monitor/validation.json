@@ -1,12 +1,12 @@
 {
   "passed": true,
-  "triangles": 58960,
-  "mesh_objects": 33,
+  "triangles": 56032,
+  "mesh_objects": 32,
   "materials": 4,
-  "bytes": 1698648,
+  "bytes": 1597620,
   "identity_transforms": true,
   "screen_faces_positive_z": true,
   "screen_4_3": true,
   "textures": 0,
-  "draw_primitives": 33
+  "draw_primitives": 32
 }

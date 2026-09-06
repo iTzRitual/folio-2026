@@ -94,6 +94,7 @@ export function createCRTGeometry(model: Object3D, width: number) {
   const surface = new BufferGeometry();
   surface.setAttribute("position", new Float32BufferAttribute(vertices, 3));
   surface.setAttribute("uv", new Float32BufferAttribute(uv, 2));
+  surface.setAttribute("screenUv", new Float32BufferAttribute(uv, 2));
   surface.setAttribute("screenEdge", new Float32BufferAttribute(edge, 1));
   surface.setIndex(indices);
   surface.computeVertexNormals();
@@ -101,15 +102,18 @@ export function createCRTGeometry(model: Object3D, width: number) {
 
   const rimVertices: number[] = [];
   const rimIndices: number[] = [];
-  const bevel = CONFIG.phase2.CRT_INNER_BORDER_BEVEL;
+  const rimUvs: number[] = [];
+  const rimEdges: number[] = [];
   const steps = CONFIG.phase2.CRT_BORDER_SEGMENTS;
   for (let step = 0; step <= steps; step += 1) {
     const t = step / steps;
     for (const p of contour) {
       const x = center.x + (p.x - center.x) * (1 - (1 - sx) * t);
       const y = center.y + (p.y - center.y) * (1 - (1 - sy) * t);
-      const z = crown(x, y) - CONFIG.phase2.CRT_INNER_BORDER_RECESS * (1 - t)
-        + bevel * t + Math.sin(Math.PI * t) * bevel;
+      const z = crown(x, y);
+      rimUvs.push((x - center.x) / (halfWidth * sx) / 2 + 0.5,
+        (y - center.y) / (halfHeight * sy) / 2 + 0.5);
+      rimEdges.push(1);
       rimVertices.push(...transform(x, y, z));
     }
     if (step === 0) continue;
@@ -121,6 +125,9 @@ export function createCRTGeometry(model: Object3D, width: number) {
   }
   const border = new BufferGeometry();
   border.setAttribute("position", new Float32BufferAttribute(rimVertices, 3));
+  border.setAttribute("uv", new Float32BufferAttribute(rimUvs, 2));
+  border.setAttribute("screenUv", new Float32BufferAttribute(rimUvs, 2));
+  border.setAttribute("screenEdge", new Float32BufferAttribute(rimEdges, 1));
   border.setIndex(rimIndices);
   border.computeVertexNormals();
   border.computeBoundingSphere();
@@ -132,6 +139,7 @@ export function createCRTGeometry(model: Object3D, width: number) {
     previousAmount = amount;
     const position = surface.getAttribute("position");
     const texcoord = surface.getAttribute("uv");
+    const screenCoord = surface.getAttribute("screenUv");
     for (let i = 0; i < position.count; i += 1) {
       const x = finalUvs[i * 2] * 2 - 1;
       const y = finalUvs[i * 2 + 1] * 2 - 1;
@@ -143,11 +151,20 @@ export function createCRTGeometry(model: Object3D, width: number) {
         MathUtils.lerp((u - 0.5) * width, finalPositions[i * 3], amount),
         MathUtils.lerp((v - 0.5) * width / CONFIG.phase2.PLANE_ASPECT, finalPositions[i * 3 + 1], amount),
         finalPositions[i * 3 + 2] * amount);
-      texcoord.setXY(i, MathUtils.lerp(u, finalUvs[i * 2], amount),
-        MathUtils.lerp(v, finalUvs[i * 2 + 1], amount));
+      const screenU = MathUtils.lerp(u, finalUvs[i * 2], amount);
+      const screenV = MathUtils.lerp(v, finalUvs[i * 2 + 1], amount);
+      const px = screenU * 2 - 1;
+      const py = screenV * 2 - 1;
+      const inset = 1 - CONFIG.phase2.CRT_BORDER - CONFIG.phase2.CRT_EDGE_SOFTNESS;
+      const bow = CONFIG.phase2.CRT_ACTIVE_EDGE_BOW;
+      screenCoord.setXY(i, screenU, screenV);
+      texcoord.setXY(i,
+        MathUtils.lerp(screenU, (px * (1 + bow * py * py) / inset + 1) / 2, amount),
+        MathUtils.lerp(screenV, (py * (1 + bow * px * px) / inset + 1) / 2, amount));
     }
     position.needsUpdate = true;
     texcoord.needsUpdate = true;
+    screenCoord.needsUpdate = true;
     surface.computeVertexNormals();
     surface.computeBoundingSphere();
   };

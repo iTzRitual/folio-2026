@@ -10,12 +10,15 @@ import { crtMorph } from "@/lib/crtScreen";
 
 const vertexShader = `
 attribute float screenEdge;
+attribute vec2 screenUv;
 varying float vEdge;
 varying vec2 vUv;
+varying vec2 vScreenUv;
 varying vec3 vNormal;
 varying vec3 vView;
 void main() {
   vUv = uv;
+  vScreenUv = screenUv;
   vEdge = screenEdge;
   vec4 view = modelViewMatrix * vec4(position, 1.0);
   vNormal = normalize(normalMatrix * normal);
@@ -30,6 +33,8 @@ uniform sampler2D desktop;
 uniform vec2 texel;
 uniform float amount;
 uniform float border;
+uniform float screenAspect;
+uniform float edgeBow;
 uniform float softness;
 uniform float vignette;
 uniform float scanlines;
@@ -40,11 +45,11 @@ uniform float noise;
 uniform float glow;
 uniform float reflection;
 varying vec2 vUv;
+varying vec2 vScreenUv;
 varying vec3 vNormal;
 varying vec3 vView;
 void main() {
-  vec2 p = vUv * 2.0 - 1.0;
-  float edge = vEdge;
+  vec2 p = vScreenUv * 2.0 - 1.0;
   vec2 split = p * dot(p,p) * chromatic * amount;
   vec3 color = texture2D(desktop, vUv).rgb;
   color.r = texture2D(desktop, clamp(vUv + split, 0.0, 1.0)).r;
@@ -64,7 +69,12 @@ void main() {
   color *= 1.0 - vignette * pow(dot(p,p) * 0.5, 1.6) * amount;
   float grain = fract(sin(dot(floor(vUv / texel), vec2(12.9898,78.233))) * 43758.5453) - 0.5;
   color += grain * noise * amount;
-  float image = 1.0 - smoothstep(1.0 - border - softness, 1.0 - border, edge);
+  vec2 imageHalfSize = vec2(screenAspect, 1.0) * (1.0 - border);
+  vec2 raster = p * (1.0 + edgeBow * p.yx * p.yx);
+  vec2 distanceToEdge = abs(raster * vec2(screenAspect, 1.0)) - imageHalfSize;
+  vec2 antialias = max(vec2(softness), fwidth(distanceToEdge));
+  vec2 coverage = 1.0 - smoothstep(-antialias, vec2(0.0), distanceToEdge);
+  float image = coverage.x * coverage.y;
   color *= mix(1.0, image, amount);
   vec3 reflected = reflect(-normalize(vView), normalize(vNormal));
   float softbox = exp(-pow((reflected.x + 0.32) * 7.0, 2.0) - pow((reflected.y - 0.45) * 2.0, 2.0));
@@ -104,6 +114,8 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
         desktop: { value: target.texture },
         texel: { value: new THREE.Vector2(1 / target.width, 1 / target.height) },
         border: { value: tuning.CRT_BORDER },
+        screenAspect: { value: tuning.PLANE_ASPECT },
+        edgeBow: { value: tuning.CRT_ACTIVE_EDGE_BOW },
         softness: { value: tuning.CRT_EDGE_SOFTNESS },
         vignette: { value: tuning.CRT_VIGNETTE },
         scanlines: { value: tuning.CRT_SCANLINES },
@@ -148,14 +160,8 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
 
   return <>
     {createPortal(children, resources.scene)}
-    <mesh name="CRT_RecessedInnerBorder" geometry={borderGeometry} raycast={() => null}>
-      <meshPhysicalMaterial color={CONFIG.phase2.CRT_BORDER_COLOR}
-        roughness={CONFIG.phase2.CRT_BORDER_ROUGHNESS}
-        envMapIntensity={CONFIG.phase2.CRT_BORDER_ENV_INTENSITY}
-        specularIntensity={CONFIG.phase2.CRT_BORDER_SPECULAR_INTENSITY}
-        clearcoatRoughness={CONFIG.phase2.CRT_BORDER_CLEARCOAT_ROUGHNESS}
-        clearcoat={CONFIG.phase2.CRT_BORDER_CLEARCOAT} />
-    </mesh>
+    <mesh name="CRT_BlackGlassMargin" geometry={borderGeometry}
+      material={resources.material} raycast={() => null} />
     <mesh ref={meshRef} name="CRT_LiveScreen" geometry={geometry}
       material={resources.material} raycast={() => null} />
 

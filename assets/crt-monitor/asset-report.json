@@ -1,6 +1,6 @@
 {
-  "triangles": 58960,
-  "objects": 33,
+  "triangles": 56032,
+  "objects": 32,
   "materials": 4,
   "screen": {
     "width": 0.352,
@@ -18,11 +18,10 @@
     "CRT_Glass": 4096,
     "CRT_StatusDisplay_Bezel": 428,
     "CRT_StatusDisplay": 380,
-    "CRT_Handles_Mount": 2288,
-    "CRT_Handles": 5120,
     "CRT_RearServicePanel": 96,
     "CRT_RearPowerInlet": 90,
     "CRT_Stand": 704,
+    "CRT_Handles": 4480,
     "CRT_ControlBay": 768,
     "CRT_ControlPanel_Reveal": 156,
     "CRT_ControlPanel": 188,

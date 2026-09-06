@@ -3,7 +3,7 @@
 Photo-inspired broadcast monitor with a recessed lower control bay, ivory pushbuttons, knurled dark knobs, bias/gain wells, panel legends, and a raised Sony wordmark. Front details receive the geometry budget; the top and rear remain simple. Dimensions preserve the portfolio integration and are not a measured factory replica.
 
 - `crt-monitor.blend`: editable scene with applied modifiers and a separate studio collection.
-- `crt-monitor.glb`: 58,960 triangles, 33 mesh objects, four shared PBR materials, approximately 1.70 MB. No baked screen content or image textures.
+- `crt-monitor.glb`: 56,032 triangles, 32 mesh objects, four shared PBR materials, approximately 1.60 MB. No baked screen content or image textures.
 - `preview.png` and `front.png`: inspection renders.
 - `build_crt.py` and `refine_bvm.py`: reproducible base model and reference refinement.
 - `verify_glb.py`, `asset-report.json`, and `validation.json`: export checks.
@@ -14,7 +14,7 @@ Coordinates are meters, X horizontal, Y vertical, front +Z. Every exported objec
 
 `CRT_Screen` preserves its 0.352 × 0.264 m dimensions, positive-Z normals, UVs, and crown at Z=0. `CRT_Glass` supplies the peripheral contour. The portfolio hides these source meshes and uses their geometry in `Phase2CRTScreen` to present the live desktop. `Phase2CRT` remains inside the same final surface group, preserving the reveal and desktop interaction coordinates.
 
-Hardware colors use vertex colors within one shared accent material. The Sony badge and labels are geometry, avoiding additional texture fetches. The green power indicator is colored hardware rather than an additional emissive material.
+Hardware colors use vertex colors within one shared accent material. The Sony badge and labels are geometry, avoiding additional texture fetches. The control bay has narrow sloped edges around its broad recessed face. Handles have a uniform tube diameter without mounting collars. The live screen margin shares the curved screen shader and reflections instead of using a separate plastic bevel. The green power indicator is colored hardware rather than an additional emissive material.
 
 ## Rebuild
 
