@@ -28,7 +28,8 @@ function affordableTaps(width: number, height: number) {
 export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     const scroll = useDebugSettings().scrollBlur;
     const { inputMode } = useSceneCapabilities();
-    const { revealProgressRef } = useHeroTransition();
+    const { revealProgressRef, scrollAberrationVelocityRef } =
+      useHeroTransition();
     const { size } = useThree();
     const taps = Math.min(
       scroll.taps,
@@ -42,7 +43,7 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     const prevMouse = useRef(new Vector2(0.5, 0.5));
     const intensity = useRef(0.0);
     const prevScrollY = useRef<number | null>(null);
-    const scrollVelocity = useRef(0.0);
+    const targetScrollVelocity = useRef(0.0);
 
     useEffect(() => {
       const aspectRatio = size.width / size.height;
@@ -54,7 +55,8 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
     }, [size, effect]);
 
     useFrame(({ pointer }, delta) => {
-      const phase2Active =
+      const phase2Started = revealProgressRef.current > 0;
+      const phase2SurfaceActive =
         revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
       const mappedX = (pointer.x + 1) / 2;
       const mappedY = (pointer.y + 1) / 2;
@@ -102,39 +104,61 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
         prevScrollY.current === null ? 0 : scrollY - prevScrollY.current;
       prevScrollY.current = scrollY;
 
-      const targetScrollVel = MathUtils.clamp(
-        (scrollDelta / size.height) *
-          scroll.velocityScale *
-          (CONFIG.customAberration.VEL_MULT / safeDelta),
-        -CONFIG.customAberration.SCROLL_VEL_CLAMP,
-        CONFIG.customAberration.SCROLL_VEL_CLAMP,
-      );
+      if (phase2Started) {
+        targetScrollVelocity.current *= Math.exp(
+          -60 * CONFIG.scrollTimeline.LENIS_LERP * delta,
+        );
+      } else {
+        targetScrollVelocity.current = MathUtils.clamp(
+          (scrollDelta / size.height) *
+            scroll.velocityScale *
+            (CONFIG.customAberration.VEL_MULT / safeDelta),
+          -CONFIG.customAberration.SCROLL_VEL_CLAMP,
+          CONFIG.customAberration.SCROLL_VEL_CLAMP,
+        );
+      }
+
+      if (
+        Math.abs(targetScrollVelocity.current) <
+        CONFIG.customAberration.SCROLL_MIN
+      ) {
+        targetScrollVelocity.current = 0.0;
+      }
+
+      const targetScrollVel = targetScrollVelocity.current;
 
       const scrollLerpMult =
-        Math.abs(targetScrollVel) > Math.abs(scrollVelocity.current)
+        Math.abs(targetScrollVel) >
+        Math.abs(scrollAberrationVelocityRef.current)
           ? scroll.attack
           : scroll.release;
 
-      scrollVelocity.current = MathUtils.lerp(
-        scrollVelocity.current,
+      scrollAberrationVelocityRef.current = MathUtils.lerp(
+        scrollAberrationVelocityRef.current,
         targetScrollVel,
         1 - Math.exp(-scrollLerpMult * delta),
       );
 
-      if (Math.abs(scrollVelocity.current) < CONFIG.customAberration.SCROLL_MIN) {
-        scrollVelocity.current = 0.0;
+      if (
+        Math.abs(scrollAberrationVelocityRef.current) <
+        CONFIG.customAberration.SCROLL_MIN
+      ) {
+        scrollAberrationVelocityRef.current = 0.0;
       }
 
       effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
       effect.uniforms.get("u_aberrationIntensity")!.value =
-        !phase2Active && inputMode === "fine" ? intensity.current : 0;
+        !phase2SurfaceActive && inputMode === "fine" ? intensity.current : 0;
       effect
         .uniforms
         .get("u_mouseVelocity")!
-        .value.set(phase2Active ? 0 : velX, phase2Active ? 0 : velY);
-      effect.uniforms.get("u_scrollVelocity")!.value = phase2Active
+        .value.set(
+          phase2SurfaceActive ? 0 : velX,
+          phase2SurfaceActive ? 0 : velY,
+        );
+      effect.uniforms.get("u_scrollVelocity")!.value = phase2SurfaceActive
         ? 0
-        : scrollVelocity.current;
+        : scrollAberrationVelocityRef.current;
       const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
       effect.uniforms.get("u_scrollBlur")!.value =
         scroll.blur * mobileIntensity;

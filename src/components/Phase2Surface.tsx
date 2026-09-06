@@ -1667,7 +1667,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     leftX,
     rightX,
   } = useHeroLayout();
-  const { revealProgressRef } = useHeroTransition();
+  const { revealProgressRef, scrollAberrationVelocityRef } =
+    useHeroTransition();
   const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { scrollBlur: scroll, phase2 } = useDebugSettings();
@@ -1717,8 +1718,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const mouseIntensityRef = useRef(0);
-  const previousScrollYRef = useRef<number | null>(null);
-  const scrollVelocityRef = useRef(0);
   const intersectionsRef = useRef<THREE.Intersection[]>([]);
 
   const taps = Math.min(
@@ -1903,8 +1902,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     suppressVSCodeClickRef.current = false;
     setGeniePresentation(genieUniforms, 0, false);
     setGeniePresentation(vscodeGenieUniforms, 0, false);
-    previousScrollYRef.current = null;
-    scrollVelocityRef.current = 0;
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
     if (surfaceGroupRef.current) {
@@ -2739,41 +2736,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             CONFIG.customAberration.VEL_MULT) /
           safeDelta
         : 0;
-    const scrollY = window.scrollY;
-    const scrollDelta =
-      previousScrollYRef.current === null
-        ? 0
-        : scrollY - previousScrollYRef.current;
-    previousScrollYRef.current = scrollY;
-    const targetScrollVelocity = THREE.MathUtils.clamp(
-      ((scrollDelta / size.height) *
-        scroll.velocityScale *
-        CONFIG.customAberration.VEL_MULT) /
-        safeDelta,
-      -CONFIG.customAberration.SCROLL_VEL_CLAMP,
-      CONFIG.customAberration.SCROLL_VEL_CLAMP,
-    );
-    const scrollLerp =
-      Math.abs(targetScrollVelocity) > Math.abs(scrollVelocityRef.current)
-        ? scroll.attack
-        : scroll.release;
-
-    scrollVelocityRef.current = THREE.MathUtils.lerp(
-      scrollVelocityRef.current,
-      targetScrollVelocity,
-      1 - Math.exp(-scrollLerp * delta),
-    );
-
-    if (Math.abs(scrollVelocityRef.current) < CONFIG.customAberration.SCROLL_MIN) {
-      scrollVelocityRef.current = 0;
-    }
-
     const uniforms = pageAberrationMaterialRef.current.uniforms;
     uniforms.u_mouse.value.copy(currentMouseRef.current);
     uniforms.u_aberrationIntensity.value =
       inputMode === "fine" ? mouseIntensityRef.current : 0;
     uniforms.u_mouseVelocity.value.set(mouseVelocityX, mouseVelocityY);
-    uniforms.u_scrollVelocity.value = scrollVelocityRef.current;
+    uniforms.u_scrollVelocity.value = scrollAberrationVelocityRef.current;
     const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
     uniforms.u_scrollBlur.value = scroll.blur * mobileIntensity;
     uniforms.u_scrollSplit.value = scroll.split * mobileIntensity;

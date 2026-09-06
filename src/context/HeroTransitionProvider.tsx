@@ -19,6 +19,7 @@ export function HeroTransitionProvider({
   const progressRef = useRef(0);
   const detailsScrollRef = useRef(0);
   const revealProgressRef = useRef(0);
+  const scrollAberrationVelocityRef = useRef(0);
   const detailsOverflowViewportsRef = useRef(detailsOverflowViewports);
   const modelAnchorRef = useRef({
     xFraction: 0,
@@ -91,6 +92,7 @@ export function HeroTransitionProvider({
         progressRef,
         detailsScrollRef,
         revealProgressRef,
+        scrollAberrationVelocityRef,
         modelAnchorRef,
       }}
     >

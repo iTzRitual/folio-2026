@@ -39,7 +39,10 @@ const DynamicDebugPanel = dynamic(() => import("@/components/DebugPanel"), {
 
 const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
-const LENIS_OPTIONS = { autoRaf: false } as const;
+const LENIS_OPTIONS = {
+    autoRaf: false,
+    lerp: CONFIG.scrollTimeline.LENIS_LERP,
+} as const;
 
 const RESIZE_DEBOUNCE_MS = 150;
 

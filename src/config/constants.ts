@@ -42,6 +42,7 @@ export const CONFIG = {
     },
     scrollTimeline: {
         VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
+        LENIS_LERP: 0.1,
     },
     phase2: {
         CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd-closed-badge",
