@@ -4,12 +4,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const generator = path.join(root, "scripts", "generate-source-manifest.mjs");
-const nextBinary = path.join(
-  root,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "next.cmd" : "next",
-);
+const nextCli = path.join(root, "node_modules", "next", "dist", "bin", "next");
 const ignoredPrefixes = [
   ".agents/",
   ".claude/",
@@ -89,7 +84,7 @@ function shouldRegenerate(filename) {
 
 await regenerate();
 
-const next = spawn(nextBinary, ["dev", ...process.argv.slice(2)], {
+const next = spawn(process.execPath, [nextCli, "dev", ...process.argv.slice(2)], {
   cwd: root,
   env: process.env,
   stdio: "inherit",
