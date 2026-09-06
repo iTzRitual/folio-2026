@@ -1,7 +1,8 @@
 "use client";
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useGLTF } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -31,6 +32,9 @@ import {
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
+import { Phase2CRT } from "./Phase2CRT";
+import { Phase2CRTScreen } from "./Phase2CRTScreen";
+import { createCRTGeometry, crtMorph } from "@/lib/crtScreen";
 
 type Phase2Tuning = DebugSettings["phase2"];
 
@@ -111,25 +115,6 @@ function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry
     CONFIG.phase2.PLANE_SEGMENTS_X,
     CONFIG.phase2.PLANE_SEGMENTS_Y,
   );
-}
-
-function updatePlaneCurve(
-  geometry: THREE.PlaneGeometry,
-  width: number,
-  height: number,
-  curveDepth: number,
-) {
-  const positions = geometry.attributes.position;
-
-  for (let index = 0; index < positions.count; index += 1) {
-    const x = positions.getX(index) / (width / 2);
-    const y = positions.getY(index) / (height / 2);
-    positions.setZ(index, curveDepth * (1 - x * x) * (1 - y * y));
-  }
-
-  positions.needsUpdate = true;
-  geometry.computeVertexNormals();
-  geometry.computeBoundingSphere();
 }
 
 function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
@@ -1675,6 +1660,7 @@ function isThemeToggleHit({
 }
 
 export function Phase2Surface({ children }: { children: ReactNode }) {
+  const { scene: crtModel } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
   const {
     viewport,
     size: layoutSize,
@@ -1712,7 +1698,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   );
   const capturedRef = useRef(false);
   const capturePendingRef = useRef(false);
-  const lastCurveDepthRef = useRef(-1);
   const htmlOverlayHiddenRef = useRef(false);
   const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
   const browserLayoutRef = useRef<ReturnType<typeof getBrowserLayout> | null>(null);
@@ -1779,16 +1764,22 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       CONFIG.phase2.PLANE_ASPECT,
   );
   const planeHeight = planeWidth / CONFIG.phase2.PLANE_ASPECT;
-  const maxCurveDepth =
-    Math.min(planeWidth, planeHeight) * CONFIG.phase2.PLANE_CURVE_DEPTH_MULT;
-  const planeGeometry = useMemo(
+  const desktopGeometry = useMemo(
     () => createPlaneGeometry(planeWidth, planeHeight),
-    [planeHeight, planeWidth],
+    [planeWidth, planeHeight],
+  );
+  useEffect(() => () => desktopGeometry.dispose(), [desktopGeometry]);
+  const { surface: planeGeometry, border: borderGeometry, updateSurface } = useMemo(
+    () => createCRTGeometry(crtModel, planeWidth),
+    [crtModel, planeWidth],
   );
 
   useEffect(() => {
-    return () => planeGeometry.dispose();
-  }, [planeGeometry]);
+    return () => {
+      planeGeometry.dispose();
+      borderGeometry.dispose();
+    };
+  }, [planeGeometry, borderGeometry]);
 
   useEffect(() => {
     return () => pageAberrationMaterial.dispose();
@@ -1879,7 +1870,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useEffect(() => {
     capturedRef.current = false;
     capturePendingRef.current = false;
-    lastCurveDepthRef.current = -1;
     targetRef.current?.dispose();
     targetRef.current = null;
     chromeTextureRef.current?.dispose();
@@ -2550,6 +2540,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         ? 1
         : 0
       : scrollReveal;
+    updateSurface(crtMorph(reveal, prefersReducedMotion));
     const hideHtmlOverlays = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
 
     if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
@@ -2577,7 +2568,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const targetZ = planeZ + restDistance * fit;
 
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
-      camera.position.set(0, 0, THREE.MathUtils.lerp(restZ, targetZ, reveal));
+      const cameraProgress = THREE.MathUtils.clamp(
+        (reveal - CONFIG.phase2.CRT_MORPH_END) /
+          (1 - CONFIG.phase2.CRT_MORPH_END), 0, 1,
+      );
+      camera.position.set(0, 0, THREE.MathUtils.lerp(restZ, targetZ, cameraProgress));
       camera.updateMatrixWorld();
     }
 
@@ -2585,24 +2580,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       ? reveal
       : THREE.MathUtils.mapLinear(
           reveal,
-          CONFIG.phase2.BROWSER_REVEAL_START,
+          CONFIG.phase2.CRT_MORPH_END,
           1,
           0,
           1,
         );
-    const curveDepth =
-      maxCurveDepth *
-      THREE.MathUtils.smoothstep(
-        reveal,
-        CONFIG.phase2.PLANE_CURVE_START,
-        CONFIG.phase2.PLANE_CURVE_END,
-      );
-
-    if (Math.abs(curveDepth - lastCurveDepthRef.current) > 0.0001) {
-      updatePlaneCurve(planeGeometry, planeWidth, planeHeight, curveDepth);
-      lastCurveDepthRef.current = curveDepth;
-    }
-
     if (!capturedRef.current && reveal >= CONFIG.phase2.BROWSER_REVEAL_START) {
       if (!capturePendingRef.current) {
         capturePendingRef.current = true;
@@ -3209,8 +3191,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         position={[0, 0, CONFIG.phase2.PLANE_Z]}
         visible={false}
       >
+        <Suspense fallback={null}>
+          <Phase2CRT width={planeWidth} />
+        </Suspense>
+        <Phase2CRTScreen width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <mesh
-          geometry={planeGeometry}
+          geometry={desktopGeometry}
           renderOrder={9}
           frustumCulled={false}
           raycast={() => null}
@@ -3225,7 +3211,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         </mesh>
         <group ref={windowGroupRef}>
           <mesh
-            geometry={planeGeometry}
+            geometry={desktopGeometry}
             renderOrder={10}
             frustumCulled={false}
             raycast={() => null}
@@ -3233,7 +3219,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             <primitive object={windowChromeMaterial} attach="material" />
           </mesh>
           <mesh
-            geometry={planeGeometry}
+            geometry={desktopGeometry}
             renderOrder={11}
             frustumCulled={false}
             raycast={() => null}
@@ -3243,7 +3229,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         </group>
         <group ref={vscodeWindowGroupRef} visible={false}>
           <mesh
-            geometry={planeGeometry}
+            geometry={desktopGeometry}
             renderOrder={11}
             frustumCulled={false}
             raycast={() => null}
@@ -3252,7 +3238,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           </mesh>
         </group>
         <mesh
-          geometry={planeGeometry}
+          geometry={desktopGeometry}
           renderOrder={12}
           frustumCulled={false}
           raycast={() => null}
@@ -3267,7 +3253,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           />
         </mesh>
         <mesh
-          geometry={planeGeometry}
+          geometry={desktopGeometry}
           renderOrder={13}
           frustumCulled={false}
           raycast={() => null}
@@ -3281,6 +3267,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             toneMapped={false}
           />
         </mesh>
+        </Phase2CRTScreen>
         <mesh
           ref={interactionMeshRef}
           geometry={planeGeometry}
