@@ -24,6 +24,14 @@ assert abs(a['max'][0]-.176)<1e-6 and abs(a['min'][0]+.176)<1e-6
 assert abs(a['max'][1]-.132)<1e-6 and abs(a['min'][1]+.132)<1e-6
 assert abs(a['max'][2])<1e-6
 assert 'TEXCOORD_0' in p['attributes']
+def mesh_bounds(name):
+    node=next(n for n in g['nodes'] if n['name']==name)
+    primitive=g['meshes'][node['mesh']]['primitives'][0]
+    return g['accessors'][primitive['attributes']['POSITION']]
+assert mesh_bounds('CRT_ControlPanel')['max'][2] < mesh_bounds('CRT_Housing')['max'][2]-.01
+assert any(n['name']=='CRT_SonyBadge' for n in g['nodes'])
+buttons=next(n for n in g['nodes'] if n['name']=='CRT_Buttons')
+assert 'COLOR_0' in g['meshes'][buttons['mesh']]['primitives'][0]['attributes']
 bin_start=20+size+8
 norm=g['accessors'][p['attributes']['NORMAL']]
 view=g['bufferViews'][norm['bufferView']]

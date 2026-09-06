@@ -202,6 +202,8 @@ for x in [-.176,.176]:
     for z in [-.280,-.025]:
         box('CRT_Stand',(x,-.247,z),(.065,.018,.061),black,.005,6)
 
+exec(compile((OUT/'refine_bvm.py').read_text(),str(OUT/'refine_bvm.py'),'exec'))
+
 groups=sorted(set(o.name.split('.')[0] for o in bpy.context.scene.objects if o.type=='MESH'))
 for prefix in groups:
     obs=[o for o in bpy.context.scene.objects if o.type=='MESH' and (o.name==prefix or o.name.startswith(prefix+'.'))]
@@ -225,6 +227,7 @@ bpy.ops.export_scene.gltf(filepath=str(OUT/'crt-monitor.glb'),export_format='GLB
 bpy.ops.object.select_all(action='DESELECT')
 
 scene=bpy.context.scene
+bpy.context.preferences.filepaths.save_version=0
 scene.unit_settings.system='METRIC'
 scene.render.engine='CYCLES'
 scene.cycles.samples=48

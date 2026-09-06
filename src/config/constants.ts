@@ -44,7 +44,7 @@ export const CONFIG = {
         VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
     },
     phase2: {
-        CRT_MODEL_URL: "/glbs/crt-monitor.glb",
+        CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd",
         CRT_SCREEN_CLEARANCE: 0.0005,
         CRT_SCREEN_RINGS: 48,
         CRT_CONTOUR_STEP: 0.008,
