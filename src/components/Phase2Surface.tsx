@@ -2,7 +2,7 @@
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Image as DreiImage, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -35,6 +35,10 @@ import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { Phase2CRT } from "./Phase2CRT";
 import { Phase2CRTScreen } from "./Phase2CRTScreen";
+import {
+  Phase2PlayStationSignal,
+  type PlayStationSignalHandle,
+} from "./Phase2PlayStationSignal";
 import { createCRTGeometry, crtMorph } from "@/lib/crtScreen";
 
 type Phase2Tuning = DebugSettings["phase2"];
@@ -1695,6 +1699,16 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const dockRendererRef = useRef<DockRenderer | null>(null);
   const toolbarTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const toolbarRendererRef = useRef<ToolbarRenderer | null>(null);
+  const desktopSignalGroupRef = useRef<THREE.Group>(null);
+  const playStationSignalRef = useRef<PlayStationSignalHandle>(null);
+  const syncPlayStationSignal = useCallback(() => {
+    playStationSignalRef.current?.syncFromMonitor();
+  }, []);
+  useFrame(() => {
+    if (desktopSignalGroupRef.current) {
+      desktopSignalGroupRef.current.visible = monitorHasSignal(monitorState);
+    }
+  });
   const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
   const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
     null,
@@ -3182,9 +3196,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           transparent={false}
         />
         <Suspense fallback={null}>
-          <Phase2CRT width={planeWidth} monitorState={monitorState} />
+          <Phase2CRT
+            width={planeWidth}
+            monitorState={monitorState}
+            onButtonPress={syncPlayStationSignal}
+          />
         </Suspense>
         <Phase2CRTScreen monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
+        <group ref={desktopSignalGroupRef}>
         <mesh
           geometry={desktopGeometry}
           renderOrder={9}
@@ -3257,6 +3276,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             toneMapped={false}
           />
         </mesh>
+        </group>
+        <Phase2PlayStationSignal
+          ref={playStationSignalRef}
+          geometry={desktopGeometry}
+          monitorState={monitorState}
+        />
         </Phase2CRTScreen>
         <mesh
           ref={interactionMeshRef}

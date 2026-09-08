@@ -36,7 +36,11 @@ export function createMonitorState(): MonitorState {
 export function toggleMonitorButton(state: MonitorState, control: MonitorButton) {
   if (control === "power") {
     const power = !state.power;
+    const inputMode = state.inputMode;
+    const lineInput = state.lineInput;
+    const rgbMode = state.rgbMode;
     Object.assign(state, MONITOR_DEFAULTS, { power });
+    Object.assign(state, { inputMode, lineInput, rgbMode });
   } else if (state.power) {
     if (control === "inputMode") state.inputMode = state.inputMode === "LINE" ? "RGB" : "LINE";
     else if (control === "inputSelect") {

@@ -87,7 +87,7 @@ export function createMonitorScreenRuntime() {
       uniforms.monitorUnderScan.value = underScan;
       uniforms.monitorDelay.value = Number(state.hvDelay);
       uniforms.monitorInput.value = state.inputMode === "LINE" ? 0 : state.rgbMode === "RGB" ? 1 : 2;
-      uniforms.monitorNoSignal.value = Number(state.inputMode === "LINE" && state.lineInput === "B");
+      uniforms.monitorNoSignal.value = 0;
       uniforms.monitorBlue.value = Number(state.blueOnly);
       uniforms.monitorAperture.value = state.aperture;
       uniforms.monitorBrightness.value = state.brightness;

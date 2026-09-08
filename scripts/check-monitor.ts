@@ -69,17 +69,24 @@ for (const control of controls.controls.filter(control => control.kind === 'butt
   toggleMonitorButton(state, control.id as Parameters<typeof toggleMonitorButton>[1]);
 }
 screen.update(uniforms, state, 1, false);
+const selectedInput = {
+  inputMode: state.inputMode,
+  lineInput: state.lineInput,
+  rgbMode: state.rgbMode,
+};
 toggleMonitorButton(state, 'power');
-assert.deepEqual(state, { ...MONITOR_DEFAULTS, power: false });
+assert.deepEqual(state, { ...MONITOR_DEFAULTS, ...selectedInput, power: false });
 for (const knob of knobs) setMonitorKnob(state, knob.id as MonitorKnob, 1);
 toggleMonitorButton(state, 'blueOnly');
-assert.deepEqual(state, { ...MONITOR_DEFAULTS, power: false });
+assert.deepEqual(state, { ...MONITOR_DEFAULTS, ...selectedInput, power: false });
 screen.update(uniforms, state, 0.35, false);
 assert.equal(uniforms.monitorPowerLevel.value, 0);
 toggleMonitorButton(state, 'power');
-assert.deepEqual(state, MONITOR_DEFAULTS);
+assert.deepEqual(state, { ...MONITOR_DEFAULTS, ...selectedInput });
 screen.update(uniforms, state, 0.48, false);
 assert.equal(uniforms.monitorPowerLevel.value, 1);
+toggleMonitorButton(state, 'inputMode');
+toggleMonitorButton(state, 'inputSelect');
 for (let i = 0; i < 100; i++) {
   toggleMonitorButton(state, 'blueOnly');
   controls.syncPhysicalControlsFromState(state, 1, false);

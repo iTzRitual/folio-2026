@@ -10,7 +10,11 @@ import { knobNormalized, resetMonitorKnob, setMonitorKnob, toggleMonitorButton, 
 import { lockRootScroll, releaseRootScroll, rootScrollLock } from "@/lib/rootScrollLock";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
-export function Phase2CRT({ width, monitorState }: { width: number; monitorState: MonitorState }) {
+export function Phase2CRT({ width, monitorState, onButtonPress }: {
+  width: number;
+  monitorState: MonitorState;
+  onButtonPress?: (button: MonitorButton) => void;
+}) {
   const { scene } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
   const three = useThree();
   const reducedMotion = usePrefersReducedMotion();
@@ -92,7 +96,9 @@ export function Phase2CRT({ width, monitorState }: { width: number; monitorState
       if (!control) return;
       stop(event);
       if (control.kind === "button") {
-        toggleMonitorButton(monitorState, control.id as MonitorButton);
+        const button = control.id as MonitorButton;
+        toggleMonitorButton(monitorState, button);
+        onButtonPress?.(button);
         return;
       }
       const target = event.target instanceof Element ? event.target : canvas;
@@ -150,7 +156,7 @@ export function Phase2CRT({ width, monitorState }: { width: number; monitorState
       window.removeEventListener("touchmove", preventTouchScroll, true);
       controls.dispose(); runtime.current = null;
     };
-  }, [model, monitorState, runtime, three]);
+  }, [model, monitorState, onButtonPress, runtime, three]);
 
   useFrame((_, delta) => runtime.current?.syncPhysicalControlsFromState(monitorState, delta, reducedMotion));
   const scale = width / screenWidth;
