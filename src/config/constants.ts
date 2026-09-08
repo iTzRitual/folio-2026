@@ -45,6 +45,12 @@ export const CONFIG = {
         LENIS_LERP: 0.1,
     },
     phase2: {
+        TEMP_BACKGROUND_URL: "/images/temporary-crt-background.jpg",
+        TEMP_BACKGROUND_ASPECT: 1470 / 980,
+        TEMP_BACKGROUND_X: 0,
+        TEMP_BACKGROUND_Y: 0,
+        TEMP_BACKGROUND_Z: -1.5,
+        TEMP_BACKGROUND_SCALE: 50,
         CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd-closed-badge",
         CRT_SCREEN_CLEARANCE: 0.0005,
         CRT_SCREEN_RINGS: 48,

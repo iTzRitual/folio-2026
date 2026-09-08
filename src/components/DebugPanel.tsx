@@ -19,8 +19,18 @@ const BIO_SCHEMA = {
 };
 
 const PREVIEW_SCHEMA = {
-    sizeMult: { value: D.projectPreview.sizeMult, min: 0.5, max: 2.5, step: 0.05 },
-    bendMult: { value: D.projectPreview.bendMult, min: 0, max: 0.6, step: 0.005 },
+    sizeMult: {
+        value: D.projectPreview.sizeMult,
+        min: 0.5,
+        max: 2.5,
+        step: 0.05,
+    },
+    bendMult: {
+        value: D.projectPreview.bendMult,
+        min: 0,
+        max: 0.6,
+        step: 0.005,
+    },
     aberrationMult: {
         value: D.projectPreview.aberrationMult,
         min: 0,
@@ -69,7 +79,12 @@ const PREVIEW_SCHEMA = {
 const MATERIAL_SCHEMA = {
     thickness: { value: D.material.thickness, min: 0, max: 5, step: 0.05 },
     roughness: { value: D.material.roughness, min: 0, max: 1, step: 0.1 },
-    transmission: { value: D.material.transmission, min: 0, max: 1, step: 0.01 },
+    transmission: {
+        value: D.material.transmission,
+        min: 0,
+        max: 1,
+        step: 0.01,
+    },
     ior: { value: D.material.ior, min: 0, max: 3, step: 0.1 },
     chromaticAberration: {
         value: D.material.chromaticAberration,
@@ -88,7 +103,12 @@ const SKULL_ROTATION_SCHEMA = {
 };
 
 const CURL_SCHEMA = {
-    foldOffsetMult: { value: D.curl.foldOffsetMult, min: -0.3, max: 0.3, step: 0.005 },
+    foldOffsetMult: {
+        value: D.curl.foldOffsetMult,
+        min: -0.3,
+        max: 0.3,
+        step: 0.005,
+    },
     bottomOffsetMult: {
         value: D.curl.bottomOffsetMult,
         min: 0,
@@ -97,7 +117,12 @@ const CURL_SCHEMA = {
     },
     radiusMult: { value: D.curl.radiusMult, min: 0.03, max: 1, step: 0.005 },
     maxAngle: { value: D.curl.maxAngle, min: 0.2, max: 3, step: 0.01 },
-    fadeAngleStart: { value: D.curl.fadeAngleStart, min: 0, max: 2, step: 0.01 },
+    fadeAngleStart: {
+        value: D.curl.fadeAngleStart,
+        min: 0,
+        max: 2,
+        step: 0.01,
+    },
     fadeAngleEnd: { value: D.curl.fadeAngleEnd, min: 0.05, max: 3, step: 0.01 },
 };
 
@@ -121,7 +146,12 @@ const HEADER_SCHEMA = {
 };
 
 const EDGE_FADE_SCHEMA = {
-    topSpanMult: { value: D.edgeFade.topSpanMult, min: 0.05, max: 2, step: 0.01 },
+    topSpanMult: {
+        value: D.edgeFade.topSpanMult,
+        min: 0.05,
+        max: 2,
+        step: 0.01,
+    },
     bottomSpanMult: {
         value: D.edgeFade.bottomSpanMult,
         min: 0.01,
@@ -131,7 +161,12 @@ const EDGE_FADE_SCHEMA = {
 };
 
 const SCROLL_BLUR_SCHEMA = {
-    velocityScale: { value: D.scrollBlur.velocityScale, min: 1, max: 60, step: 1 },
+    velocityScale: {
+        value: D.scrollBlur.velocityScale,
+        min: 1,
+        max: 60,
+        step: 1,
+    },
     blur: { value: D.scrollBlur.blur, min: 0, max: 0.12, step: 0.001 },
     split: { value: D.scrollBlur.split, min: 0, max: 0.03, step: 0.0005 },
     taps: {
@@ -146,28 +181,72 @@ const SCROLL_BLUR_SCHEMA = {
         max: 1.5,
         step: 0.05,
     },
-    vignetteInner: { value: D.scrollBlur.vignetteInner, min: 0, max: 0.7, step: 0.01 },
+    vignetteInner: {
+        value: D.scrollBlur.vignetteInner,
+        min: 0,
+        max: 0.7,
+        step: 0.01,
+    },
     vignetteOuter: {
         value: D.scrollBlur.vignetteOuter,
         min: 0.05,
         max: 1.2,
         step: 0.01,
     },
-    vignetteFloor: { value: D.scrollBlur.vignetteFloor, min: 0, max: 1, step: 0.05 },
+    vignetteFloor: {
+        value: D.scrollBlur.vignetteFloor,
+        min: 0,
+        max: 1,
+        step: 0.05,
+    },
     attack: { value: D.scrollBlur.attack, min: 5, max: 80, step: 1 },
     release: { value: D.scrollBlur.release, min: 2, max: 40, step: 1 },
 };
 
 const EXCLUSION_SCHEMA = {
     strength: { value: D.headerExclusion.strength, min: 0, max: 1, step: 0.05 },
-    threshold: { value: D.headerExclusion.threshold, min: 0, max: 0.5, step: 0.005 },
-    softness: { value: D.headerExclusion.softness, min: 0.01, max: 0.6, step: 0.005 },
+    threshold: {
+        value: D.headerExclusion.threshold,
+        min: 0,
+        max: 0.5,
+        step: 0.005,
+    },
+    softness: {
+        value: D.headerExclusion.softness,
+        min: 0.01,
+        max: 0.6,
+        step: 0.005,
+    },
 };
 
 const PHASE2_SCHEMA = {
+    backgroundX: { value: D.phase2.backgroundX, min: -10, max: 10, step: 0.05 },
+    backgroundY: { value: D.phase2.backgroundY, min: -10, max: 10, step: 0.05 },
+    backgroundZ: {
+        value: D.phase2.backgroundZ,
+        min: -10,
+        max: -0.3,
+        step: 0.05,
+    },
+    backgroundScale: {
+        value: D.phase2.backgroundScale,
+        min: 1,
+        max: 100,
+        step: 0.1,
+    },
     dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
-    dockOffsetX: { value: D.phase2.dockOffsetX, min: -0.3, max: 0.3, step: 0.005 },
-    dockOffsetY: { value: D.phase2.dockOffsetY, min: -0.3, max: 0.045, step: 0.005 },
+    dockOffsetX: {
+        value: D.phase2.dockOffsetX,
+        min: -0.3,
+        max: 0.3,
+        step: 0.005,
+    },
+    dockOffsetY: {
+        value: D.phase2.dockOffsetY,
+        min: -0.3,
+        max: 0.045,
+        step: 0.005,
+    },
     dockMagnification: {
         value: D.phase2.dockMagnification,
         min: 0,
