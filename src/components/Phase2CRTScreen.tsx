@@ -103,7 +103,7 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
       { depthBuffer: false, stencilBuffer: false });
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0);
-    const camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, 0.1, 10);
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
     camera.position.z = 1;
     const material = new THREE.ShaderMaterial({
       vertexShader, fragmentShader, toneMapped: false,
@@ -127,7 +127,7 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
       uniforms: material.uniforms,
     });
     return { scene, camera, material, marginMaterial, target };
-  }, [width, height]);
+  }, []);
 
   useEffect(() => () => {
     resources.target.dispose();
@@ -138,6 +138,22 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
   useFrame(({ gl, size }) => {
     if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) return;
     const { target, scene, camera, material } = resources;
+    const cameraLeft = -width / 2;
+    const cameraRight = width / 2;
+    const cameraTop = height / 2;
+    const cameraBottom = -height / 2;
+    if (
+      camera.left !== cameraLeft ||
+      camera.right !== cameraRight ||
+      camera.top !== cameraTop ||
+      camera.bottom !== cameraBottom
+    ) {
+      camera.left = cameraLeft;
+      camera.right = cameraRight;
+      camera.top = cameraTop;
+      camera.bottom = cameraBottom;
+      camera.updateProjectionMatrix();
+    }
     material.uniforms.amount.value = crtMorph(revealProgressRef.current, reducedMotion);
     const targetWidth = Math.max(1, Math.min(CONFIG.phase2.CRT_TARGET_MAX_SIZE,
       Math.ceil(Math.max(size.width, size.height * CONFIG.phase2.PLANE_ASPECT) * gl.getPixelRatio())));
@@ -167,4 +183,3 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
 
   </>;
 }
-
