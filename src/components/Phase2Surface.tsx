@@ -32,6 +32,7 @@ import {
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
+import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { Phase2CRT } from "./Phase2CRT";
 import { Phase2CRTScreen } from "./Phase2CRTScreen";
 import { createCRTGeometry, crtMorph } from "@/lib/crtScreen";
@@ -1660,6 +1661,7 @@ function isThemeToggleHit({
 }
 
 export function Phase2Surface({ children }: { children: ReactNode }) {
+  const monitorState = useMemo(createMonitorState, []);
   const { scene: crtModel } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
   const {
     viewport,
@@ -1984,6 +1986,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const pointer = new THREE.Vector2();
     const intersections: THREE.Intersection[] = [];
     const onWheel = (event: WheelEvent) => {
+      if (!monitorHasSignal(monitorState)) return;
       const bridge = returnBridgeRef.current;
       if (bridge?.autoScroll) {
         bridge.autoScroll = null;
@@ -2069,7 +2072,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         capture: true,
       });
     };
-  }, [camera, gl]);
+  }, [camera, gl, monitorState]);
 
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
@@ -2922,6 +2925,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   }, 0.5);
 
   const handlePageClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!monitorHasSignal(monitorState)) return;
     if (returnBridgeRef.current) {
       event.stopPropagation();
       return;
@@ -3091,6 +3095,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   };
 
   const handlePagePointerDown = (event: ThreeEvent<PointerEvent>) => {
+    if (!monitorHasSignal(monitorState)) return;
     const pageUv = event.uv;
     const renderer = vscodeRendererRef.current;
 
@@ -3177,9 +3182,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           transparent={false}
         />
         <Suspense fallback={null}>
-          <Phase2CRT width={planeWidth} />
+          <Phase2CRT width={planeWidth} monitorState={monitorState} />
         </Suspense>
-        <Phase2CRTScreen width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
+        <Phase2CRTScreen monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <mesh
           geometry={desktopGeometry}
           renderOrder={9}

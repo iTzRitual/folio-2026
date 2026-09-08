@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { createMonitorUniforms, createMonitorScreenRuntime, monitorShader } from "@/lib/monitorScreen";
+import type { MonitorState } from "@/lib/monitorState";
 import { crtMorph } from "@/lib/crtScreen";
 
 const vertexShader = `
@@ -44,19 +46,34 @@ varying vec2 vUv;
 varying vec2 vScreenUv;
 varying vec3 vNormal;
 varying vec3 vView;
+${monitorShader}
 void main() {
   vec2 p = vScreenUv * 2.0 - 1.0;
   #ifdef BLACK_GLASS_MARGIN
   vec3 color = vec3(0.0);
   #else
+  vec2 raster = (vUv - 0.5) / monitorPowerSize + 0.5;
+  raster = (raster - 0.5) / monitorUnderScan + 0.5;
+  float rasterMask = step(0.0, raster.x) * step(raster.x, 1.0) * step(0.0, raster.y) * step(raster.y, 1.0);
+  if (monitorDelay > 0.5) {
+    raster = fract(raster + vec2(${CONFIG.monitor.HV_HORIZONTAL_SHIFT.toFixed(8)}, 0.5));
+    rasterMask *= step(${CONFIG.monitor.HV_HORIZONTAL_BLANK.toFixed(8)}, raster.x) * step(${CONFIG.monitor.HV_VERTICAL_BLANK.toFixed(8)}, raster.y);
+  }
+  if (monitorSync > 0.0) {
+    float roll = fract(monitorTime * ${CONFIG.monitor.SYNC_ROLL_SPEED.toFixed(8)}) * monitorSync;
+    float drift = (sin(monitorTime * 2.1) * ${CONFIG.monitor.SYNC_DRIFT.toFixed(8)} + sin(raster.y * 18.0 + monitorTime) * 0.001) * monitorSync;
+    float jump = step(0.985, sin(monitorTime * 1.7)) * ${CONFIG.monitor.SYNC_JUMP.toFixed(8)} * monitorSync;
+    raster = fract(raster + vec2(drift + jump, roll));
+  }
   vec2 split = p * dot(p,p) * chromatic * amount;
-  vec3 color = texture2D(desktop, vUv).rgb;
-  color.r = texture2D(desktop, clamp(vUv + split, 0.0, 1.0)).r;
-  color.b = texture2D(desktop, clamp(vUv - split, 0.0, 1.0)).b;
-  vec3 halo = texture2D(desktop, vUv + vec2(texel.x,0.0)).rgb;
-  halo += texture2D(desktop, vUv - vec2(texel.x,0.0)).rgb;
-  halo += texture2D(desktop, vUv + vec2(0.0,texel.y)).rgb;
-  halo += texture2D(desktop, vUv - vec2(0.0,texel.y)).rgb;
+  vec3 color = monitorSample(raster);
+  color.r = monitorSample(clamp(raster + split, 0.0, 1.0)).r;
+  color.b = monitorSample(clamp(raster - split, 0.0, 1.0)).b;
+  vec3 halo = monitorSample(raster + vec2(texel.x,0.0));
+  halo += monitorSample(raster - vec2(texel.x,0.0));
+  halo += monitorSample(raster + vec2(0.0,texel.y));
+  halo += monitorSample(raster - vec2(0.0,texel.y));
+  if (monitorInput != 1.0 && monitorAperture != 0.0) color += (color - halo * 0.25) * monitorAperture * ${CONFIG.monitor.APERTURE_STRENGTH.toFixed(8)};
   color += max(halo * 0.25 - 0.65, 0.0) * glow * amount;
   float scanFootprint = fwidth(vUv.y) * scanlines;
   float scanVisibility = 1.0 - smoothstep(0.35, 0.9, scanFootprint);
@@ -72,7 +89,9 @@ void main() {
   vec2 antialias = max(fwidth(distanceToEdge), vec2(0.000001));
   vec2 coverage = 1.0 - smoothstep(-antialias, vec2(0.0), distanceToEdge);
   float image = coverage.x * coverage.y;
-  color *= image;
+  color = monitorColor(color);
+  color = mix(color, vec3(0.8), monitorPowerFlash);
+  color *= image * rasterMask * monitorPowerLevel;
   #endif
   vec3 reflected = reflect(-normalize(vView), normalize(vNormal));
   float softbox = exp(-pow((reflected.x + 0.32) * 7.0, 2.0) - pow((reflected.y - 0.45) * 2.0, 2.0));
@@ -83,7 +102,8 @@ void main() {
 }
 `;
 
-export function Phase2CRTScreen({ width, height, geometry, borderGeometry, children }: {
+export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monitorState, children }: {
+  monitorState: MonitorState;
   width: number;
   height: number;
   geometry: THREE.BufferGeometry;
@@ -93,6 +113,8 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
 }) {
   const { revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
+  const monitorRuntime = useMemo(createMonitorScreenRuntime, []);
+  const monitorUniforms = useMemo(createMonitorUniforms, []);
   const meshRef = useRef<THREE.Mesh>(null);
 
 
@@ -108,6 +130,7 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
     const material = new THREE.ShaderMaterial({
       vertexShader, fragmentShader, toneMapped: false,
       uniforms: {
+        ...monitorUniforms,
         amount: { value: 0 },
         desktop: { value: target.texture },
         texel: { value: new THREE.Vector2(1 / target.width, 1 / target.height) },
@@ -127,7 +150,7 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
       uniforms: material.uniforms,
     });
     return { scene, camera, material, marginMaterial, target };
-  }, []);
+  }, [monitorUniforms]);
 
   useEffect(() => () => {
     resources.target.dispose();
@@ -135,7 +158,8 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, child
     resources.marginMaterial.dispose();
   }, [resources]);
 
-  useFrame(({ gl, size }) => {
+  useFrame(({ gl, size }, delta) => {
+    monitorRuntime.update(monitorUniforms, monitorState, delta, reducedMotion);
     if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) return;
     const { target, scene, camera, material } = resources;
     const cameraLeft = -width / 2;
