@@ -1,3 +1,11 @@
+export const achievementContent = {
+    crtOff: {
+        title: "Power saving unlocked",
+        points: 50,
+        total: 1000,
+    },
+} as const;
+
 export const heroContent = {
     title: "Natan Mokrzycki",
     subtitle:

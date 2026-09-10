@@ -9,6 +9,7 @@ import { createMonitorControls } from "@/lib/monitorControls";
 import { knobNormalized, resetMonitorKnob, setMonitorKnob, toggleMonitorButton, type MonitorButton, type MonitorKnob, type MonitorState } from "@/lib/monitorState";
 import { lockRootScroll, releaseRootScroll, rootScrollLock } from "@/lib/rootScrollLock";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { showAchievement } from "@/lib/achievements";
 
 export function Phase2CRT({ width, monitorState, onButtonPress }: {
   width: number;
@@ -98,6 +99,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
       if (control.kind === "button") {
         const button = control.id as MonitorButton;
         toggleMonitorButton(monitorState, button);
+        if (button === "power" && !monitorState.power) showAchievement("crtOff");
         onButtonPress?.(button);
         return;
       }

@@ -32,6 +32,34 @@ export const FONTS = {
 const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 
 export const CONFIG = {
+    achievement: {
+        BACKGROUND: "#3e398b",
+        ACCENT: "#6052ed",
+        FOREGROUND: "#ffffff",
+        WIDTH: 360,
+        HEIGHT: 88,
+        BOTTOM: 48,
+        DURATION: 7000,
+        APPEAR: 200,
+        SETTLE: 1000,
+        EXPANDED: 2400,
+        TEXT_IN: 1850,
+        TEXT_VISIBLE: 2250,
+        TEXT_OUT: 4850,
+        TEXT_HIDDEN: 5050,
+        RECENTER: 5250,
+        DISAPPEAR: 6100,
+        EASE: "cubic-bezier(0.22, 0.68, 0, 1)",
+        WIDTH_SAMPLES: [
+            [1400, 130], [1500, 150], [1600, 320], [1700, 366],
+            [1800, 410], [1900, 449], [2000, 483], [2100, 508],
+            [2200, 527], [2300, 537], [2400, 540],
+            [5400, 540], [5500, 520], [5600, 456], [5700, 362],
+            [5800, 258], [5900, 164], [6000, 130],
+        ],
+        REFERENCE_CIRCLE: 130,
+        REFERENCE_WIDTH: 540,
+    },
     monitor: {
         PRESS_DEPTH: 0.0015,
         ACTIVE_EMISSION: 0.18,

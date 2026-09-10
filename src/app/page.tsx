@@ -7,7 +7,9 @@ import { usePathname } from "next/navigation";
 import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { getSharedEngine, mountLapse } from "@aiforui/lapse/panel";
 import { Loader } from "@/components/Loader";
+import { AchievementToast } from "@/components/AchievementToast";
 import { useInputMode } from "@/hooks/useInputMode";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
@@ -58,6 +60,18 @@ export default function Home() {
     const [overflowViewports, setOverflowViewports] = useState(0);
     const fontsReady = useFontsReady();
     const themeContext = useTheme();
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === "production") return;
+
+        const engine = getSharedEngine();
+        engine.registerGSAP(gsap);
+        const lapse = mountLapse();
+
+        return () => {
+            void lapse.unmount();
+        };
+    }, []);
 
     const [debugSettings, setDebugSettings] =
         useState<DebugSettings>(DEBUG_DEFAULTS);
@@ -197,6 +211,7 @@ export default function Home() {
         <>
             <NoJsContent />
             <div className="js-only-app">
+                <AchievementToast />
                 {isDebug && <DynamicDebugPanel onChange={setDebugSettings} />}
                 {removeLoader && !prefersReducedMotion && inputMode === "fine" && (
                     <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
