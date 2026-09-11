@@ -1,0 +1,35 @@
+FOLIO 2026 ATTRIBUTION LICENSE
+
+Copyright © 2026 Natan Mokrzycki. All rights reserved except as expressly granted below.
+
+Permission is granted to use, copy, modify, and distribute this software and
+derivative works, including for commercial purposes, subject to all of the
+following conditions:
+
+1. The above copyright notice and this license must be included in all copies
+   or substantial portions of the software.
+
+2. Any publicly accessible website, application, or other user-facing project
+   that uses, modifies, or is substantially based on this software must display
+   the following attribution in a clearly visible and readable location within
+   its user interface, such as the site footer:
+
+   "Based on the original work by Natan Mokrzycki (@iTzRitual)"
+   https://github.com/iTzRitual/folio-2026
+
+   The repository URL must be presented as a working hyperlink where the
+   medium supports hyperlinks. Attribution solely in source code,
+   documentation, or a README file does not satisfy this condition.
+
+3. The attribution must not be removed, hidden, obscured, or presented in a
+   manner that is reasonably likely to escape the notice of ordinary users.
+
+4. Modified or derivative works must not imply endorsement by Natan Mokrzycki
+   or misrepresent their authorship or origin.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
