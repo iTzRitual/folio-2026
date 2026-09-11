@@ -2808,7 +2808,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;
-    captureCamera.position.z = CONFIG.caseStudy.CAMERA_REST_Z;
+    captureCamera.position.set(0, 0, CONFIG.caseStudy.CAMERA_REST_Z);
     captureCamera.layers.enable(HEADER_LAYER);
     captureCamera.layers.enable(THEME_SWEEP_LAYER);
     captureCamera.updateMatrixWorld();
