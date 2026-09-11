@@ -42,6 +42,8 @@ export function Phase2Workstation({ width }: { width: number }) {
   const scale = width / resources.screenWidth;
   const { keyboardPosition, keyboardRotation, keyboardScale, deskPosition, deskScale } = workstation;
   const supportY = resources.supportY + deskPosition.y;
+  const deskDepth = resources.deskSize.z * deskScale.z;
+  const wallSize = CONFIG.phase2.WALL_SIZE;
   useFrame(({ gl }) => {
     const reveal = revealProgressRef.current;
     if ((!reducedMotion && reveal < CONFIG.phase2.CONTACT_SHADOW_REVEAL) || reveal <= 0) return;
@@ -54,7 +56,7 @@ export function Phase2Workstation({ width }: { width: number }) {
       [monitor, keyboardCapture],
       new Vector3(deskPosition.x, supportY + CONFIG.phase2.CONTACT_SHADOW_OFFSET, deskPosition.z),
       resources.deskSize.x * deskScale.x,
-      resources.deskSize.z * deskScale.z,
+      deskDepth,
     );
     capturedSettings.current = workstation;
     if (shadowRef.current) shadowRef.current.visible = true;
@@ -70,6 +72,21 @@ export function Phase2Workstation({ width }: { width: number }) {
         -(resources.screenFront + CONFIG.phase2.CRT_SCREEN_CLEARANCE) * scale,
       ]}
     >
+      <mesh
+        name="Workstation_Wall"
+        position={[
+          deskPosition.x,
+          supportY + CONFIG.phase2.WALL_CENTER_Y,
+          deskPosition.z - deskDepth / 2 - wallSize.z / 2,
+        ]}
+        raycast={() => null}
+      >
+        <boxGeometry args={[wallSize.x, wallSize.y, wallSize.z]} />
+        <meshStandardMaterial
+          color={CONFIG.phase2.WALL_COLOR}
+          roughness={CONFIG.phase2.WALL_ROUGHNESS}
+        />
+      </mesh>
       <primitive
         object={resources.deskModel}
         position={[deskPosition.x, supportY, deskPosition.z]}
@@ -93,7 +110,7 @@ export function Phase2Workstation({ width }: { width: number }) {
         visible={false}
         raycast={() => null}
       >
-        <planeGeometry args={[resources.deskSize.x * deskScale.x, resources.deskSize.z * deskScale.z]} />
+        <planeGeometry args={[resources.deskSize.x * deskScale.x, deskDepth]} />
       </mesh>
     </group>
   );

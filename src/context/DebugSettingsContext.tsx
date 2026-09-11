@@ -52,10 +52,6 @@ export interface DebugSettings {
         release: number;
     };
     phase2: {
-        backgroundX: number;
-        backgroundY: number;
-        backgroundZ: number;
-        backgroundScale: number;
         dockScale: number;
         dockOffsetX: number;
         dockOffsetY: number;
@@ -134,10 +130,6 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         release: CONFIG.customAberration.SCROLL_RELEASE_MULT,
     },
     phase2: {
-        backgroundX: CONFIG.phase2.TEMP_BACKGROUND_X,
-        backgroundY: CONFIG.phase2.TEMP_BACKGROUND_Y,
-        backgroundZ: CONFIG.phase2.TEMP_BACKGROUND_Z,
-        backgroundScale: CONFIG.phase2.TEMP_BACKGROUND_SCALE,
         dockScale: CONFIG.phase2.DOCK_SCALE,
         dockOffsetX: CONFIG.phase2.DOCK_OFFSET_X,
         dockOffsetY: CONFIG.phase2.DOCK_OFFSET_Y,

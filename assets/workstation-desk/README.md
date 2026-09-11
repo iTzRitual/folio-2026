@@ -11,3 +11,7 @@ Copy-Item assets/workstation-desk/workstation-desk.glb public/glbs/workstation-d
 ```
 
 `Phase2Workstation` anchors the top to the existing CRT stand, using the same scale as the CRT screen. Placement, keyboard clearances, debug controls, previews, and the final workstation screenshot are documented in `../keyboard/README.md`. `asset-report.json` contains the verified dimensions, geometry counts, and byte size.
+
+The scene stretches the tabletop to 1.26 m deep and moves its center to Z=-0.28 m, preserving the original front edge while extending the rear to Z=-0.91 m. A matte charcoal wall replaces the photographic backdrop. Its front face follows the desk's rear edge, so changing the desk position or depth keeps them connected. Wall size, height, color, and roughness live in `CONFIG.phase2`; the wall uses one box mesh and one material, with no texture or pointer interception.
+
+![Wall and extended tabletop in the production scene](wall-preview.png)

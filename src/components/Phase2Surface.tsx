@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Image as DreiImage, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
@@ -3186,21 +3186,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         position={[0, 0, CONFIG.phase2.PLANE_Z]}
         visible={false}
       >
-        <DreiImage
-          url={CONFIG.phase2.TEMP_BACKGROUND_URL}
-          position={[
-            phase2.backgroundX,
-            phase2.backgroundY,
-            phase2.backgroundZ - CONFIG.phase2.PLANE_Z,
-          ]}
-          scale={[
-            phase2.backgroundScale,
-            phase2.backgroundScale / CONFIG.phase2.TEMP_BACKGROUND_ASPECT,
-          ]}
-          renderOrder={-100}
-          toneMapped={false}
-          transparent={false}
-        />
         <Suspense fallback={null}>
           <Phase2CRT
             width={planeWidth}

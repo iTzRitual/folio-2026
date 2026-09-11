@@ -220,20 +220,6 @@ const EXCLUSION_SCHEMA = {
 };
 
 const PHASE2_SCHEMA = {
-    backgroundX: { value: D.phase2.backgroundX, min: -10, max: 10, step: 0.05 },
-    backgroundY: { value: D.phase2.backgroundY, min: -10, max: 10, step: 0.05 },
-    backgroundZ: {
-        value: D.phase2.backgroundZ,
-        min: -10,
-        max: -0.3,
-        step: 0.05,
-    },
-    backgroundScale: {
-        value: D.phase2.backgroundScale,
-        min: 1,
-        max: 100,
-        step: 0.1,
-    },
     dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
     dockOffsetX: {
         value: D.phase2.dockOffsetX,

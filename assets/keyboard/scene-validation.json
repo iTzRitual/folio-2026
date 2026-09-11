@@ -4,8 +4,8 @@
   "keyboard_desk_gap_m": 0,
   "crt_desk_gap_m": 0,
   "keyboard_crt_clearance_m": 0.040861416704549625,
-  "crt_rear_desk_margin_m": 0.06116569638252256,
-  "keyboard_front_desk_margin_m": 0.11566140646447165,
+  "crt_rear_desk_margin_m": 0.42116569161415096,
+  "keyboard_front_desk_margin_m": 0.11566140169609995,
   "keyboard_screen_width_ratio": 0.8750000047412786,
   "camera_fov": 75,
   "projected": [
