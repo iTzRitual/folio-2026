@@ -96,7 +96,7 @@ export const CONFIG = {
         KEYBOARD_ROTATION: { x: 0, y: -2, z: 0 },
         KEYBOARD_SCALE: 1,
         DESK_POSITION: { x: 0, y: 0, z: -0.28 },
-        DESK_SCALE: { x: 1, y: 1, z: 1.4 },
+        DESK_SCALE: { x: 5.5, y: 1, z: 1.4 },
         WALL_SIZE: { x: 6, y: 4, z: 0.12 },
         WALL_CENTER_Y: 0.8,
         WALL_COLOR: "#35383d",

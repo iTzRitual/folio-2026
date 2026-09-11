@@ -270,7 +270,7 @@ const WORKSTATION_SCHEMA = {
     keyboardRotation: { value: D.workstation.keyboardRotation, step: 0.5 },
     keyboardScale: { value: D.workstation.keyboardScale, min: 0.5, max: 1.5, step: 0.01 },
     deskPosition: { value: D.workstation.deskPosition, step: 0.001 },
-    deskScale: { value: D.workstation.deskScale, min: 0.5, max: 2, step: 0.01 },
+    deskScale: { value: D.workstation.deskScale, min: 0.5, max: 6, step: 0.01 },
 };
 
 /**
