@@ -1,6 +1,17 @@
 import { Box3, BufferGeometry, Float32BufferAttribute, MathUtils, Mesh, Object3D, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
 
+export function getCRTReferenceFrame(model: Object3D) {
+  const screen = new Box3().setFromObject(model.getObjectByName("CRT_Screen")!);
+  const stand = new Box3().setFromObject(model.getObjectByName("CRT_Stand")!);
+  return {
+    screenCenter: screen.getCenter(new Vector3()),
+    screenWidth: screen.max.x - screen.min.x,
+    screenFront: screen.max.z,
+    supportY: stand.min.y,
+  };
+}
+
 export function crtMorph(reveal: number, reducedMotion: boolean) {
   return reducedMotion ? 1 : MathUtils.smoothstep(reveal,
     CONFIG.phase2.BROWSER_REVEAL_START, CONFIG.phase2.CRT_MORPH_END);

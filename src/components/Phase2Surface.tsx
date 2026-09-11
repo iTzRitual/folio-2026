@@ -34,12 +34,13 @@ import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { Phase2CRT } from "./Phase2CRT";
+import { Phase2Workstation } from "./Phase2Workstation";
 import { Phase2CRTScreen } from "./Phase2CRTScreen";
 import {
   Phase2PlayStationSignal,
   type PlayStationSignalHandle,
 } from "./Phase2PlayStationSignal";
-import { createCRTGeometry, crtMorph } from "@/lib/crtScreen";
+import { createCRTGeometry, crtMorph, getCRTReferenceFrame } from "@/lib/crtScreen";
 
 type Phase2Tuning = DebugSettings["phase2"];
 
@@ -1667,6 +1668,7 @@ function isThemeToggleHit({
 export function Phase2Surface({ children }: { children: ReactNode }) {
   const monitorState = useMemo(createMonitorState, []);
   const { scene: crtModel } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
+  const crtFrame = useMemo(() => getCRTReferenceFrame(crtModel), [crtModel]);
   const {
     viewport,
     size: layoutSize,
@@ -2587,7 +2589,11 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         (reveal - CONFIG.phase2.CRT_MORPH_END) /
           (1 - CONFIG.phase2.CRT_MORPH_END), 0, 1,
       );
-      camera.position.set(0, 0, THREE.MathUtils.lerp(restZ, targetZ, cameraProgress));
+      camera.position.set(
+        0,
+        CONFIG.phase2.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth * cameraProgress,
+        THREE.MathUtils.lerp(restZ, targetZ, cameraProgress),
+      );
       camera.updateMatrixWorld();
     }
 
@@ -3201,6 +3207,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             monitorState={monitorState}
             onButtonPress={syncPlayStationSignal}
           />
+          <Phase2Workstation width={planeWidth} />
         </Suspense>
         <Phase2CRTScreen monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <group ref={desktopSignalGroupRef}>

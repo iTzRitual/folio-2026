@@ -1,0 +1,85 @@
+{
+  "passed": true,
+  "support_y_m": -0.28086620569229126,
+  "keyboard_desk_gap_m": 0,
+  "crt_desk_gap_m": 0,
+  "keyboard_crt_clearance_m": 0.040861416704549625,
+  "crt_rear_desk_margin_m": 0.06116569638252256,
+  "keyboard_front_desk_margin_m": 0.11566140646447165,
+  "keyboard_screen_width_ratio": 0.8750000047412786,
+  "camera_fov": 75,
+  "projected": [
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "keyboard_pixels": {
+        "left": 435.5726800860472,
+        "right": 866.5327599906833,
+        "top": 544.9861549921909,
+        "bottom": 644.4226921096754
+      }
+    },
+    {
+      "viewport": [
+        1920,
+        1080
+      ],
+      "keyboard_pixels": {
+        "left": 653.3590201290708,
+        "right": 1299.799139986025,
+        "top": 817.4792324882864,
+        "bottom": 966.634038164513
+      }
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "keyboard_pixels": {
+        "left": 464.4658501075591,
+        "right": 1003.1659499883539,
+        "top": 681.2326937402386,
+        "bottom": 805.5283651370942
+      }
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "keyboard_pixels": {
+        "left": 293.9441920917837,
+        "right": 753.6349439900621,
+        "top": 581.3185653250036,
+        "bottom": 687.3842049169871
+      }
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "keyboard_pixels": {
+        "left": 311.2685350466089,
+        "right": 544.7052449949534,
+        "top": 295.2008339541034,
+        "bottom": 349.0622915594075
+      }
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "keyboard_pixels": {
+        "left": 137.72362600617112,
+        "right": 258.46986835488553,
+        "top": 487.53364251882783,
+        "bottom": 501.68944900545813
+      }
+    }
+  ]
+}

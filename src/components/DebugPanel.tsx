@@ -279,6 +279,14 @@ const PHASE2_SCHEMA = {
     },
 };
 
+const WORKSTATION_SCHEMA = {
+    keyboardPosition: { value: D.workstation.keyboardPosition, step: 0.001 },
+    keyboardRotation: { value: D.workstation.keyboardRotation, step: 0.5 },
+    keyboardScale: { value: D.workstation.keyboardScale, min: 0.5, max: 1.5, step: 0.01 },
+    deskPosition: { value: D.workstation.deskPosition, step: 0.001 },
+    deskScale: { value: D.workstation.deskScale, min: 0.5, max: 2, step: 0.01 },
+};
+
 /**
  * Every Leva control in the project lives here so that leva itself is only ever
  * pulled in on /debug. Nothing else may import it.
@@ -298,6 +306,7 @@ export default function DebugPanel({
     const edgeFade = useControls("Curl edge fade", EDGE_FADE_SCHEMA);
     const scrollBlur = useControls("Scroll blur", SCROLL_BLUR_SCHEMA);
     const phase2 = useControls("CRT desktop", PHASE2_SCHEMA);
+    const workstation = useControls("Workstation", WORKSTATION_SCHEMA);
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
     useEffect(() => {
@@ -312,6 +321,7 @@ export default function DebugPanel({
             edgeFade,
             scrollBlur,
             phase2,
+            workstation,
             headerExclusion,
         });
     }, [
@@ -326,6 +336,7 @@ export default function DebugPanel({
         edgeFade,
         scrollBlur,
         phase2,
+        workstation,
         headerExclusion,
     ]);
 

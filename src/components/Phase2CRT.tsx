@@ -3,12 +3,13 @@
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { Box3, Mesh, Vector2, Vector3, type Intersection, type Object3D } from "three";
+import { Mesh, Vector2, type Intersection, type Object3D } from "three";
 import { CONFIG } from "@/config/constants";
 import { createMonitorControls } from "@/lib/monitorControls";
 import { knobNormalized, resetMonitorKnob, setMonitorKnob, toggleMonitorButton, type MonitorButton, type MonitorKnob, type MonitorState } from "@/lib/monitorState";
 import { lockRootScroll, releaseRootScroll, rootScrollLock } from "@/lib/rootScrollLock";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { getCRTReferenceFrame } from "@/lib/crtScreen";
 
 export function Phase2CRT({ width, monitorState, onButtonPress }: {
   width: number;
@@ -20,15 +21,14 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
   const reducedMotion = usePrefersReducedMotion();
   const resources = useMemo(() => {
     const model = scene.clone(true);
-    const screen = model.getObjectByName("CRT_Screen")!;
-    const bounds = new Box3().setFromObject(screen);
+    const frame = getCRTReferenceFrame(model);
     model.traverse(object => {
       if (object.name === "CRT_Screen" || object.name === "CRT_Glass") {
         object.visible = false;
         if (object instanceof Mesh) object.raycast = () => null;
       }
     });
-    return { model, screenCenter: bounds.getCenter(new Vector3()), screenWidth: bounds.max.x - bounds.min.x, screenFront: bounds.max.z };
+    return { model, ...frame };
   }, [scene]);
   const { model, screenCenter, screenWidth, screenFront } = resources;
   const runtime = useRef<ReturnType<typeof createMonitorControls> | null>(null);

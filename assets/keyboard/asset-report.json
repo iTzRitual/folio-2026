@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "file": "keyboard.glb",
+  "sha256": "bf54c885132a7ebc12c5966d1c61745df21f9e40ed8f3b2de358158a92be8838",
+  "dimensions_m": {
+    "width": 0.30799999833106995,
+    "height": 0.021236250177025795,
+    "depth": 0.11800000071525574
+  },
+  "bounds_m": {
+    "min": [
+      -0.15399999916553497,
+      0,
+      -0.05900000035762787
+    ],
+    "max": [
+      0.15399999916553497,
+      0.021236250177025795,
+      0.05900000035762787
+    ]
+  },
+  "triangles": 22148,
+  "unique_mesh_triangles": 7298,
+  "mesh_objects_including_instances": 91,
+  "gltf_nodes": 17,
+  "unique_meshes": 16,
+  "draw_primitives": 16,
+  "materials": 4,
+  "textures": 1,
+  "images": 1,
+  "bytes": 266568,
+  "key_count": 84,
+  "external_resources": 0,
+  "cameras": 0,
+  "lights": 0,
+  "rotation_and_scale_applied": true,
+  "translation_only_instances": true,
+  "legend_atlas": {
+    "width": 1024,
+    "height": 1024,
+    "embedded": true,
+    "alpha_mode": "MASK",
+    "legend_count": 83
+  }
+}

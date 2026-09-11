@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "blender_version": "5.2.1 LTS",
+  "mesh_objects": 91,
+  "materials": 4,
+  "packed_images": 1,
+  "blender_z_up_dimensions_m": [
+    0.30799999833106995,
+    0.11800000071525574,
+    0.021236250177025795
+  ],
+  "legend_uvs": true,
+  "cameras": 0,
+  "lights": 0
+}

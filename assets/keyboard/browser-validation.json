@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-09-11",
+  "application": "folio-2026",
+  "checks": {
+    "phase_1_hero_renders": true,
+    "phase_2_reveal_renders": true,
+    "phase_2_return_to_phase_1_and_reveal_again": true,
+    "complete_keyboard_visible": true,
+    "crt_dock_opens_vscode": true,
+    "crt_power_off_and_on": true,
+    "debug_workstation_controls_present": true,
+    "debug_keyboard_scale_changed_to_1_1_and_restored": true,
+    "contact_shadow_refreshes_with_scale": true,
+    "production_build": true,
+    "production_scene_inspected": true,
+    "production_console_errors": 0,
+    "eslint": true,
+    "existing_monitor_control_checks": true,
+    "temporary_probe_removed": true
+  },
+  "performance": {
+    "comparison_environment": "Local development build, in-app Chromium, 1280x720, DPR 1.5; 120 steady-state frames after 60 warmup frames",
+    "baseline_meshes_hidden": { "median_frame_ms": 5.9, "p95_frame_ms": 6.0 },
+    "keyboard_and_desk_visible": { "median_frame_ms": 5.8, "p95_frame_ms": 6.2 },
+    "final_debug_observation": "162-165 FPS at 1422x929 after the native-coordinate cached-shadow correction",
+    "limitation": "Short single-machine samples, not a cross-device benchmark. Paired timing samples preceded the final cached-shadow correction; the final scene was separately checked with the existing Stats overlay."
+  },
+  "asset_validation": ["asset-report.json", "import-validation.json", "scene-validation.json"],
+  "unchanged_crt_glb_sha256": "dd80f7e530c38c3645a59258ce1daf689781050027f851eb8dfcd5abe8db041d"
+}

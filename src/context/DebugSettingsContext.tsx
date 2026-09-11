@@ -66,6 +66,13 @@ export interface DebugSettings {
         safariBottomSafeArea: number;
     };
     headerExclusion: { strength: number; threshold: number; softness: number };
+    workstation: {
+        keyboardPosition: { x: number; y: number; z: number };
+        keyboardRotation: { x: number; y: number; z: number };
+        keyboardScale: number;
+        deskPosition: { x: number; y: number; z: number };
+        deskScale: { x: number; y: number; z: number };
+    };
 }
 
 /**
@@ -141,6 +148,13 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         safariBottomSafeArea: CONFIG.phase2.SAFARI_BOTTOM_SAFE_AREA,
     },
     headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
+    workstation: {
+        keyboardPosition: CONFIG.phase2.KEYBOARD_POSITION,
+        keyboardRotation: CONFIG.phase2.KEYBOARD_ROTATION,
+        keyboardScale: CONFIG.phase2.KEYBOARD_SCALE,
+        deskPosition: CONFIG.phase2.DESK_POSITION,
+        deskScale: CONFIG.phase2.DESK_SCALE,
+    },
 };
 
 const DebugSettingsContext = createContext<DebugSettings>(DEBUG_DEFAULTS);
