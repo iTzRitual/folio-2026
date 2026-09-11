@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: >-
+  If you use, modify, redistribute, or create a project substantially based on
+  this software, please credit Natan Mokrzycki (@iTzRitual) as the original
+  author and link to the original repository.
+title: "Folio 2026"
+type: software
+authors:
+  - family-names: "Mokrzycki"
+    given-names: "Natan"
+    alias: "iTzRitual"
+repository-code: "https://github.com/iTzRitual/folio-2026"
+url: "https://github.com/iTzRitual/folio-2026"
+preferred-citation:
+  type: software
+  authors:
+    - family-names: "Mokrzycki"
+      given-names: "Natan"
+      alias: "iTzRitual"
+  title: "Folio 2026"
+  year: 2026
+  url: "https://github.com/iTzRitual/folio-2026"
