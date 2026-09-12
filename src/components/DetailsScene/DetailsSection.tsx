@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { memo, type RefObject } from "react";
 import type { Group } from "three";
 import { DetailsText } from "./DetailsText";
 import { DetailsLink } from "./DetailsLink";
@@ -37,7 +37,7 @@ interface DetailsSectionProps {
     activeItemIndex?: number | null;
 }
 
-export function DetailsSection({
+export const DetailsSection = memo(function DetailsSection({
     heading,
     items,
     headingX,
@@ -137,4 +137,4 @@ export function DetailsSection({
             })}
         </>
     );
-}
+});

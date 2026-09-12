@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { memo, Suspense } from "react";
 import { DetailsText } from "./DetailsText";
 import { AnimatedRevealImage } from "./AnimatedRevealImage";
 import { CONFIG, FONTS } from "@/config/constants";
@@ -24,7 +24,7 @@ interface BioSectionProps {
     startTrigger: boolean;
 }
 
-export function BioSection({
+export const BioSection = memo(function BioSection({
     heading,
     lines,
     imageX,
@@ -102,4 +102,4 @@ export function BioSection({
             )}
         </>
     );
-}
+});
