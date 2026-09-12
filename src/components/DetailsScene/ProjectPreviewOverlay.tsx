@@ -347,10 +347,11 @@ function useProjectLoopTexture(preview: string | null, enabled: boolean) {
         // Re-entering an already decoded loop fires no load event, only this.
         video.addEventListener("playing", onReady);
 
-        if (video.src !== new URL(src, window.location.href).href) {
+        const sourceChanged = video.src !== new URL(src, window.location.href).href;
+        if (sourceChanged) {
             video.src = src;
+            video.currentTime = 0;
         }
-        video.currentTime = 0;
         void video.play().catch(() => {});
 
         return () => {
@@ -412,7 +413,8 @@ void main() {
 export function ProjectPreviewOverlay() {
     const { viewport } = useThree();
     const { leftX, rightX } = useHeroLayout();
-    const { layoutMode, compactHeight, inputMode } = useSceneCapabilities();
+    const { layoutMode, compactHeight, inputMode, qualityTier } =
+        useSceneCapabilities();
     const fixedPreview = layoutMode === "narrow";
     const { progressRef } = useHeroTransition();
     const prefersReducedMotion = usePrefersReducedMotion();
@@ -474,7 +476,7 @@ export function ProjectPreviewOverlay() {
     // falling back to the still, and nothing is left decoding off screen.
     const loopTexture = useProjectLoopTexture(
         active ? shownPreview : null,
-        !prefersReducedMotion,
+        !prefersReducedMotion && qualityTier !== "low",
     );
     const stillTexture = shownPreview ? (textures[shownPreview] ?? null) : null;
     const plateTexture = loopTexture ?? stillTexture;
