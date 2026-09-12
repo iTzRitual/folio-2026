@@ -1703,6 +1703,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const { revealProgressRef, scrollAberrationVelocityRef } =
     useHeroTransition();
   const { camera, events, gl, scene, size } = useThree();
+  if (!(camera instanceof THREE.PerspectiveCamera)) {
+    throw new Error("Phase 2 requires a perspective camera");
+  }
   const prefersReducedMotion = usePrefersReducedMotion();
   const { scrollBlur: scroll, phase2 } = useDebugSettings();
   const { inputMode, layoutMode, qualityTier } = useSceneCapabilities();
@@ -1996,7 +1999,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       toolbarRendererRef.current = null;
       pageMaskRef.current?.dispose();
       setHtmlOverlayVisibility(
-        events.connected as HTMLElement | null,
+        events.connected instanceof HTMLElement ? events.connected : null,
         gl.domElement,
         false,
       );
@@ -2601,7 +2604,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
       setHtmlOverlayVisibility(
-        (events.connected as HTMLElement | null) ?? gl.domElement.parentElement,
+        events.connected instanceof HTMLElement
+          ? events.connected
+          : gl.domElement.parentElement,
         gl.domElement,
         hideHtmlOverlays,
       );
@@ -2609,13 +2614,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
     const planeZ = CONFIG.phase2.PLANE_Z;
     const restZ = CONFIG.caseStudy.CAMERA_REST_Z;
-    const perspective = camera as THREE.PerspectiveCamera;
     const restDistance = restZ - planeZ;
     const restHeight =
       2 *
-      Math.tan(THREE.MathUtils.degToRad(perspective.fov) / 2) *
+      Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
       restDistance;
-    const restWidth = restHeight * perspective.aspect;
+    const restWidth = restHeight * camera.aspect;
     const fit = Math.max(
       1,
       planeWidth / (restWidth * CONFIG.phase2.REVEAL_CAMERA_FILL),
@@ -2870,7 +2874,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const previousTarget = gl.getRenderTarget();
     const wasSurfaceVisible = surfaceGroupRef.current.visible;
     const wasPageVisible = pageGroupRef.current.visible;
-    captureCamera.copy(camera as THREE.PerspectiveCamera);
+    captureCamera.copy(camera);
 
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;

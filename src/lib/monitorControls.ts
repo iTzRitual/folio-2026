@@ -1,8 +1,23 @@
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
-import { buttonActive, knobNormalized, type MonitorControl, type MonitorKnob, type MonitorButton, type MonitorState } from "./monitorState";
+import { buttonActive, knobNormalized, type MonitorKnob, type MonitorButton, type MonitorState } from "./monitorState";
+import { getRequiredMesh } from "./crtScreen";
 
-type ControlDefinition = { id: MonitorControl; kind: "button" | "knob"; x: number; y: number; sources: string[] };
+type ControlPosition = { x: number; y: number; sources: string[] };
+type ControlDefinition =
+  | ({ id: MonitorButton; kind: "button" } & ControlPosition)
+  | ({ id: MonitorKnob; kind: "knob" } & ControlPosition);
+type ControlRuntime = ControlDefinition & {
+  group: THREE.Group;
+  originalPosition: THREE.Vector3;
+  originalRotation: THREE.Quaternion;
+  amount: number;
+  materials: {
+    material: THREE.MeshStandardMaterial;
+    emissive: THREE.Color;
+    intensity: number;
+  }[];
+};
 const largeKnobs: MonitorKnob[] = ["aperture", "brightness", "chroma", "phase", "contrast"];
 export const MONITOR_CONTROLS: ControlDefinition[] = [
   { id: "inputSelect", kind: "button", x: -0.179, y: -0.219, sources: ["CRT_Buttons"] },
@@ -19,13 +34,19 @@ export const MONITOR_CONTROLS: ControlDefinition[] = [
 ];
 
 export function createMonitorControls(model: THREE.Object3D) {
-  const controls = MONITOR_CONTROLS.map(definition => {
+  const controls = MONITOR_CONTROLS.map((definition): ControlRuntime => {
     const group = new THREE.Group();
     group.name = `MonitorControl_${definition.id}`;
     group.position.set(definition.x, definition.y, 0);
     model.add(group);
-    return { ...definition, group, originalPosition: group.position.clone(), originalRotation: group.quaternion.clone(), amount: 0,
-      materials: [] as { material: THREE.MeshStandardMaterial; emissive: THREE.Color; intensity: number }[] };
+    return {
+      ...definition,
+      group,
+      originalPosition: group.position.clone(),
+      originalRotation: group.quaternion.clone(),
+      amount: 0,
+      materials: [],
+    };
   });
   const registry = new Map<THREE.Object3D, typeof controls[number]>();
   const geometries: THREE.BufferGeometry[] = [];
@@ -78,9 +99,13 @@ export function createMonitorControls(model: THREE.Object3D) {
     originals.push({ mesh: source, visible: source.visible, material: source.material });
     source.visible = false;
   }
-  const led = model.getObjectByName("CRT_StatusLight") as THREE.Mesh;
+  const led = getRequiredMesh(model, "CRT_StatusLight");
   const ledOriginal = led.material;
-  const ledMaterial = (Array.isArray(led.material) ? led.material[0] : led.material).clone() as THREE.MeshStandardMaterial;
+  const ledSourceMaterial = Array.isArray(led.material) ? led.material[0] : led.material;
+  if (!(ledSourceMaterial instanceof THREE.MeshStandardMaterial)) {
+    throw new Error("CRT status light does not use a standard material");
+  }
+  const ledMaterial = ledSourceMaterial.clone();
   led.material = ledMaterial;
   materials.push(ledMaterial);
   const axis = new THREE.Vector3(0, 0, 1);
@@ -101,7 +126,9 @@ export function createMonitorControls(model: THREE.Object3D) {
     syncPhysicalControlsFromState(state: MonitorState, delta: number, reducedMotion: boolean) {
       const blend = reducedMotion ? 1 : 1 - Math.exp(-CONFIG.monitor.RESPONSE * delta);
       for (const control of controls) {
-        const target = control.kind === "button" ? Number(buttonActive(state, control.id as MonitorButton)) : knobNormalized(state, control.id as MonitorKnob);
+        const target = control.kind === "button"
+          ? Number(buttonActive(state, control.id))
+          : knobNormalized(state, control.id);
         control.amount = THREE.MathUtils.lerp(control.amount, target, blend);
         if (Math.abs(control.amount - target) < 0.00001) control.amount = target;
         control.group.position.copy(control.originalPosition);

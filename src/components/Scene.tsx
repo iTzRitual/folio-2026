@@ -72,16 +72,14 @@ function SceneContent({
             <CaseStudyScene />
           </Phase2Surface>
         </Suspense>
-        {(
-          <EffectComposer multisampling={0}>
-            <>
-              <HeaderExclusion />
-              {!prefersReducedMotion && qualityTier !== "low" && (
-                <CustomAberration />
-              )}
-            </>
-          </EffectComposer>
-        )}
+        <EffectComposer multisampling={0}>
+          <>
+            <HeaderExclusion />
+            {!prefersReducedMotion && qualityTier !== "low" && (
+              <CustomAberration />
+            )}
+          </>
+        </EffectComposer>
         </CaseStudyProvider>
         </ProjectHoverProvider>
       </HeroTransitionProvider>

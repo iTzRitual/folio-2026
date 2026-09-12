@@ -94,15 +94,14 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
       if (!control) return;
       stop(event);
       if (control.kind === "button") {
-        const button = control.id as MonitorButton;
-        toggleMonitorButton(monitorState, button);
-        onButtonPress?.(button);
+        toggleMonitorButton(monitorState, control.id);
+        onButtonPress?.(control.id);
         return;
       }
       const target = event.target instanceof Element ? event.target : canvas;
       const cameraControls = (three.get().controls as { enabled: boolean } | null) ?? null;
-      drag = { id: event.pointerId, touch: event.pointerType !== "mouse", moved: false, key: control.id as MonitorKnob, x: event.clientX, y: event.clientY,
-        value: knobNormalized(monitorState, control.id as MonitorKnob), target, cameraControls,
+      drag = { id: event.pointerId, touch: event.pointerType !== "mouse", moved: false, key: control.id, x: event.clientX, y: event.clientY,
+        value: knobNormalized(monitorState, control.id), target, cameraControls,
         enabled: cameraControls?.enabled ?? false, locked: rootScrollLock.active };
       target.setPointerCapture(event.pointerId);
       if (cameraControls) cameraControls.enabled = false;
@@ -130,7 +129,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
     const doubleClick = (event: MouseEvent) => {
       const control = pick(event);
       if (control?.kind !== "knob") return;
-      resetMonitorKnob(monitorState, control.id as MonitorKnob);
+      resetMonitorKnob(monitorState, control.id);
       stop(event);
     };
     const click = (event: MouseEvent) => { if (pick(event)) stop(event); };

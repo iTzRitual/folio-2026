@@ -33,11 +33,11 @@ import { mixHex } from "@/lib/oklab";
 // Built once instead of on every hover enter and leave.
 const FINE_POINTER_QUERY =
   typeof window === "undefined"
-    ? ({ matches: false } as MediaQueryList)
+    ? null
     : window.matchMedia("(hover: hover) and (pointer: fine)");
 const REDUCED_MOTION_QUERY =
   typeof window === "undefined"
-    ? ({ matches: false } as MediaQueryList)
+    ? null
     : window.matchMedia("(prefers-reduced-motion: reduce)");
 
 // One texture for every link. Loading per instance let the HTTP cache dedupe
@@ -175,7 +175,7 @@ export function DetailsLink({
   const setPressScale = (to: number) => {
     const group = pressGroupRef.current;
     if (!group) return;
-    if (REDUCED_MOTION_QUERY.matches) {
+    if (REDUCED_MOTION_QUERY?.matches) {
       group.scale.setScalar(to);
       return;
     }
@@ -233,7 +233,7 @@ export function DetailsLink({
   };
 
   const startPress = (event: ThreeEvent<PointerEvent>) => {
-    if (!interactiveRef.current || !FINE_POINTER_QUERY.matches) return;
+    if (!interactiveRef.current || !FINE_POINTER_QUERY?.matches) return;
     // The rows are still in the scene behind an open case study, and the camera
     // now looks at them from a hand's width away — a press landing on one is
     // the pointer's, never the reader's.
@@ -451,8 +451,8 @@ export function DetailsLink({
   const arrowY =
     -calculatedFontSize * 0.15 - 1.5 * (calculatedFontSize / pixelFontSize);
 
-  const finePointer = () => FINE_POINTER_QUERY.matches;
-  const reducedMotion = () => REDUCED_MOTION_QUERY.matches;
+  const finePointer = () => FINE_POINTER_QUERY?.matches === true;
+  const reducedMotion = () => REDUCED_MOTION_QUERY?.matches === true;
 
   const syncHover = () => {
     const wanted = pointerInsideRef.current && interactiveRef.current;

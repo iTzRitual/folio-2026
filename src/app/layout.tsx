@@ -36,7 +36,7 @@ export default function RootLayout({
                     dangerouslySetInnerHTML={{
                         __html: `document.documentElement.classList.replace('no-js', 'js');
 var stored = null;
-try { stored = localStorage.getItem('folio-theme'); } catch (e) {}
+try { stored = localStorage.getItem('folio-theme'); } catch {}
 var theme = stored === 'Light' || stored === 'Dark'
   ? stored
   : (matchMedia('(prefers-color-scheme: light)').matches ? 'Light' : 'Dark');

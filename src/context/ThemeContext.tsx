@@ -164,18 +164,17 @@ export function useSweptColor(
     apply: (hex: string) => void,
 ): string {
     const { palette, sweep } = useTheme();
-    const targetRef = useRef<SweepTarget | null>(null);
-    targetRef.current ??= { role, object, apply };
+    const targetRef = useRef<SweepTarget>({ role, object, apply });
 
     useLayoutEffect(() => {
-        const target = targetRef.current!;
+        const target = targetRef.current;
         target.role = role;
         target.object = object;
         target.apply = apply;
     });
 
     const { register } = sweep;
-    useEffect(() => register(targetRef.current!), [register]);
+    useEffect(() => register(targetRef.current), [register]);
 
     return palette[role];
 }

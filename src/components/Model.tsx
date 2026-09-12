@@ -82,8 +82,8 @@ export default function Model() {
 
   useLayoutEffect(() => {
     mesh.current?.traverse((child) => {
-      if (skullMeshRef.current || !(child as THREE.Mesh).isMesh) return;
-      skullMeshRef.current = child as THREE.Mesh;
+      if (skullMeshRef.current || !(child instanceof THREE.Mesh)) return;
+      skullMeshRef.current = child;
     });
   }, [nodes.Sphere]);
 
@@ -436,7 +436,9 @@ export default function Model() {
                 isDragging.current = true;
                 document.body.style.cursor = "grabbing";
                 document.body.style.userSelect = "none";
-                (e.target as Element).setPointerCapture(e.pointerId);
+                if (e.target instanceof Element) {
+                  e.target.setPointerCapture(e.pointerId);
+                }
                 e.stopPropagation();
               }}
               onPointerUp={(e) => {
@@ -446,14 +448,18 @@ export default function Model() {
                   ? "grab"
                   : "auto";
                 document.body.style.userSelect = "";
-                (e.target as Element).releasePointerCapture(e.pointerId);
+                if (e.target instanceof Element) {
+                  e.target.releasePointerCapture(e.pointerId);
+                }
               }}
               onPointerCancel={(e) => {
                 if (!directManipulation || isInteractionLockedRef.current) return;
                 isDragging.current = false;
                 document.body.style.cursor = "auto";
                 document.body.style.userSelect = "";
-                (e.target as Element).releasePointerCapture(e.pointerId);
+                if (e.target instanceof Element) {
+                  e.target.releasePointerCapture(e.pointerId);
+                }
               }}
             >
               <circleGeometry args={[grabAreaRadius, 32]} />

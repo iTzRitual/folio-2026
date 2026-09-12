@@ -7,7 +7,7 @@ import { Box3, MathUtils, Mesh, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
-import { getCRTReferenceFrame } from "@/lib/crtScreen";
+import { getCRTReferenceFrame, getRequiredObject } from "@/lib/crtScreen";
 import { createWorkstationShadow } from "@/lib/workstationShadow";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
@@ -30,7 +30,7 @@ export function Phase2Workstation({ width }: { width: number }) {
     const deskModel = desk.clone(true);
     const shadowMonitor = crt.clone(true);
     for (const name of ["CRT_Screen", "CRT_Glass"]) {
-      shadowMonitor.getObjectByName(name)!.visible = false;
+      getRequiredObject(shadowMonitor, name).visible = false;
     }
     for (const model of [keyboardModel, deskModel]) {
       model.traverse(object => {

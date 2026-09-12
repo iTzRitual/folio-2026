@@ -186,11 +186,12 @@ export const PROJECT_PREVIEW_SOURCES = projectsData.map(
     (project) => project.preview,
 );
 
-export const PROJECT_LOOP_SOURCES = Object.fromEntries(
-    projectsData.flatMap((project) =>
-        "loop" in project ? [[project.preview, project.loop] as const] : [],
-    ),
-) as Record<string, string | undefined>;
+export const PROJECT_LOOP_SOURCES = projectsData.reduce<
+    Record<string, string | undefined>
+>((sources, project) => {
+    if ("loop" in project) sources[project.preview] = project.loop;
+    return sources;
+}, {});
 export const educationData = [
     {
         institution: "DSW University of Lower Silesia",

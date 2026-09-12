@@ -130,13 +130,13 @@ export function HeaderItem({
   const twinClass = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${weightClass} leading-none block no-underline outline-none ${
     anchorX === "right" ? "-translate-x-full" : "left-0"
   } -translate-y-1/2`;
-  const twinStyle = {
+  const twinStyle: React.CSSProperties = {
     fontSize: `${pixelFontSize}px`,
     letterSpacing: `${
       CONFIG.header.LETTER_SPACING + CONFIG.header.HTML_LETTER_SPACING_OFFSET
     }em`,
     color: "transparent",
-  } as React.CSSProperties;
+  };
 
   const label = (
     <p className="m-0 p-0">{text}</p>

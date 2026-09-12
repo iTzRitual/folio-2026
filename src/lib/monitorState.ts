@@ -1,12 +1,34 @@
 import { MathUtils } from "three";
 import { CONFIG } from "@/config/constants";
 
-export const MONITOR_DEFAULTS = Object.freeze({
+export interface MonitorState {
+  power: boolean;
+  syncExternal: boolean;
+  inputMode: "LINE" | "RGB";
+  lineInput: "A" | "B";
+  rgbMode: "RGB" | "COMPONENT";
+  blueOnly: boolean;
+  underScan: boolean;
+  hvDelay: boolean;
+  aperture: number;
+  brightness: number;
+  chroma: number;
+  phase: number;
+  contrast: number;
+  biasR: number;
+  biasG: number;
+  biasB: number;
+  gainR: number;
+  gainG: number;
+  gainB: number;
+}
+
+export const MONITOR_DEFAULTS: Readonly<MonitorState> = Object.freeze({
   power: true,
   syncExternal: false,
-  inputMode: "LINE" as "LINE" | "RGB",
-  lineInput: "A" as "A" | "B",
-  rgbMode: "RGB" as "RGB" | "COMPONENT",
+  inputMode: "LINE",
+  lineInput: "A",
+  rgbMode: "RGB",
   blueOnly: false,
   underScan: false,
   hvDelay: false,
@@ -23,7 +45,6 @@ export const MONITOR_DEFAULTS = Object.freeze({
   gainB: 1,
 });
 
-export type MonitorState = { -readonly [K in keyof typeof MONITOR_DEFAULTS]: typeof MONITOR_DEFAULTS[K] extends boolean ? boolean : typeof MONITOR_DEFAULTS[K] extends number ? number : typeof MONITOR_DEFAULTS[K] };
 export type MonitorKnob = "aperture" | "brightness" | "chroma" | "phase" | "contrast" |
   "biasR" | "biasG" | "biasB" | "gainR" | "gainG" | "gainB";
 export type MonitorButton = "power" | "syncExternal" | "inputMode" | "inputSelect" | "blueOnly" | "underScan" | "hvDelay";

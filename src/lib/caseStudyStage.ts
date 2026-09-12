@@ -19,13 +19,22 @@ export interface PlateControl {
     follow: number;
 }
 
+interface CaseStudyStage {
+    open: boolean;
+    instant: boolean;
+    progress: number;
+    dim: number;
+    pose: Vector3;
+    plate: PlateControl;
+}
+
 /**
  * The per-frame channels between the case study's driver and everything the
  * flight has to get out of its way. Module scope because there is one camera
  * and one plate, and the pieces that read this sit in three different subtrees
  * — the same reason the details curl keeps its uniforms here.
  */
-export const caseStudyStage = {
+export const caseStudyStage: CaseStudyStage = {
     /**
      * Mirrors the provider's state for the readers that must not re-render
      * when it changes: every project row carries an <Html> twin, and a React
@@ -61,5 +70,5 @@ export const caseStudyStage = {
         z: 0,
         width: 0,
         follow: 1,
-    } as PlateControl,
+    },
 };

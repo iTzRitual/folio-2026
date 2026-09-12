@@ -17,9 +17,7 @@ export const HeaderExclusion = forwardRef<HeaderExclusionEffect>((_, ref) => {
   );
 
   useEffect(() => {
-    effect.uniforms.get("u_strength")!.value = strength;
-    effect.uniforms.get("u_threshold")!.value = threshold;
-    effect.uniforms.get("u_softness")!.value = softness;
+    effect.configure(strength, threshold, softness);
   }, [effect, strength, threshold, softness]);
 
   useEffect(() => {

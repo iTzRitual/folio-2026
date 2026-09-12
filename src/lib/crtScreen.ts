@@ -1,9 +1,21 @@
 import { Box3, BufferGeometry, Float32BufferAttribute, MathUtils, Mesh, Object3D, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
 
+export function getRequiredObject(model: Object3D, name: string) {
+  const object = model.getObjectByName(name);
+  if (!object) throw new Error(`Missing CRT object: ${name}`);
+  return object;
+}
+
+export function getRequiredMesh(model: Object3D, name: string) {
+  const object = getRequiredObject(model, name);
+  if (!(object instanceof Mesh)) throw new Error(`CRT object is not a mesh: ${name}`);
+  return object;
+}
+
 export function getCRTReferenceFrame(model: Object3D) {
-  const screen = new Box3().setFromObject(model.getObjectByName("CRT_Screen")!);
-  const stand = new Box3().setFromObject(model.getObjectByName("CRT_Stand")!);
+  const screen = new Box3().setFromObject(getRequiredObject(model, "CRT_Screen"));
+  const stand = new Box3().setFromObject(getRequiredObject(model, "CRT_Stand"));
   return {
     screenCenter: screen.getCenter(new Vector3()),
     screenWidth: screen.max.x - screen.min.x,
@@ -46,8 +58,8 @@ function perimeter(mesh: Mesh) {
 
 export function createCRTGeometry(model: Object3D, width: number) {
   model.updateMatrixWorld(true);
-  const source = model.getObjectByName("CRT_Screen") as Mesh;
-  const glass = model.getObjectByName("CRT_Glass") as Mesh;
+  const source = getRequiredMesh(model, "CRT_Screen");
+  const glass = getRequiredMesh(model, "CRT_Glass");
   const bounds = new Box3().setFromObject(source);
   const center = bounds.getCenter(new Vector3());
   const scale = width / (bounds.max.x - bounds.min.x);

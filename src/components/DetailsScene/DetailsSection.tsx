@@ -93,27 +93,26 @@ export const DetailsSection = memo(function DetailsSection({
             {items.map((item, index) => {
                 const column = Math.floor(index / rows);
                 const row = index % rows;
+                const position: [number, number, number] = [
+                    bodyX + column * columnWidth,
+                    bodyY - row * bodyLineHeight,
+                    0,
+                ];
+                const role: ThemeRole = item.href ? "bg" : "textBody";
+                const blockRole: ThemeRole = item.href
+                    ? "textPrimary"
+                    : "textBody";
                 const shared = {
                     text: item.text,
-                    position: [
-                        bodyX + column * columnWidth,
-                        bodyY - row * bodyLineHeight,
-                        0,
-                    ] as [
-                        number,
-                        number,
-                        number,
-                    ],
+                    position,
                     anchorX: bodyAnchorX,
                     anchorY: "top" as const,
                     calculatedFontSize: bodyFontSize,
                     pixelFontSize: bodyFontSize / pxTo3DWidth,
                     font: FONTS.karlaLight,
                     fontWeightClass: "font-light" as const,
-                    role: (item.href ? "bg" : "textBody") as ThemeRole,
-                    blockRole: (item.href
-                        ? "textPrimary"
-                        : "textBody") as ThemeRole,
+                    role,
+                    blockRole,
                     startTrigger,
                     delay: CONFIG.detailsTimings.BODY_DELAY + index * staggerStep,
                     direction,

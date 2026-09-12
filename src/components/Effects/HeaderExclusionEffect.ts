@@ -52,6 +52,10 @@ export class HeaderExclusionEffect extends Effect {
   private readonly scene: Scene;
   private readonly camera: Camera;
   private readonly target: WebGLRenderTarget;
+  private readonly backgroundUniform: Uniform<Color>;
+  private readonly thresholdUniform: Uniform<number>;
+  private readonly softnessUniform: Uniform<number>;
+  private readonly strengthUniform: Uniform<number>;
 
   constructor(scene: Scene, camera: Camera) {
     const target = new WebGLRenderTarget(1, 1, {
@@ -60,27 +64,35 @@ export class HeaderExclusionEffect extends Effect {
       depthBuffer: false,
       stencilBuffer: false,
     });
+    const backgroundUniform = new Uniform(new Color());
+    const thresholdUniform = new Uniform(0.05);
+    const softnessUniform = new Uniform(0.15);
+    const strengthUniform = new Uniform(1);
 
     super("HeaderExclusionEffect", FRAGMENT, {
       uniforms: new Map<string, Uniform<unknown>>([
         ["u_header", new Uniform(target.texture)],
-        ["u_bg", new Uniform(new Color())],
-        ["u_threshold", new Uniform(0.05)],
-        ["u_softness", new Uniform(0.15)],
-        ["u_strength", new Uniform(1)],
+        ["u_bg", backgroundUniform],
+        ["u_threshold", thresholdUniform],
+        ["u_softness", softnessUniform],
+        ["u_strength", strengthUniform],
       ]),
     });
 
     this.scene = scene;
     this.camera = camera;
     this.target = target;
+    this.backgroundUniform = backgroundUniform;
+    this.thresholdUniform = thresholdUniform;
+    this.softnessUniform = softnessUniform;
+    this.strengthUniform = strengthUniform;
   }
 
   update(renderer: WebGLRenderer) {
     if (this.blendMode.opacity.value === 0) return;
     const background = this.scene.background;
     if (background instanceof Color) {
-      (this.uniforms.get("u_bg")!.value as Color).copy(background);
+      this.backgroundUniform.value.copy(background);
     }
 
     const previousTarget = renderer.getRenderTarget();
@@ -101,6 +113,12 @@ export class HeaderExclusionEffect extends Effect {
 
   setActive(active: boolean) {
     this.blendMode.opacity.value = active ? 1 : 0;
+  }
+
+  configure(strength: number, threshold: number, softness: number) {
+    this.strengthUniform.value = strength;
+    this.thresholdUniform.value = threshold;
+    this.softnessUniform.value = softness;
   }
 
   setSize(width: number, height: number) {

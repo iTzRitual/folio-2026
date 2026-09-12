@@ -50,8 +50,7 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
       const columns = CONFIG.customAberration.COLUMNS;
       const rows = columns / aspectRatio;
 
-      effect.uniforms.get("u_gridSize")!.value.set(columns, rows);
-      effect.uniforms.get("u_aspect")!.value.set(aspectRatio, 1.0);
+      effect.setGrid(columns, rows, aspectRatio);
     }, [size, effect]);
 
     useFrame(({ pointer }, delta) => {
@@ -146,32 +145,22 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
         scrollAberrationVelocityRef.current = 0.0;
       }
 
-      effect.uniforms.get("u_mouse")!.value.copy(currentMouse.current);
-      effect.uniforms.get("u_aberrationIntensity")!.value =
-        !phase2SurfaceActive && inputMode === "fine" ? intensity.current : 0;
-      effect
-        .uniforms
-        .get("u_mouseVelocity")!
-        .value.set(
-          phase2SurfaceActive ? 0 : velX,
-          phase2SurfaceActive ? 0 : velY,
-        );
-      effect.uniforms.get("u_scrollVelocity")!.value = phase2SurfaceActive
-        ? 0
-        : scrollAberrationVelocityRef.current;
+      effect.setPointer(
+        currentMouse.current,
+        !phase2SurfaceActive && inputMode === "fine" ? intensity.current : 0,
+        phase2SurfaceActive ? 0 : velX,
+        phase2SurfaceActive ? 0 : velY,
+      );
       const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
-      effect.uniforms.get("u_scrollBlur")!.value =
-        scroll.blur * mobileIntensity;
-      effect.uniforms.get("u_scrollSplit")!.value =
-        scroll.split * mobileIntensity;
-      effect.uniforms
-        .get("u_scrollVignette")!
-        .value.set(
-          scroll.vignetteXWeight,
-          scroll.vignetteInner,
-          scroll.vignetteOuter,
-          scroll.vignetteFloor,
-        );
+      effect.setScroll(
+        phase2SurfaceActive ? 0 : scrollAberrationVelocityRef.current,
+        scroll.blur * mobileIntensity,
+        scroll.split * mobileIntensity,
+        scroll.vignetteXWeight,
+        scroll.vignetteInner,
+        scroll.vignetteOuter,
+        scroll.vignetteFloor,
+      );
     });
 
     return <primitive ref={ref} object={effect} dispose={null} />;
