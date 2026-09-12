@@ -1,42 +1,11 @@
 import { spawn } from "node:child_process";
 import { watch } from "node:fs";
 import path from "node:path";
+import { isPublishedSourcePath } from "./source-publication-policy.mjs";
 
 const root = process.cwd();
 const generator = path.join(root, "scripts", "generate-source-manifest.mjs");
 const nextCli = path.join(root, "node_modules", "next", "dist", "bin", "next");
-const ignoredPrefixes = [
-  ".agents/",
-  ".claude/",
-  ".git/",
-  ".next/",
-  "node_modules/",
-  "out/",
-  "plans/",
-  "public/source-manifest.",
-  "raw/",
-];
-const ignoredFiles = new Set([
-  ".DS_Store",
-  "AGENTS.md",
-  "next-env.d.ts",
-  "package-lock.json",
-  "tsconfig.tsbuildinfo",
-]);
-const textExtensions = new Set([
-  ".css",
-  ".html",
-  ".js",
-  ".json",
-  ".md",
-  ".mjs",
-  ".svg",
-  ".ts",
-  ".tsx",
-  ".txt",
-  ".yaml",
-  ".yml",
-]);
 let debounce;
 let generating = false;
 let queued = false;
@@ -73,13 +42,7 @@ async function regenerate() {
 }
 
 function shouldRegenerate(filename) {
-  const normalized = filename.split(path.sep).join("/");
-  if (ignoredPrefixes.some((prefix) => normalized.startsWith(prefix))) {
-    return false;
-  }
-  if (ignoredFiles.has(path.basename(normalized))) return false;
-  if (normalized === ".gitignore") return true;
-  return textExtensions.has(path.extname(normalized).toLowerCase());
+  return isPublishedSourcePath(filename);
 }
 
 await regenerate();
