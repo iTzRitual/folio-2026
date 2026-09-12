@@ -42,7 +42,10 @@ import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { Phase2CRT } from "./Phase2CRT";
 import { Phase2Workstation } from "./Phase2Workstation";
-import { Phase2CRTScreen } from "./Phase2CRTScreen";
+import {
+  Phase2CRTScreen,
+  type Phase2CRTScreenHandle,
+} from "./Phase2CRTScreen";
 import {
   Phase2PlayStationSignal,
   type PlayStationSignalHandle,
@@ -1727,6 +1730,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const toolbarMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const interactionMeshRef = useRef<THREE.Mesh>(null);
+  const crtScreenRef = useRef<Phase2CRTScreenHandle>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const targetQualityRef = useRef(qualityTier);
@@ -1777,6 +1781,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const mouseIntensityRef = useRef(0);
   const intersectionsRef = useRef<THREE.Intersection[]>([]);
+  const interactionUvRef = useRef(new THREE.Vector2());
+
+  const mapContentUv = useCallback(
+    (source: THREE.Vector2 | undefined, target: THREE.Vector2) =>
+      source && crtScreenRef.current?.mapContentUv(source, target)
+        ? target
+        : null,
+    [],
+  );
 
   const lockReturnScroll = (y: number) => {
     returnScrollLeaseRef.current ??= acquireRootScrollLock(y);
@@ -2053,6 +2066,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useEffect(() => {
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const contentUv = new THREE.Vector2();
     const intersections: THREE.Intersection[] = [];
     const onWheel = (event: WheelEvent) => {
       if (!monitorHasSignal(monitorState)) return;
@@ -2094,7 +2108,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       raycaster.setFromCamera(pointer, camera);
       intersections.length = 0;
       raycaster.intersectObject(interactionMesh, false, intersections);
-      const pageUv = intersections[0]?.uv;
+      const pageUv = mapContentUv(intersections[0]?.uv, contentUv);
 
       if (
         !pageUv ||
@@ -2141,7 +2155,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         capture: true,
       });
     };
-  }, [camera, gl, monitorState]);
+  }, [camera, gl, mapContentUv, monitorState]);
 
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
@@ -2714,7 +2728,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     intersections.length = 0;
     state.raycaster.setFromCamera(state.pointer, state.camera);
     state.raycaster.intersectObject(interactionMeshRef.current, false, intersections);
-    const pageUv = intersections[0]?.uv;
+    const pageUv = mapContentUv(
+      intersections[0]?.uv,
+      interactionUvRef.current,
+    );
     const bounds = pageUvBoundsRef.current;
     const mouseX = pageUv ? (pageUv.x - bounds.x) / bounds.width : -1;
     const mouseY = pageUv ? (pageUv.y - bounds.y) / bounds.height : -1;
@@ -3057,7 +3074,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       return;
     }
 
-    const pageUv = event.uv;
+    const pageUv = mapContentUv(event.uv, interactionUvRef.current);
     const bounds = pageUvBoundsRef.current;
 
     if (!pageUv || !bounds) return;
@@ -3216,7 +3233,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
   const handlePagePointerDown = (event: ThreeEvent<PointerEvent>) => {
     if (!monitorHasSignal(monitorState)) return;
-    const pageUv = event.uv;
+    const pageUv = mapContentUv(event.uv, interactionUvRef.current);
     const renderer = vscodeRendererRef.current;
 
     if (
@@ -3248,7 +3265,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const handlePagePointerMove = (event: ThreeEvent<PointerEvent>) => {
     const drag = vscodeScrollbarDragRef.current;
     const renderer = vscodeRendererRef.current;
-    const pageUv = event.uv;
+    const pageUv = mapContentUv(event.uv, interactionUvRef.current);
 
     if (!drag || !renderer || !pageUv) return;
 
@@ -3294,7 +3311,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           />
           <Phase2Workstation width={planeWidth} />
         </Suspense>
-        <Phase2CRTScreen monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
+        <Phase2CRTScreen ref={crtScreenRef} monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <group ref={desktopSignalGroupRef}>
         <mesh
           geometry={desktopGeometry}

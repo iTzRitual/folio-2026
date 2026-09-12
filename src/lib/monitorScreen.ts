@@ -67,13 +67,56 @@ export function createMonitorUniforms() {
   };
 }
 
+export type MonitorUniforms = ReturnType<typeof createMonitorUniforms>;
+
+const fract = (value: number) => value - Math.floor(value);
+
+export function mapMonitorScreenUv(
+  source: Vector2,
+  target: Vector2,
+  uniforms: MonitorUniforms,
+) {
+  const powerSize = uniforms.monitorPowerSize.value;
+  let x = (source.x - 0.5) / powerSize.x + 0.5;
+  let y = (source.y - 0.5) / powerSize.y + 0.5;
+  x = (x - 0.5) / uniforms.monitorUnderScan.value + 0.5;
+  y = (y - 0.5) / uniforms.monitorUnderScan.value + 0.5;
+
+  let visible = x >= 0 && x <= 1 && y >= 0 && y <= 1;
+  if (uniforms.monitorDelay.value > 0.5) {
+    x = fract(x + CONFIG.monitor.HV_HORIZONTAL_SHIFT);
+    y = fract(y + 0.5);
+    visible =
+      visible &&
+      x >= CONFIG.monitor.HV_HORIZONTAL_BLANK &&
+      y >= CONFIG.monitor.HV_VERTICAL_BLANK;
+  }
+
+  const sync = uniforms.monitorSync.value;
+  if (sync > 0) {
+    const time = uniforms.monitorTime.value;
+    const roll = fract(time * CONFIG.monitor.SYNC_ROLL_SPEED) * sync;
+    const drift =
+      (Math.sin(time * 2.1) * CONFIG.monitor.SYNC_DRIFT +
+        Math.sin(y * 18 + time) * 0.001) *
+      sync;
+    const jump =
+      (Math.sin(time * 1.7) >= 0.985 ? CONFIG.monitor.SYNC_JUMP : 0) * sync;
+    x = fract(x + drift + jump);
+    y = fract(y + roll);
+  }
+
+  target.set(x, y);
+  return visible && uniforms.monitorPowerLevel.value > 0;
+}
+
 export function createMonitorScreenRuntime() {
   let powerAmount = 1;
   let sync = 0;
   let underScan = 1;
   let time = 0;
   return {
-    update(uniforms: ReturnType<typeof createMonitorUniforms>, state: MonitorState, delta: number, reducedMotion: boolean) {
+    update(uniforms: MonitorUniforms, state: MonitorState, delta: number, reducedMotion: boolean) {
       time += delta;
       const blend = 1 - Math.exp(-CONFIG.monitor.RESPONSE * delta);
       sync += (Number(state.syncExternal) - sync) * blend;

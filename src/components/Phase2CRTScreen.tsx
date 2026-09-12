@@ -1,12 +1,24 @@
 "use client";
 
 import { createPortal, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { createMonitorUniforms, createMonitorScreenRuntime, monitorShader } from "@/lib/monitorScreen";
+import {
+  createMonitorUniforms,
+  createMonitorScreenRuntime,
+  mapMonitorScreenUv,
+  monitorShader,
+} from "@/lib/monitorScreen";
 import type { MonitorState } from "@/lib/monitorState";
 import { crtMorph } from "@/lib/crtScreen";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
@@ -103,15 +115,21 @@ void main() {
 }
 `;
 
-export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monitorState, children }: {
+export type Phase2CRTScreenHandle = {
+  mapContentUv(source: THREE.Vector2, target: THREE.Vector2): boolean;
+};
+
+export const Phase2CRTScreen = forwardRef<Phase2CRTScreenHandle, {
   monitorState: MonitorState;
   width: number;
   height: number;
   geometry: THREE.BufferGeometry;
-
   borderGeometry: THREE.BufferGeometry;
   children: ReactNode;
-}) {
+}>(function Phase2CRTScreen(
+  { width, height, geometry, borderGeometry, monitorState, children },
+  ref,
+) {
   const { revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
   const monitorRuntime = useMemo(createMonitorScreenRuntime, []);
@@ -124,6 +142,14 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monit
   );
   const targetQualityRef = useRef(qualityTier);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      mapContentUv: (source, target) =>
+        mapMonitorScreenUv(source, target, monitorUniforms),
+    }),
+    [monitorUniforms],
+  );
 
   const resources = useMemo(() => {
     const tuning = CONFIG.phase2;
@@ -238,4 +264,4 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monit
       material={resources.material} raycast={() => null} />
 
   </>;
-}
+});

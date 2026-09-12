@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BufferGeometry, BufferAttribute, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BufferGeometry, BufferAttribute, Group, Mesh, MeshStandardMaterial, Vector2, Vector3 } from 'three';
 import { createMonitorControls, MONITOR_CONTROLS } from '../src/lib/monitorControls';
 import { createMonitorState, MONITOR_DEFAULTS, toggleMonitorButton, setMonitorKnob, resetMonitorKnob, type MonitorKnob } from '../src/lib/monitorState';
-import { createMonitorScreenRuntime, createMonitorUniforms } from '../src/lib/monitorScreen';
+import { createMonitorScreenRuntime, createMonitorUniforms, mapMonitorScreenUv } from '../src/lib/monitorScreen';
 
 const file = readFileSync('public/glbs/crt-monitor.glb');
 const jsonSize = file.readUInt32LE(12);
@@ -52,6 +52,20 @@ const uniforms = createMonitorUniforms();
 screen.update(uniforms, state, 1 / 60, false);
 assert.equal(uniforms.monitorPowerFlash.value, 0);
 assert.deepEqual(uniforms.monitorPowerSize.value.toArray(), [1, 1]);
+const mappedUv = new Vector2();
+assert(mapMonitorScreenUv(new Vector2(0.2, 0.7), mappedUv, uniforms));
+assert(mappedUv.distanceTo(new Vector2(0.2, 0.7)) < 1e-8);
+uniforms.monitorUnderScan.value = 0.8;
+assert(!mapMonitorScreenUv(new Vector2(0.09, 0.5), mappedUv, uniforms));
+uniforms.monitorUnderScan.value = 1;
+uniforms.monitorDelay.value = 1;
+assert(!mapMonitorScreenUv(new Vector2(0.15, 0.6), mappedUv, uniforms));
+assert(mapMonitorScreenUv(new Vector2(0.3, 0.6), mappedUv, uniforms));
+assert(mappedUv.distanceTo(new Vector2(0.18, 0.1)) < 1e-8);
+uniforms.monitorDelay.value = 0;
+uniforms.monitorPowerLevel.value = 0;
+assert(!mapMonitorScreenUv(new Vector2(0.5, 0.5), mappedUv, uniforms));
+screen.update(uniforms, state, 0, false);
 const knobs = controls.controls.filter(control => control.kind === 'knob');
 assert.equal(knobs.length, 11);
 for (const knob of knobs) {
@@ -101,4 +115,4 @@ assert.equal(uniforms.monitorUnderScan.value, 1);
 assert(uniforms.monitorGain.value.equals(new Vector3(1, 1, 1)));
 controls.dispose();
 for (const name of originalVertices.keys()) assert(model.getObjectByName(name)?.visible);
-console.log('PASS: 18 controls, 11 knobs, triangle preservation, bounds, isolated resets, off-state lockout, power cycle, neutral uniforms, drift, disposal.');
+console.log('PASS: 18 controls, 11 knobs, triangle preservation, bounds, raster mapping, isolated resets, off-state lockout, power cycle, neutral uniforms, drift, disposal.');
