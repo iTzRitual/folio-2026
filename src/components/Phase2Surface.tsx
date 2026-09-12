@@ -16,6 +16,7 @@ import {
   type RootScrollLockLease,
 } from "@/lib/rootScrollLock";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { useSceneMotion } from "@/context/SceneMotionContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
   beginVSCodeScrollbarDrag,
@@ -1710,8 +1711,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     leftX,
     rightX,
   } = useHeroLayout();
-  const { revealProgressRef, scrollAberrationVelocityRef } =
-    useHeroTransition();
+  const { revealProgressRef } = useHeroTransition();
+  const { scrollVelocityRef } = useSceneMotion();
   const { camera, events, gl, scene, size } = useThree();
   if (!(camera instanceof THREE.PerspectiveCamera)) {
     throw new Error("Phase 2 requires a perspective camera");
@@ -2846,7 +2847,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         ? mouseIntensityRef.current
         : 0;
     uniforms.u_mouseVelocity.value.set(mouseVelocityX, mouseVelocityY);
-    uniforms.u_scrollVelocity.value = scrollAberrationVelocityRef.current;
+    uniforms.u_scrollVelocity.value = scrollVelocityRef.current;
     const mobileIntensity =
       qualityTier === "low" ? 0.25 : inputMode === "coarse" ? 0.55 : 1;
     uniforms.u_scrollBlur.value = scroll.blur * mobileIntensity;

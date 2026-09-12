@@ -1,11 +1,12 @@
-import React, { forwardRef, useEffect, useMemo, useRef } from "react";
+import React, { forwardRef, useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Vector2, MathUtils } from "three";
+import { MathUtils } from "three";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "../../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { useSceneMotion } from "@/context/SceneMotionContext";
 
 function affordableTaps(width: number, height: number) {
   const {
@@ -26,145 +27,56 @@ function affordableTaps(width: number, height: number) {
 }
 
 export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
-    const scroll = useDebugSettings().scrollBlur;
-    const { inputMode } = useSceneCapabilities();
-    const { revealProgressRef, scrollAberrationVelocityRef } =
-      useHeroTransition();
-    const { size } = useThree();
-    const taps = Math.min(
-      scroll.taps,
-      affordableTaps(size.width, size.height),
-      inputMode === "coarse" ? 4 : CONFIG.customAberration.SCROLL_TAPS,
+  const scroll = useDebugSettings().scrollBlur;
+  const { inputMode } = useSceneCapabilities();
+  const { revealProgressRef } = useHeroTransition();
+  const {
+    pointerRef,
+    pointerVelocityRef,
+    pointerIntensityRef,
+    scrollVelocityRef,
+  } = useSceneMotion();
+  const { size } = useThree();
+  const taps = Math.min(
+    scroll.taps,
+    affordableTaps(size.width, size.height),
+    inputMode === "coarse" ? 4 : CONFIG.customAberration.SCROLL_TAPS,
+  );
+  const effect = useMemo(() => new CustomAberrationEffect(taps), [taps]);
+
+  useEffect(() => {
+    const aspectRatio = size.width / size.height;
+    const columns = CONFIG.customAberration.COLUMNS;
+    const rows = columns / aspectRatio;
+
+    effect.setGrid(columns, rows, aspectRatio);
+  }, [size, effect]);
+
+  useFrame(() => {
+    const phase2SurfaceActive =
+      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
+    effect.setPointer(
+      pointerRef.current,
+      !phase2SurfaceActive && inputMode === "fine"
+        ? pointerIntensityRef.current
+        : 0,
+      phase2SurfaceActive ? 0 : pointerVelocityRef.current.x,
+      phase2SurfaceActive ? 0 : pointerVelocityRef.current.y,
     );
-    const effect = useMemo(() => new CustomAberrationEffect(taps), [taps]);
+    const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
+    effect.setScroll(
+      phase2SurfaceActive ? 0 : scrollVelocityRef.current,
+      scroll.blur * mobileIntensity,
+      scroll.split * mobileIntensity,
+      scroll.vignetteXWeight,
+      scroll.vignetteInner,
+      scroll.vignetteOuter,
+      scroll.vignetteFloor,
+    );
+  });
 
-    const currentMouse = useRef(new Vector2(0.5, 0.5));
-    const targetMouse = useRef(new Vector2(0.5, 0.5));
-    const prevMouse = useRef(new Vector2(0.5, 0.5));
-    const intensity = useRef(0.0);
-    const prevScrollY = useRef<number | null>(null);
-    const targetScrollVelocity = useRef(0.0);
-
-    useEffect(() => {
-      const aspectRatio = size.width / size.height;
-      const columns = CONFIG.customAberration.COLUMNS;
-      const rows = columns / aspectRatio;
-
-      effect.setGrid(columns, rows, aspectRatio);
-    }, [size, effect]);
-
-    useFrame(({ pointer }, delta) => {
-      const phase2Started = revealProgressRef.current > 0;
-      const phase2SurfaceActive =
-        revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
-      const mappedX = (pointer.x + 1) / 2;
-      const mappedY = (pointer.y + 1) / 2;
-
-      const dx = mappedX - targetMouse.current.x;
-      const dy = mappedY - targetMouse.current.y;
-
-      if (
-        inputMode === "fine" &&
-        (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001)
-      ) {
-        intensity.current = 1.0;
-      }
-
-      targetMouse.current.set(mappedX, mappedY);
-      prevMouse.current.copy(currentMouse.current);
-
-      const lerpFactor = 1 - Math.exp(-CONFIG.customAberration.LERP_FACTOR_MULT * delta);
-      currentMouse.current.lerp(targetMouse.current, lerpFactor);
-
-      intensity.current = MathUtils.lerp(
-        intensity.current,
-        0,
-        1 - Math.exp(-CONFIG.customAberration.INTENSITY_LERP_MULT * delta),
-      );
-
-      if (intensity.current < CONFIG.customAberration.INTENSITY_MIN) {
-        intensity.current = 0.0;
-      }
-
-      const safeDelta = Math.max(delta, CONFIG.customAberration.SAFE_DELTA_MIN);
-      const velX =
-        intensity.current > 0
-          ? (currentMouse.current.x - prevMouse.current.x) *
-            (CONFIG.customAberration.VEL_MULT / safeDelta)
-          : 0;
-      const velY =
-        intensity.current > 0
-          ? (currentMouse.current.y - prevMouse.current.y) *
-            (CONFIG.customAberration.VEL_MULT / safeDelta)
-          : 0;
-
-      const scrollY = window.scrollY;
-      const scrollDelta =
-        prevScrollY.current === null ? 0 : scrollY - prevScrollY.current;
-      prevScrollY.current = scrollY;
-
-      if (phase2Started) {
-        targetScrollVelocity.current *= Math.exp(
-          -60 * CONFIG.scrollTimeline.LENIS_LERP * delta,
-        );
-      } else {
-        targetScrollVelocity.current = MathUtils.clamp(
-          (scrollDelta / size.height) *
-            scroll.velocityScale *
-            (CONFIG.customAberration.VEL_MULT / safeDelta),
-          -CONFIG.customAberration.SCROLL_VEL_CLAMP,
-          CONFIG.customAberration.SCROLL_VEL_CLAMP,
-        );
-      }
-
-      if (
-        Math.abs(targetScrollVelocity.current) <
-        CONFIG.customAberration.SCROLL_MIN
-      ) {
-        targetScrollVelocity.current = 0.0;
-      }
-
-      const targetScrollVel = targetScrollVelocity.current;
-
-      const scrollLerpMult =
-        Math.abs(targetScrollVel) >
-        Math.abs(scrollAberrationVelocityRef.current)
-          ? scroll.attack
-          : scroll.release;
-
-      scrollAberrationVelocityRef.current = MathUtils.lerp(
-        scrollAberrationVelocityRef.current,
-        targetScrollVel,
-        1 - Math.exp(-scrollLerpMult * delta),
-      );
-
-      if (
-        Math.abs(scrollAberrationVelocityRef.current) <
-        CONFIG.customAberration.SCROLL_MIN
-      ) {
-        scrollAberrationVelocityRef.current = 0.0;
-      }
-
-      effect.setPointer(
-        currentMouse.current,
-        !phase2SurfaceActive && inputMode === "fine" ? intensity.current : 0,
-        phase2SurfaceActive ? 0 : velX,
-        phase2SurfaceActive ? 0 : velY,
-      );
-      const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
-      effect.setScroll(
-        phase2SurfaceActive ? 0 : scrollAberrationVelocityRef.current,
-        scroll.blur * mobileIntensity,
-        scroll.split * mobileIntensity,
-        scroll.vignetteXWeight,
-        scroll.vignetteInner,
-        scroll.vignetteOuter,
-        scroll.vignetteFloor,
-      );
-    });
-
-    return <primitive ref={ref} object={effect} dispose={null} />;
-  },
+  return <primitive ref={ref} object={effect} dispose={null} />;
+},
 );
 
 CustomAberration.displayName = "CustomAberration";

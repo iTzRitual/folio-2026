@@ -37,6 +37,7 @@ import type {
 import { Phase2Surface } from "./Phase2Surface";
 import { CONFIG } from "@/config/constants";
 import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
+import { SceneMotionProvider } from "@/context/SceneMotionContext";
 
 function SceneContent({
   startAnimation,
@@ -56,34 +57,36 @@ function SceneContent({
       <HeroTransitionProvider
         detailsOverflowViewports={detailsOverflowViewports}
       >
-        <ProjectHoverProvider>
-        <CaseStudyProvider>
-        <ThemeSweep />
-        <directionalLight intensity={3} position={[0, 3, 2]} />
-        <Environment files="/hdri/city.hdr" />
+        <SceneMotionProvider>
+          <ProjectHoverProvider>
+            <CaseStudyProvider>
+              <ThemeSweep />
+              <directionalLight intensity={3} position={[0, 3, 2]} />
+              <Environment files="/hdri/city.hdr" />
 
-        <Suspense fallback={null}>
-          <Phase2Surface>
-            <Model />
+              <Suspense fallback={null}>
+                <Phase2Surface>
+                  <Model />
 
-            <Header />
-            <HeroText />
-            <Details bioVariant={bioVariant} />
-            <CurlEdgeFade />
-            <ProjectPreviewOverlay />
-            <CaseStudyScene />
-          </Phase2Surface>
-        </Suspense>
-        <EffectComposer multisampling={0}>
-          <>
-            <HeaderExclusion />
-            {!prefersReducedMotion && qualityTier !== "low" && (
-              <CustomAberration />
-            )}
-          </>
-        </EffectComposer>
-        </CaseStudyProvider>
-        </ProjectHoverProvider>
+                  <Header />
+                  <HeroText />
+                  <Details bioVariant={bioVariant} />
+                  <CurlEdgeFade />
+                  <ProjectPreviewOverlay />
+                  <CaseStudyScene />
+                </Phase2Surface>
+              </Suspense>
+              <EffectComposer multisampling={0}>
+                <>
+                  <HeaderExclusion />
+                  {!prefersReducedMotion && qualityTier !== "low" && (
+                    <CustomAberration />
+                  )}
+                </>
+              </EffectComposer>
+            </CaseStudyProvider>
+          </ProjectHoverProvider>
+        </SceneMotionProvider>
       </HeroTransitionProvider>
     </HeroLayoutProvider>
   );
