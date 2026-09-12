@@ -38,7 +38,7 @@ export function CaseStudyScene() {
     const { layoutMode, compactHeight, inputMode } = useSceneCapabilities();
     const { leftX, rightX } = useHeroLayout();
     const narrowStudy = layoutMode === "narrow";
-    const nativeStudyScroll = narrowStudy && inputMode === "coarse";
+    const nativeStudyScroll = inputMode === "coarse";
     const tuning = useDebugSettings().projectPreview;
 
     // Kept past the close, so the copy fading out is still the copy that was

@@ -108,9 +108,8 @@ export function DetailsLink({
   onSync,
   active = false,
 }: DetailsLinkProps) {
-  const { layoutMode, inputMode } = useSceneCapabilities();
-  const opensCaseStudyDirectly =
-    layoutMode === "narrow" && inputMode === "coarse";
+  const { inputMode } = useSceneCapabilities();
+  const opensCaseStudyDirectly = inputMode === "coarse";
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const arrowRef = useRef<THREE.MeshBasicMaterial>(null);
   const plateRef = useRef<THREE.MeshBasicMaterial>(null);
