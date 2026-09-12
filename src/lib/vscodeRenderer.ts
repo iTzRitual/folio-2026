@@ -1,15 +1,6 @@
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
-
-export type SourceFile = {
-  path: string;
-  content: string;
-};
-
-export type SourceManifest = {
-  version?: string;
-  files: SourceFile[];
-};
+import type { SourceFile, SourceManifest } from "@/lib/sourceManifest";
 
 export type VSCodeScrollbarKind = "tree-y" | "editor-y" | "editor-x";
 
@@ -105,9 +96,6 @@ type ScrollbarGeometry = {
 const keywordPattern = /^(?:as|async|await|break|case|catch|class|const|continue|default|delete|do|else|export|extends|false|finally|for|from|function|if|implements|import|in|instanceof|interface|let|new|null|of|private|protected|public|return|static|super|switch|throw|true|try|type|typeof|undefined|var|void|while|with|yield)$/;
 const typePattern = /^(?:Array|Record|Promise|ReactNode|string|number|boolean|unknown|never|void|HTMLElement|HTMLCanvasElement|CanvasRenderingContext2D)$/;
 const tokenPattern = /(\/\/.*$|\/\*.*?\*\/|<!--.*?-->|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b[A-Za-z_$][\w$]*\b|\b\d+(?:\.\d+)?\b)/g;
-const sourceManifestUrl = "/source-manifest.json";
-let sourceManifestPromise: Promise<SourceManifest> | null = null;
-
 function createRoot(): TreeNode {
   return {
     name: "folio-2026",
@@ -1206,27 +1194,4 @@ export function handleVSCodeWheel(
 
   drawVSCodeRenderer(renderer);
   return true;
-}
-
-export function loadSourceManifest(force = false) {
-  if (force || !sourceManifestPromise) {
-    sourceManifestPromise = fetch(sourceManifestUrl, {
-      cache: "no-store",
-    }).then(async (response) => {
-      if (!response.ok) throw new Error("Source manifest unavailable");
-      const manifest = (await response.json()) as SourceManifest;
-      if (!Array.isArray(manifest.files)) throw new Error("Invalid source manifest");
-      return manifest;
-    });
-  }
-
-  return sourceManifestPromise;
-}
-
-export async function loadSourceManifestVersion() {
-  const response = await fetch("/source-manifest.version", {
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Source manifest version unavailable");
-  return (await response.text()).trim();
 }

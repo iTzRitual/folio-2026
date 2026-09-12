@@ -25,8 +25,6 @@ import {
   endVSCodeScrollbarDrag,
   handleVSCodeClick,
   handleVSCodeWheel,
-  loadSourceManifest,
-  loadSourceManifestVersion,
   restoreVSCodeSession,
   setVSCodeLoadError,
   setVSCodeSources,
@@ -35,8 +33,12 @@ import {
   type VSCodeScrollbarDrag,
   type VSCodeRenderer,
   type VSCodeSessionSnapshot,
-  type SourceManifest,
 } from "@/lib/vscodeRenderer";
+import {
+  loadSourceManifest,
+  refreshSourceManifest,
+  type SourceManifest,
+} from "@/lib/sourceManifest";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
@@ -2044,9 +2046,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
       sourceRefreshPendingRef.current = true;
       try {
-        const version = await loadSourceManifestVersion();
-        if (renderer.sourceVersion !== version) {
-          const manifest = await loadSourceManifest(true);
+        const manifest = await refreshSourceManifest(renderer.sourceVersion);
+        if (manifest) {
           sourceManifestRef.current = manifest;
           setVSCodeSources(renderer, manifest);
         }
