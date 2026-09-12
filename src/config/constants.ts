@@ -81,6 +81,15 @@ export const CONFIG = {
         COMPACT_HEIGHT: 520,
         COMPACT_ASPECT: 0.62,
     },
+    performanceMonitor: {
+        LOWER_FPS: 50,
+        UPPER_FPS: 58,
+        DECLINE_COOLDOWN_MS: 3000,
+        INCLINE_COOLDOWN_MS: 12000,
+        LOW_DPR: 0.75,
+        BALANCED_DPR: 1,
+        HIGH_DPR: 1.5,
+    },
     scene: {
         DETAILS_GROUP_Z: -0.05,
     },

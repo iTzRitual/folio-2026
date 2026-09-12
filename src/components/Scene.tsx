@@ -35,6 +35,7 @@ import type {
   SceneQualityTier,
 } from "@/lib/responsiveScene";
 import { Phase2Surface } from "./Phase2Surface";
+import { CONFIG } from "@/config/constants";
 
 function SceneContent({
   startAnimation,
@@ -109,6 +110,39 @@ export default function Scene({
 
   const [dpr, setDpr] = useState(1);
   const [qualityTier, setQualityTier] = useState<SceneQualityTier>("balanced");
+  const qualityTierRef = useRef<SceneQualityTier>("balanced");
+  const lastQualityChangeRef = useRef(0);
+
+  const changeQuality = (
+    direction: "incline" | "decline",
+    cooldown: number,
+  ) => {
+    const now = performance.now();
+    if (now - lastQualityChangeRef.current < cooldown) return;
+
+    const current = qualityTierRef.current;
+    const next: SceneQualityTier =
+      direction === "decline"
+        ? current === "high"
+          ? "balanced"
+          : "low"
+        : current === "low"
+          ? "balanced"
+          : "high";
+
+    if (next === current) return;
+
+    qualityTierRef.current = next;
+    lastQualityChangeRef.current = now;
+    setQualityTier(next);
+    setDpr(
+      next === "low"
+        ? CONFIG.performanceMonitor.LOW_DPR
+        : next === "balanced"
+          ? CONFIG.performanceMonitor.BALANCED_DPR
+          : CONFIG.performanceMonitor.HIGH_DPR,
+    );
+  };
 
   return (
     <div
@@ -133,38 +167,24 @@ export default function Scene({
         }}
       >
         <PerformanceMonitor
-          bounds={() => [45, 55]}
+          bounds={() => [
+            CONFIG.performanceMonitor.LOWER_FPS,
+            CONFIG.performanceMonitor.UPPER_FPS,
+          ]}
           step={1}
           onDecline={() => {
-            setQualityTier("low");
-            setDpr((prevDpr) => {
-              if (prevDpr >= 1.5) {
-                return 1.0;
-              }
-              if (prevDpr > 0.75) {
-                return 0.75;
-              }
-              return prevDpr;
-            });
+            changeQuality(
+              "decline",
+              CONFIG.performanceMonitor.DECLINE_COOLDOWN_MS,
+            );
           }}
           onIncline={() => {
-            setQualityTier("high");
-            setDpr((prevDpr) => {
-              if (prevDpr <= 0.75) {
-                return 1.0;
-              }
-              if (prevDpr < 1.5) {
-                return 1.5;
-              }
-              return prevDpr;
-            });
+            changeQuality(
+              "incline",
+              CONFIG.performanceMonitor.INCLINE_COOLDOWN_MS,
+            );
           }}
-          // Not a "this device is struggling" signal: drei increments `flipped`
-          // on every incline *and* decline, and keeps incrementing once the
-          // factor has saturated, so onFallback fires on healthy machines too.
-          // It only exists here to stop DPR oscillating; nothing may hang off
-          // it.
-          flipflops={3}
+          flipflops={Infinity}
         />
         <SceneCapabilitiesProvider
           inputMode={inputMode}
