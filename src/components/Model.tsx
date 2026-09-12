@@ -5,7 +5,7 @@ import {
   Center,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -25,6 +25,21 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 const CLIP_DISABLED = 1e6;
 const FOLD_CLIP = new THREE.Plane(new THREE.Vector3(0, -1, 0), CLIP_DISABLED);
 const FOLD_CLIP_PLANES = [FOLD_CLIP];
+
+type PointerCaptureHandle = {
+  hasPointerCapture?: (pointerId: number) => boolean;
+  releasePointerCapture: (pointerId: number) => void;
+  setPointerCapture: (pointerId: number) => void;
+};
+
+function isPointerCaptureHandle(value: unknown): value is PointerCaptureHandle {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PointerCaptureHandle>;
+  return (
+    typeof candidate.setPointerCapture === "function" &&
+    typeof candidate.releasePointerCapture === "function"
+  );
+}
 
 useGLTF.setDecoderPath("/draco/");
 
@@ -62,6 +77,11 @@ export default function Model() {
   const vel = useRef(new THREE.Vector3(0, 0, 0));
   const isDragging = useRef(false);
   const isInteractionLockedRef = useRef(false);
+  const capturedPointerRef = useRef<{
+    id: number;
+    target: PointerCaptureHandle;
+  } | null>(null);
+  const previousUserSelectRef = useRef<string | null>(null);
 
   const isHoveringCenter = useRef(false);
   const isHoveringModel = useRef(false);
@@ -79,6 +99,42 @@ export default function Model() {
   const refractionBuffer = useRef<THREE.Texture | null>(null);
 
   const debug = useDebugSettings();
+
+  const finishDrag = useCallback(
+    (cursor: "auto" | "grab" = "auto", releaseCapture = true) => {
+      const capturedPointer = capturedPointerRef.current;
+      capturedPointerRef.current = null;
+
+      if (
+        releaseCapture &&
+        capturedPointer &&
+        (capturedPointer.target.hasPointerCapture?.(capturedPointer.id) ?? true)
+      ) {
+        capturedPointer.target.releasePointerCapture(capturedPointer.id);
+      }
+
+      isDragging.current = false;
+      document.body.style.cursor = cursor;
+      if (previousUserSelectRef.current !== null) {
+        document.body.style.userSelect = previousUserSelectRef.current;
+        previousUserSelectRef.current = null;
+      }
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const cancelDrag = () => finishDrag();
+    window.addEventListener("blur", cancelDrag);
+    return () => {
+      window.removeEventListener("blur", cancelDrag);
+      finishDrag();
+    };
+  }, [finishDrag]);
+
+  useLayoutEffect(() => {
+    if (!directManipulation) finishDrag();
+  }, [directManipulation, finishDrag]);
 
   useLayoutEffect(() => {
     mesh.current?.traverse((child) => {
@@ -150,11 +206,9 @@ export default function Model() {
       isInteractionLockedRef.current = shouldLockInteraction;
 
       if (shouldLockInteraction) {
-        isDragging.current = false;
+        finishDrag();
         isHoveringCenter.current = false;
         isHoveringModel.current = false;
-
-        document.body.style.cursor = "auto";
       }
     }
 
@@ -433,34 +487,26 @@ export default function Model() {
               }}
               onPointerDown={(e) => {
                 if (!directManipulation || isInteractionLockedRef.current) return;
+                finishDrag();
                 isDragging.current = true;
                 document.body.style.cursor = "grabbing";
+                previousUserSelectRef.current = document.body.style.userSelect;
                 document.body.style.userSelect = "none";
-                if (e.target instanceof Element) {
+                if (isPointerCaptureHandle(e.target)) {
                   e.target.setPointerCapture(e.pointerId);
+                  capturedPointerRef.current = {
+                    id: e.pointerId,
+                    target: e.target,
+                  };
                 }
                 e.stopPropagation();
               }}
-              onPointerUp={(e) => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isDragging.current = false;
-                document.body.style.cursor = isHoveringModel.current
-                  ? "grab"
-                  : "auto";
-                document.body.style.userSelect = "";
-                if (e.target instanceof Element) {
-                  e.target.releasePointerCapture(e.pointerId);
-                }
+              onPointerUp={() => {
+                if (!isDragging.current) return;
+                finishDrag(isHoveringModel.current ? "grab" : "auto");
               }}
-              onPointerCancel={(e) => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isDragging.current = false;
-                document.body.style.cursor = "auto";
-                document.body.style.userSelect = "";
-                if (e.target instanceof Element) {
-                  e.target.releasePointerCapture(e.pointerId);
-                }
-              }}
+              onPointerCancel={() => finishDrag()}
+              onLostPointerCapture={() => finishDrag("auto", false)}
             >
               <circleGeometry args={[grabAreaRadius, 32]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
