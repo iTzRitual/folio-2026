@@ -1,14 +1,18 @@
 import { CONFIG } from "@/config/constants";
 import {
-    experienceData,
     projectsData,
-    educationData,
-    coursesData,
     skillsData,
     bioVariants,
     DEFAULT_BIO_VARIANT,
     type BioVariant,
 } from "@/data/content";
+import {
+    DETAILS_SECTION_CONTENT,
+    DETAILS_SECTION_HEADINGS,
+    WIDE_STACKED_SECTION_KEYS,
+    type DetailsListSectionKey,
+    type DetailsSectionKey,
+} from "@/data/detailsContent";
 import { calculateHeroSafeZone } from "./heroSafeZone";
 import { measureTextWidth, wrapParagraphs, wrapText } from "./textMetrics";
 import {
@@ -46,8 +50,8 @@ export interface DetailsLayout {
     modelInterludeHeight: number;
     skillsColumns: number;
     skillsColumnWidth: number;
-    sectionLines: Record<string, string[]>;
-    sections: Record<string, DetailsSectionOffsets>;
+    sectionLines: Record<DetailsListSectionKey, string[]>;
+    sections: Record<DetailsSectionKey, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
     overflow: number;
@@ -59,15 +63,6 @@ interface DetailsLayoutInput {
     bioVariant?: BioVariant;
     fontsReady?: boolean;
 }
-
-export const SECTION_HEADINGS = {
-    experience: "Experience",
-    projects: "Featured Projects",
-    education: "Education",
-    courses: "Courses\n& Certifications",
-    bio: "About me",
-    skills: "Skills",
-} as const;
 
 export function headingLines(heading: string): string[] {
     return heading.split("\n");
@@ -84,19 +79,6 @@ export function headingBlockHeight(
             (lines - 1) * CONFIG.detailsLayout.HEADING_LINE_HEIGHT_MULT)
     );
 }
-
-const STACKED_SECTIONS = [
-    "experience",
-    "projects",
-    "education",
-    "courses",
-] as const;
-
-export const DETAILS_SECTION_KEYS = [
-    ...STACKED_SECTIONS,
-    "bio",
-    "skills",
-] as const;
 
 function calculateWideDetailsLayout({
     viewportWidth,
@@ -122,9 +104,9 @@ function calculateWideDetailsLayout({
     const bodyTopOffset = headingFontSize * L.BODY_TOP_OFFSET_MULT;
     const sectionGap = headingFontSize * L.SECTION_GAP_MULT;
 
-    const widestHeading = STACKED_SECTIONS.reduce(
+    const widestHeading = WIDE_STACKED_SECTION_KEYS.reduce(
         (max, key) =>
-            headingLines(SECTION_HEADINGS[key]).reduce(
+            headingLines(DETAILS_SECTION_HEADINGS[key]).reduce(
                 (lineMax, line) =>
                     Math.max(
                         lineMax,
@@ -187,15 +169,15 @@ function calculateWideDetailsLayout({
     const skillsLeftEdge = viewportWidth - marginX - widestSkill;
     const modelGapCenterPx = (projectsRightEdge + skillsLeftEdge) / 2;
 
-    const lineCounts: Record<string, number> = {
-        experience: experienceData.length,
-        projects: projectsData.length,
-        education: educationData.length,
-        courses: coursesData.length,
-        skills: skillsData.length,
+    const sectionLines: Record<DetailsListSectionKey, string[]> = {
+        experience: [...DETAILS_SECTION_CONTENT.experience.wideLines],
+        skills: [...DETAILS_SECTION_CONTENT.skills.wideLines],
+        projects: [...DETAILS_SECTION_CONTENT.projects.wideLines],
+        education: [...DETAILS_SECTION_CONTENT.education.wideLines],
+        courses: [...DETAILS_SECTION_CONTENT.courses.wideLines],
     };
 
-    const lineHeights: Record<string, number> = {
+    const lineHeights: Record<DetailsListSectionKey, number> = {
         experience: bodyLineHeight,
         projects: projectLineHeight,
         education: bodyLineHeight,
@@ -204,22 +186,22 @@ function calculateWideDetailsLayout({
     };
 
     const cursors: Record<DetailsColumn, number> = { left: 0, right: 0 };
-    const offsets: Record<string, DetailsSectionOffsets> = {};
+    const offsets = {} as Record<DetailsSectionKey, DetailsSectionOffsets>;
 
-    const place = (key: string, column: DetailsColumn) => {
+    const place = (key: DetailsListSectionKey, column: DetailsColumn) => {
         const top = cursors[column];
         const headingHeight = headingBlockHeight(
-            SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
+            DETAILS_SECTION_HEADINGS[key],
             headingFontSize,
         );
         const height = Math.max(
             headingHeight,
-            bodyTopOffset + lineCounts[key] * lineHeights[key],
+            bodyTopOffset + sectionLines[key].length * lineHeights[key],
         );
         const inkHeight = Math.max(
             headingHeight,
             bodyTopOffset +
-                (lineCounts[key] - 1) * lineHeights[key] +
+                (sectionLines[key].length - 1) * lineHeights[key] +
                 bodyLineHeight,
         );
 
@@ -231,7 +213,7 @@ function calculateWideDetailsLayout({
         cursors[column] = top + height + sectionGap;
     };
 
-    for (const key of STACKED_SECTIONS) place(key, "left");
+    for (const key of WIDE_STACKED_SECTION_KEYS) place(key, "left");
     place("skills", "right");
 
     const topInset =
@@ -286,20 +268,7 @@ function calculateWideDetailsLayout({
         modelInterludeHeight: 0,
         skillsColumns: 1,
         skillsColumnWidth: bodyMaxWidth,
-        sectionLines: {
-            experience: experienceData.map(
-                (exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`,
-            ),
-            projects: projectsData.map((project) => project.name),
-            education: educationData.map(
-                (edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`,
-            ),
-            courses: coursesData.map(
-                (course) =>
-                    `${course.date} / ${course.title} @ ${course.issuer}`,
-            ),
-            skills: [...skillsData],
-        },
+        sectionLines,
         sections: offsets,
         contentHeight,
         usableHeight,
@@ -371,33 +340,30 @@ function calculateNarrowDetailsLayout({
                 fontsReady,
             ),
         );
-    const sectionLines = {
+    const sectionLines: Record<DetailsListSectionKey, string[]> = {
         experience: wrapItems(
-            experienceData.map(
-                (exp) => `${exp.duration} / ${exp.position} @ ${exp.company}`,
-            ),
+            DETAILS_SECTION_CONTENT.experience.narrowLines,
         ),
-        projects: projectsData.map((project) => project.title),
+        skills: [...DETAILS_SECTION_CONTENT.skills.narrowLines],
+        projects: [...DETAILS_SECTION_CONTENT.projects.narrowLines],
         education: wrapItems(
-            educationData.map(
-                (edu) => `${edu.field} (${edu.degree}) @ ${edu.institution}`,
-            ),
+            DETAILS_SECTION_CONTENT.education.narrowLines,
         ),
         courses: wrapItems(
-            coursesData.map(
-                (course) =>
-                    `${course.date} / ${course.title} @ ${course.issuer}`,
-            ),
+            DETAILS_SECTION_CONTENT.courses.narrowLines,
         ),
-        skills: [...skillsData],
     };
-    const offsets: Record<string, DetailsSectionOffsets> = {};
+    const offsets = {} as Record<DetailsSectionKey, DetailsSectionOffsets>;
     let cursor = 0;
 
-    const place = (key: string, rows: number, lineHeight: number) => {
+    const place = (
+        key: DetailsListSectionKey,
+        rows: number,
+        lineHeight: number,
+    ) => {
         const top = cursor;
         const headingHeight = headingBlockHeight(
-            SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
+            DETAILS_SECTION_HEADINGS[key],
             headingFontSize,
         );
         const bodyY = top + headingHeight + bodyTopOffset;
@@ -440,7 +406,7 @@ function calculateNarrowDetailsLayout({
     const detailsOverflow = Math.max(0, detailsHeight - usableHeight);
     const bioTopY = detailsOverflow + viewportHeight;
     const bioHeadingHeight = headingBlockHeight(
-        SECTION_HEADINGS.bio,
+        DETAILS_SECTION_HEADINGS.bio,
         headingFontSize,
     );
     const bioImageWidth = contentWidth * L.NARROW_BIO_IMAGE_WIDTH_MULT;

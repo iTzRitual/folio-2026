@@ -6,14 +6,16 @@ import {
     coursesData,
     experienceData,
     projectsData,
+    skillsData,
 } from "@/data/content";
+import { DETAILS_SECTION_HEADINGS } from "@/data/detailsContent";
 
 export function NoJsDetails() {
     return (
         <section className="w-full max-w-275 px-4 pb-16 sm:px-8 sm:pb-24">
             <div className="mb-12">
                 <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
-                    Experience
+                    {DETAILS_SECTION_HEADINGS.experience}
                 </h3>
                 <ul className="mt-4 space-y-3">
                     {experienceData.map((item) => (
@@ -30,7 +32,7 @@ export function NoJsDetails() {
 
             <div className="mb-12">
                 <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
-                    Recent Projects
+                    {DETAILS_SECTION_HEADINGS.projects}
                 </h3>
                 <ul className="mt-4 space-y-3">
                     {projectsData.map((item) => (
@@ -54,7 +56,7 @@ export function NoJsDetails() {
 
             <div className="mb-12">
                 <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
-                    Education
+                    {DETAILS_SECTION_HEADINGS.education}
                 </h3>
                 <ul className="mt-4 space-y-3">
                     {educationData.map((item) => (
@@ -71,7 +73,7 @@ export function NoJsDetails() {
 
             <div className="mb-12">
                 <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
-                    Courses & Certifications
+                    {DETAILS_SECTION_HEADINGS.courses.replace("\n", " ")}
                 </h3>
                 <ul className="mt-4 space-y-3">
                     {coursesData.map((item) => (
@@ -85,9 +87,25 @@ export function NoJsDetails() {
                 </ul>
             </div>
 
+            <div className="mb-12">
+                <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
+                    {DETAILS_SECTION_HEADINGS.skills}
+                </h3>
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {skillsData.map((skill) => (
+                        <li
+                            key={skill}
+                            className="text-left text-lg leading-relaxed font-karla text-(--text-body)"
+                        >
+                            - {skill}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
             <div className="mb-36">
                 <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
-                    Bio
+                    {DETAILS_SECTION_HEADINGS.bio}
                 </h3>
                 {bioData.map((paragraph, index) => (
                     <p

@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/check-monitor.mjs && node scripts/check-monitor.mjs scripts/check-root-scroll-lock.ts && node scripts/check-monitor.mjs scripts/check-source-manifest.ts && node scripts/check-source-publication.mjs",
+    "test": "node scripts/check-monitor.mjs && node scripts/check-monitor.mjs scripts/check-root-scroll-lock.ts && node scripts/check-monitor.mjs scripts/check-source-manifest.ts && node scripts/check-monitor.mjs scripts/check-details-layout.ts && node scripts/check-source-publication.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {

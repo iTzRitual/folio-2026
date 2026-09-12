@@ -15,20 +15,19 @@ import {
 } from "./DetailsScene/DetailsSection";
 import { BioSection } from "./DetailsScene/BioSection";
 import {
-  experienceData,
   projectsData,
-  educationData,
-  coursesData,
-  skillsData,
   DEFAULT_BIO_VARIANT,
   type BioVariant,
 } from "@/data/content";
 import {
-  SECTION_HEADINGS,
-  DETAILS_SECTION_KEYS,
   headingBlockHeight,
   calculateDetailsLayout,
 } from "@/lib/detailsLayout";
+import {
+  DETAILS_SECTION_HEADINGS,
+  DETAILS_SECTION_KEYS,
+  type DetailsSectionKey,
+} from "@/data/detailsContent";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { applyCurlSettings, curlUniforms } from "@/lib/detailsCurl";
 import { CONFIG } from "../config/constants";
@@ -72,8 +71,12 @@ export function Details({
   const rootGroupRef = useRef<Group>(null);
   const lastPointerSyncY = useRef(Number.NEGATIVE_INFINITY);
 
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const revealedRef = useRef<Record<string, boolean>>({});
+  const [revealed, setRevealed] = useState<
+    Partial<Record<DetailsSectionKey, boolean>>
+  >({});
+  const revealedRef = useRef<
+    Partial<Record<DetailsSectionKey, boolean>>
+  >({});
   const [activeProjectIndex, setActiveProjectIndex] = useState<number | null>(
     null,
   );
@@ -105,7 +108,7 @@ export function Details({
   const sectionTop =
     viewport.height / 2 - marginY * CONFIG.detailsLayout.SECTION_TOP_OFF_MULT;
 
-  const sectionY = (key: string) => {
+  const sectionY = (key: DetailsSectionKey) => {
     const offsets = layout.sections[key];
     return {
       headingY: sectionTop - offsets.headingY * pxTo3DHeight,
@@ -167,12 +170,15 @@ export function Details({
 
     const foldY = curlUniforms.uCurlFoldY.value;
 
-    const stickHeading = (headingGroup: Group | null, key: string) => {
+    const stickHeading = (
+      headingGroup: Group | null,
+      key: DetailsSectionKey,
+    ) => {
       if (!headingGroup) return;
 
       const headingHeight =
         headingBlockHeight(
-          SECTION_HEADINGS[key as keyof typeof SECTION_HEADINGS],
+          DETAILS_SECTION_HEADINGS[key],
           layout.headingFontSize,
         ) * pxTo3DHeight;
       const offsets = layout.sections[key];
@@ -284,49 +290,34 @@ export function Details({
   });
 
   const experienceItems: DetailsSectionItem[] = useMemo(
-    () =>
-      layoutMode === "narrow"
-        ? layout.sectionLines.experience.map((text) => ({ text }))
-        : experienceData.map((exp) => ({
-            text: `${exp.duration} / ${exp.position} @ ${exp.company}`,
-          })),
-    [layoutMode, layout.sectionLines.experience],
+    () => layout.sectionLines.experience.map((text) => ({ text })),
+    [layout.sectionLines.experience],
   );
 
   const projectItems: DetailsSectionItem[] = useMemo(
     () =>
       projectsData.map((project, index) => ({
-        text: layoutMode === "narrow" ? project.title : project.name,
+        text: layout.sectionLines.projects[index],
         href: project.link,
         previewImage: project.preview,
         caseStudyIndex: index,
       })),
-    [layoutMode],
+    [layout.sectionLines.projects],
   );
 
   const educationItems: DetailsSectionItem[] = useMemo(
-    () =>
-      layoutMode === "narrow"
-        ? layout.sectionLines.education.map((text) => ({ text }))
-        : educationData.map((edu) => ({
-            text: `${edu.field} (${edu.degree}) @ ${edu.institution}`,
-          })),
-    [layoutMode, layout.sectionLines.education],
+    () => layout.sectionLines.education.map((text) => ({ text })),
+    [layout.sectionLines.education],
   );
 
   const coursesItems: DetailsSectionItem[] = useMemo(
-    () =>
-      layoutMode === "narrow"
-        ? layout.sectionLines.courses.map((text) => ({ text }))
-        : coursesData.map((course) => ({
-            text: `${course.date} / ${course.title} @ ${course.issuer}`,
-          })),
-    [layoutMode, layout.sectionLines.courses],
+    () => layout.sectionLines.courses.map((text) => ({ text })),
+    [layout.sectionLines.courses],
   );
 
   const skillItems: DetailsSectionItem[] = useMemo(
-    () => skillsData.map((skill) => ({ text: skill })),
-    [],
+    () => layout.sectionLines.skills.map((text) => ({ text })),
+    [layout.sectionLines.skills],
   );
 
   const shared = {
@@ -342,7 +333,7 @@ export function Details({
       ref={rootGroupRef}
     >
       <DetailsSection
-        heading={SECTION_HEADINGS.experience}
+        heading={DETAILS_SECTION_HEADINGS.experience}
         items={experienceItems}
         headingX={leftX}
         headingY={sectionY("experience").headingY}
@@ -357,7 +348,7 @@ export function Details({
       />
 
       <DetailsSection
-        heading={SECTION_HEADINGS.skills}
+        heading={DETAILS_SECTION_HEADINGS.skills}
         items={skillItems}
         headingX={layoutMode === "narrow" ? leftX : rightTitleX}
         headingY={sectionY("skills").headingY}
@@ -374,7 +365,7 @@ export function Details({
       />
 
       <DetailsSection
-        heading={SECTION_HEADINGS.projects}
+        heading={DETAILS_SECTION_HEADINGS.projects}
         items={projectItems}
         headingX={leftX}
         headingY={sectionY("projects").headingY}
@@ -391,7 +382,7 @@ export function Details({
       />
 
       <DetailsSection
-        heading={SECTION_HEADINGS.education}
+        heading={DETAILS_SECTION_HEADINGS.education}
         items={educationItems}
         headingX={leftX}
         headingY={sectionY("education").headingY}
@@ -406,7 +397,7 @@ export function Details({
       />
 
       <DetailsSection
-        heading={SECTION_HEADINGS.courses}
+        heading={DETAILS_SECTION_HEADINGS.courses}
         items={coursesItems}
         headingX={leftX}
         headingY={sectionY("courses").headingY}
@@ -421,7 +412,7 @@ export function Details({
       />
 
       <BioSection
-        heading={SECTION_HEADINGS.bio}
+        heading={DETAILS_SECTION_HEADINGS.bio}
         lines={layout.bioLines}
         imageX={leftX + layout.bioImageXOffset * pxTo3DWidth}
         imageY={sectionTop - layout.bioImageY * pxTo3DHeight}
