@@ -1720,6 +1720,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const targetQualityRef = useRef(qualityTier);
+  const captureCamera = useMemo(() => new THREE.PerspectiveCamera(), []);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeRendererRef = useRef<VSCodeRenderer | null>(null);
@@ -2830,6 +2831,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (
+      capturedRef.current &&
+      (!monitorHasSignal(monitorState) ||
+        windowGroupRef.current?.visible !== true ||
+        windowRuntimesRef.current.safari.state === "minimized")
+    ) {
+      return;
+    }
+
     const pixelRatio = gl.getPixelRatio();
     const sourceDimensions = getPageTargetDimensions(
       Math.round(size.width * pixelRatio),
@@ -2860,7 +2870,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const previousTarget = gl.getRenderTarget();
     const wasSurfaceVisible = surfaceGroupRef.current.visible;
     const wasPageVisible = pageGroupRef.current.visible;
-    const captureCamera = (camera as THREE.PerspectiveCamera).clone();
+    captureCamera.copy(camera as THREE.PerspectiveCamera);
 
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;

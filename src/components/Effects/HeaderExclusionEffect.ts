@@ -77,6 +77,7 @@ export class HeaderExclusionEffect extends Effect {
   }
 
   update(renderer: WebGLRenderer) {
+    if (this.blendMode.opacity.value === 0) return;
     const background = this.scene.background;
     if (background instanceof Color) {
       (this.uniforms.get("u_bg")!.value as Color).copy(background);
@@ -96,6 +97,10 @@ export class HeaderExclusionEffect extends Effect {
     renderer.setClearAlpha(previousClearAlpha);
     renderer.setRenderTarget(previousTarget);
     this.camera.layers.mask = previousMask;
+  }
+
+  setActive(active: boolean) {
+    this.blendMode.opacity.value = active ? 1 : 0;
   }
 
   setSize(width: number, height: number) {

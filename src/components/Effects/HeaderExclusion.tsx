@@ -1,12 +1,15 @@
 import { forwardRef, useEffect, useMemo } from "react";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { HEADER_LAYER, HeaderExclusionEffect } from "./HeaderExclusionEffect";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
+import { useHeroTransition } from "@/context/HeroTransitionContext";
+import { CONFIG } from "@/config/constants";
 
 export const HeaderExclusion = forwardRef<HeaderExclusionEffect>((_, ref) => {
   const { strength, threshold, softness } = useDebugSettings().headerExclusion;
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
+  const { revealProgressRef } = useHeroTransition();
 
   const effect = useMemo(
     () => new HeaderExclusionEffect(scene, camera),
@@ -25,6 +28,12 @@ export const HeaderExclusion = forwardRef<HeaderExclusionEffect>((_, ref) => {
       camera.layers.enable(HEADER_LAYER);
     };
   }, [camera]);
+
+  useFrame(() => {
+    effect.setActive(
+      revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START,
+    );
+  });
 
   return <primitive ref={ref} object={effect} dispose={null} />;
 });
