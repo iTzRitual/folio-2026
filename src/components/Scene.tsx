@@ -36,6 +36,7 @@ import type {
 } from "@/lib/responsiveScene";
 import { Phase2Surface } from "./Phase2Surface";
 import { CONFIG } from "@/config/constants";
+import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 
 function SceneContent({
   startAnimation,
@@ -48,6 +49,7 @@ function SceneContent({
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { qualityTier } = useSceneCapabilities();
+  useStableSceneViewport();
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>

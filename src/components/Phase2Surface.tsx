@@ -2631,7 +2631,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       htmlOverlayHiddenRef.current = hideHtmlOverlays;
     }
     const planeZ = CONFIG.phase2.PLANE_Z;
-    const restZ = CONFIG.caseStudy.CAMERA_REST_Z;
+    const restZ = CONFIG.scene.CAMERA_REST_Z;
     const restDistance = restZ - planeZ;
     const restHeight =
       2 *
@@ -2896,7 +2896,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;
-    captureCamera.position.set(0, 0, CONFIG.caseStudy.CAMERA_REST_Z);
+    captureCamera.position.set(0, 0, CONFIG.scene.CAMERA_REST_Z);
     captureCamera.layers.enable(HEADER_LAYER);
     captureCamera.layers.enable(THEME_SWEEP_LAYER);
     captureCamera.updateMatrixWorld();
@@ -3016,7 +3016,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       pageMask,
       bounds,
     );
-    const restDistance = CONFIG.caseStudy.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
+    const restDistance = CONFIG.scene.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
     const restHeight =
       2 *
       Math.tan(THREE.MathUtils.degToRad(captureCamera.fov) / 2) *

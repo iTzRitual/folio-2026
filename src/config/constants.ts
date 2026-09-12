@@ -91,6 +91,7 @@ export const CONFIG = {
         HIGH_DPR: 1.5,
     },
     scene: {
+        CAMERA_REST_Z: 5,
         DETAILS_GROUP_Z: -0.05,
     },
     scrollTimeline: {
@@ -382,10 +383,6 @@ export const CONFIG = {
         CAPTION_TRAIL: "Hold for live site",
     },
     caseStudy: {
-        // Where R3F parks its default camera, and the only place anything else
-        // in the scene expects it to be. Every distance below is measured from
-        // here, so the flight has to end by putting it back.
-        CAMERA_REST_Z: 5,
         // Fraction of the landed frame's width the plate spans. Below ~0.8 the
         // frame still reads as a page with margins rather than as a fullscreen
         // image, which is what keeps the copy underneath feeling attached.

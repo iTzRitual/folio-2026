@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFrame, useStore, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -83,7 +83,7 @@ export function CaseStudyScene() {
     const plateHeight = plateWidth / CONFIG.projectPreview.ASPECT;
     const fill = narrowStudy ? cfg.MOBILE_FILL : cfg.FILL;
     const distance =
-        (cfg.CAMERA_REST_Z * plateWidth) / (fill * viewport.width);
+        (CONFIG.scene.CAMERA_REST_Z * plateWidth) / (fill * viewport.width);
     const frameWidth = plateWidth / fill;
     const frameHeight = frameWidth / (viewport.width / viewport.height);
     const em = frameWidth * (narrowStudy ? cfg.MOBILE_EM_MULT : cfg.EM_MULT);
@@ -97,14 +97,17 @@ export function CaseStudyScene() {
         layout.height + frameHeight * cfg.SCROLL_OVERSHOOT_MULT,
         0,
     );
+    const transitionSettingsRef = useRef({ prefersReducedMotion, narrowStudy });
+    transitionSettingsRef.current = { prefersReducedMotion, narrowStudy };
 
     useEffect(() => {
+        const transition = transitionSettingsRef.current;
         if (openIndex === null) {
             gsap.to(caseStudyStage, {
                 progress: 0,
-                duration: prefersReducedMotion
+                duration: transition.prefersReducedMotion
                     ? 0
-                    : narrowStudy
+                    : transition.narrowStudy
                       ? cfg.MOBILE_CLOSE_DURATION
                       : cfg.CLOSE_DURATION,
                 ease: "power3.inOut",
@@ -125,23 +128,39 @@ export function CaseStudyScene() {
             {
                 progress: 1,
                 duration:
-                    prefersReducedMotion || instant
+                    transition.prefersReducedMotion || instant
                         ? 0
-                        : narrowStudy
+                        : transition.narrowStudy
                           ? cfg.MOBILE_FLIGHT_DURATION
                           : cfg.FLIGHT_DURATION,
                 ease: "power3.inOut",
                 overwrite: true,
             },
         );
-    }, [openIndex, prefersReducedMotion, narrowStudy]);
+    }, [openIndex]);
+
+    useEffect(() => {
+        if (!prefersReducedMotion) return;
+        gsap.to(caseStudyStage, {
+            progress: openIndex === null ? 0 : 1,
+            duration: 0,
+            overwrite: true,
+        });
+    }, [openIndex, prefersReducedMotion]);
 
     useEffect(() => {
         if (openIndex === null || !nativeStudyScroll) return;
-        scroll.current = 0;
-        scrollTarget.current = 0;
-        scrollSurfaceRef.current?.scrollTo(0, 0);
-    }, [openIndex, nativeStudyScroll]);
+        scroll.current = THREE.MathUtils.clamp(scroll.current, 0, limit);
+        scrollTarget.current = THREE.MathUtils.clamp(
+            scrollTarget.current,
+            0,
+            limit,
+        );
+        scrollSurfaceRef.current?.scrollTo(
+            0,
+            scrollTarget.current * Math.max(pxPerUnit, 1),
+        );
+    }, [openIndex, nativeStudyScroll, limit, pxPerUnit]);
 
     useEffect(() => {
         if (openIndex === null) return;
@@ -173,36 +192,6 @@ export function CaseStudyScene() {
             preventNativeScroll: true,
         });
     }, [openIndex]);
-
-    // R3F derives the world size of a screen from the camera's live distance to
-    // the origin, and re-derives it whenever the canvas is measured — a resize,
-    // a scroll, anything. Measured mid-flight it would hand the whole scene —
-    // the sheet, the hero, the model — a viewport half the size of the one they
-    // are laid out against, and leave it that way until the next resize. So any
-    // measurement taken while the camera is away is redone from where the rest
-    // of the site believes it is.
-    const store = useStore();
-    useEffect(
-        () =>
-            store.subscribe((state) => {
-                if (state.viewport.distance === cfg.CAMERA_REST_Z) return;
-
-                const { x, y, z } = camera.position;
-                camera.position.set(0, 0, cfg.CAMERA_REST_Z);
-                camera.updateMatrixWorld();
-                // Re-entrant, but only once: the camera is at rest for this
-                // call, so the pass it triggers takes the branch above.
-                state.setSize(
-                    state.size.width,
-                    state.size.height,
-                    state.size.top,
-                    state.size.left,
-                );
-                camera.position.set(x, y, z);
-                camera.updateMatrixWorld();
-            }),
-        [store, camera],
-    );
 
     // Nothing else owns the camera, the bend or the lock, so going away
     // mid-flight would leave the scene wherever the flight had got to.
@@ -283,7 +272,11 @@ export function CaseStudyScene() {
         camera.position.set(
             THREE.MathUtils.lerp(0, target.x, p),
             THREE.MathUtils.lerp(0, target.y, p),
-            THREE.MathUtils.lerp(cfg.CAMERA_REST_Z, target.z + distance, p),
+            THREE.MathUtils.lerp(
+                CONFIG.scene.CAMERA_REST_Z,
+                target.z + distance,
+                p,
+            ),
         );
         camera.updateMatrixWorld();
 
