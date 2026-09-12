@@ -9,6 +9,7 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { createMonitorUniforms, createMonitorScreenRuntime, monitorShader } from "@/lib/monitorScreen";
 import type { MonitorState } from "@/lib/monitorState";
 import { crtMorph } from "@/lib/crtScreen";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 const vertexShader = `
 attribute float screenEdge;
@@ -116,6 +117,12 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monit
   const monitorRuntime = useMemo(createMonitorScreenRuntime, []);
   const monitorUniforms = useMemo(createMonitorUniforms, []);
   const meshRef = useRef<THREE.Mesh>(null);
+  const { qualityTier } = useSceneCapabilities();
+  const projectedCorners = useMemo(
+    () => [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
+    [],
+  );
+  const targetQualityRef = useRef(qualityTier);
 
 
   const resources = useMemo(() => {
@@ -158,40 +165,65 @@ export function Phase2CRTScreen({ width, height, geometry, borderGeometry, monit
     resources.marginMaterial.dispose();
   }, [resources]);
 
-  useFrame(({ gl, size }, delta) => {
+  useFrame(({ camera: mainCamera, gl, size }, delta) => {
     monitorRuntime.update(monitorUniforms, monitorState, delta, reducedMotion);
     if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) return;
-    const { target, scene, camera, material } = resources;
+    const { target, scene, camera: screenCamera, material } = resources;
     const cameraLeft = -width / 2;
     const cameraRight = width / 2;
     const cameraTop = height / 2;
     const cameraBottom = -height / 2;
     if (
-      camera.left !== cameraLeft ||
-      camera.right !== cameraRight ||
-      camera.top !== cameraTop ||
-      camera.bottom !== cameraBottom
+      screenCamera.left !== cameraLeft ||
+      screenCamera.right !== cameraRight ||
+      screenCamera.top !== cameraTop ||
+      screenCamera.bottom !== cameraBottom
     ) {
-      camera.left = cameraLeft;
-      camera.right = cameraRight;
-      camera.top = cameraTop;
-      camera.bottom = cameraBottom;
-      camera.updateProjectionMatrix();
+      screenCamera.left = cameraLeft;
+      screenCamera.right = cameraRight;
+      screenCamera.top = cameraTop;
+      screenCamera.bottom = cameraBottom;
+      screenCamera.updateProjectionMatrix();
     }
     material.uniforms.amount.value = crtMorph(revealProgressRef.current, reducedMotion);
-    const targetWidth = Math.max(1, Math.min(CONFIG.phase2.CRT_TARGET_MAX_SIZE,
-      Math.ceil(Math.max(size.width, size.height * CONFIG.phase2.PLANE_ASPECT) * gl.getPixelRatio())));
+    const [center, right, top] = projectedCorners;
+    meshRef.current.localToWorld(center.set(0, 0, 0)).project(mainCamera);
+    meshRef.current.localToWorld(right.set(width / 2, 0, 0)).project(mainCamera);
+    meshRef.current.localToWorld(top.set(0, height / 2, 0)).project(mainCamera);
+    const projectedWidth = Math.abs(right.x - center.x) * size.width;
+    const projectedHeight = Math.abs(top.y - center.y) * size.height;
+    const qualityMax =
+      qualityTier === "low"
+        ? CONFIG.phase2.CRT_TARGET_LOW_MAX_SIZE
+        : qualityTier === "balanced"
+          ? CONFIG.phase2.CRT_TARGET_BALANCED_MAX_SIZE
+          : CONFIG.phase2.CRT_TARGET_MAX_SIZE;
+    const desiredWidth = Math.ceil(
+      Math.max(projectedWidth, projectedHeight * CONFIG.phase2.PLANE_ASPECT) *
+        gl.getPixelRatio() *
+        CONFIG.phase2.CRT_TARGET_PROJECTED_SCALE,
+    );
+    const targetWidth = Math.max(
+      CONFIG.phase2.CRT_TARGET_MIN_SIZE,
+      Math.min(qualityMax, desiredWidth),
+    );
     const targetHeight = Math.round(targetWidth / CONFIG.phase2.PLANE_ASPECT);
-    if (target.width !== targetWidth || target.height !== targetHeight) {
+    const qualityChanged = targetQualityRef.current !== qualityTier;
+    const resizeRatio = Math.abs(target.width - targetWidth) / target.width;
+    if (
+      qualityChanged ||
+      resizeRatio >= CONFIG.phase2.TARGET_RESIZE_THRESHOLD
+    ) {
       target.setSize(targetWidth, targetHeight);
       material.uniforms.texel.value.set(1 / targetWidth, 1 / targetHeight);
+      targetQualityRef.current = qualityTier;
     }
     const previousTarget = gl.getRenderTarget();
     const autoClear = gl.autoClear;
     try {
       gl.autoClear = true;
       gl.setRenderTarget(target);
-      gl.render(scene, camera);
+      gl.render(scene, screenCamera);
     } finally {
       gl.setRenderTarget(previousTarget);
       gl.autoClear = autoClear;

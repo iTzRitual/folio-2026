@@ -140,6 +140,28 @@ function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
   };
 }
 
+function getPageTargetDimensions(
+  sourceWidth: number,
+  sourceHeight: number,
+  qualityTier: "high" | "balanced" | "low",
+) {
+  const maxDimension =
+    qualityTier === "low"
+      ? CONFIG.phase2.PAGE_TARGET_LOW_MAX_SIZE
+      : qualityTier === "balanced"
+        ? CONFIG.phase2.PAGE_TARGET_BALANCED_MAX_SIZE
+        : CONFIG.phase2.PAGE_TARGET_HIGH_MAX_SIZE;
+  const scale = Math.min(
+    1,
+    maxDimension / Math.max(sourceWidth, sourceHeight),
+  );
+
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
 function getDockLayout(
   textureWidth: number,
   textureHeight: number,
@@ -1683,7 +1705,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const { camera, events, gl, scene, size } = useThree();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { scrollBlur: scroll, phase2 } = useDebugSettings();
-  const { inputMode, layoutMode } = useSceneCapabilities();
+  const { inputMode, layoutMode, qualityTier } = useSceneCapabilities();
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
   const surfaceGroupRef = useRef<THREE.Group>(null);
@@ -1697,6 +1719,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const interactionMeshRef = useRef<THREE.Mesh>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const targetQualityRef = useRef(qualityTier);
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeRendererRef = useRef<VSCodeRenderer | null>(null);
@@ -2767,10 +2790,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const uniforms = pageAberrationMaterialRef.current.uniforms;
     uniforms.u_mouse.value.copy(currentMouseRef.current);
     uniforms.u_aberrationIntensity.value =
-      inputMode === "fine" ? mouseIntensityRef.current : 0;
+      inputMode === "fine" && qualityTier !== "low"
+        ? mouseIntensityRef.current
+        : 0;
     uniforms.u_mouseVelocity.value.set(mouseVelocityX, mouseVelocityY);
     uniforms.u_scrollVelocity.value = scrollAberrationVelocityRef.current;
-    const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
+    const mobileIntensity =
+      qualityTier === "low" ? 0.25 : inputMode === "coarse" ? 0.55 : 1;
     uniforms.u_scrollBlur.value = scroll.blur * mobileIntensity;
     uniforms.u_scrollSplit.value = scroll.split * mobileIntensity;
     uniforms.u_scrollVignette.value.set(
@@ -2792,8 +2818,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
 
     const pixelRatio = gl.getPixelRatio();
-    const sourceWidth = Math.round(size.width * pixelRatio);
-    const sourceHeight = Math.round(size.height * pixelRatio);
+    const sourceDimensions = getPageTargetDimensions(
+      Math.round(size.width * pixelRatio),
+      Math.round(size.height * pixelRatio),
+      qualityTier,
+    );
+    const sourceWidth = sourceDimensions.width;
+    const sourceHeight = sourceDimensions.height;
     if (!targetRef.current) {
       const target = new THREE.WebGLRenderTarget(sourceWidth, sourceHeight, {
         depthBuffer: true,
@@ -2801,9 +2832,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       });
       target.texture.colorSpace = gl.outputColorSpace;
       targetRef.current = target;
+      targetQualityRef.current = qualityTier;
     }
 
     const target = targetRef.current;
+    if (
+      targetQualityRef.current !== qualityTier ||
+      target.width !== sourceWidth ||
+      target.height !== sourceHeight
+    ) {
+      target.setSize(sourceWidth, sourceHeight);
+      targetQualityRef.current = qualityTier;
+    }
     const previousTarget = gl.getRenderTarget();
     const wasSurfaceVisible = surfaceGroupRef.current.visible;
     const wasPageVisible = pageGroupRef.current.visible;
