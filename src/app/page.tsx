@@ -1,32 +1,22 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ReactLenis } from "lenis/react";
 import { Loader } from "@/components/Loader";
 import { useInputMode } from "@/hooks/useInputMode";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
-import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
-import {
-    acquireRootScrollLock,
-    rootScrollLock,
-    subscribeRootScrollLock,
-    type RootScrollLockLease,
-} from "@/lib/rootScrollLock";
 import { useFontsReady } from "@/hooks/useFontsReady";
+import { usePageScrollRuntime } from "@/hooks/usePageScrollRuntime";
 import { useTheme } from "@/context/ThemeContext";
 import {
     DEBUG_DEFAULTS,
     type DebugSettings,
 } from "@/context/DebugSettingsContext";
-
-gsap.registerPlugin(ScrollTrigger);
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
     ssr: false,
@@ -45,8 +35,6 @@ const LENIS_OPTIONS = {
     lerp: CONFIG.scrollTimeline.LENIS_LERP,
 } as const;
 
-const RESIZE_DEBOUNCE_MS = 150;
-
 export default function Home() {
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
@@ -54,150 +42,18 @@ export default function Home() {
     const prefersReducedMotion = usePrefersReducedMotion();
     const pathname = usePathname();
     const isDebug = pathname === "/debug";
-    const lenisRef = useRef<LenisRef>(null);
-    const loaderScrollLeaseRef = useRef<RootScrollLockLease | null>(null);
-    const lenis = useLenis();
-    const [overflowViewports, setOverflowViewports] = useState(0);
     const fontsReady = useFontsReady();
     const themeContext = useTheme();
 
     const [debugSettings, setDebugSettings] =
         useState<DebugSettings>(DEBUG_DEFAULTS);
     const bioVariant = debugSettings.bio.variant;
-
-    useEffect(() => {
-        const update = () =>
-            setOverflowViewports(
-                calculateDetailsOverflowViewports({
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight,
-                    bioVariant,
-                    fontsReady,
-                }),
-            );
-
-        update();
-
-        // A drag-resize fires this continuously, and each pass measures and
-        // greedy-wraps the whole bio on a canvas context before landing in a
-        // state change that triggers ScrollTrigger.refresh().
-        let debounce: number | undefined;
-        const onResize = () => {
-            window.clearTimeout(debounce);
-            debounce = window.setTimeout(update, RESIZE_DEBOUNCE_MS);
-        };
-
-        window.addEventListener("resize", onResize);
-        return () => {
-            window.clearTimeout(debounce);
-            window.removeEventListener("resize", onResize);
-        };
-    }, [bioVariant, fontsReady]);
-
-    useEffect(() => {
-        ScrollTrigger.refresh();
-    }, [overflowViewports]);
-
-    useEffect(() => {
-        const syncNativeScrollLock = () => {
-            const overflow = rootScrollLock.preventNativeScroll ? "hidden" : "";
-            document.documentElement.style.overflow = overflow;
-            document.body.style.overflow = overflow;
-        };
-        const unsubscribe = subscribeRootScrollLock(syncNativeScrollLock);
-        syncNativeScrollLock();
-        return () => {
-            unsubscribe();
-            document.documentElement.style.overflow = "";
-            document.body.style.overflow = "";
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!removeLoader || prefersReducedMotion) return;
-
-        let wasLocked = false;
-        let activeInstance: { start: () => void } | null = null;
-        const getInstance = () => {
-            const instance = lenisRef.current?.lenis;
-            if (instance) activeInstance = instance;
-            return instance;
-        };
-        const syncLock = () => {
-            const instance = getInstance();
-            if (!instance) return;
-
-            if (rootScrollLock.active) {
-                if (!wasLocked) instance.stop();
-                wasLocked = true;
-                window.scrollTo(0, rootScrollLock.y);
-                return;
-            }
-
-            if (wasLocked) instance.start();
-            wasLocked = false;
-        };
-        const unsubscribe = subscribeRootScrollLock(syncLock);
-        syncLock();
-        const update = (time: number) => {
-            const instance = getInstance();
-            if (!instance) return;
-
-            if (rootScrollLock.active) {
-                if (!wasLocked) instance.stop();
-                wasLocked = true;
-                window.scrollTo(0, rootScrollLock.y);
-                return;
-            }
-
-            if (wasLocked) {
-                instance.start();
-                wasLocked = false;
-            }
-            instance.raf(time * 1000);
-        };
-        gsap.ticker.add(update);
-        gsap.ticker.lagSmoothing(0);
-
-        return () => {
-            unsubscribe();
-            if (wasLocked) activeInstance?.start();
-            gsap.ticker.remove(update);
-        };
-    }, [removeLoader, prefersReducedMotion]);
-
-    useEffect(() => {
-        if (!lenis) return;
-        lenis.on("scroll", ScrollTrigger.update);
-        return () => {
-            lenis.off("scroll", ScrollTrigger.update);
-        };
-    }, [lenis]);
-
-    // Always start at the top on load — the browser's automatic scroll
-    // restoration would otherwise re-apply the pre-refresh position (even
-    // after our scrollTo below), leaving the scroll-linked WebGL scene
-    // mid-timeline while the loader plays.
-    useEffect(() => {
-        if ("scrollRestoration" in window.history) {
-            window.history.scrollRestoration = "manual";
-        }
-        window.scrollTo(0, 0);
-    }, []);
-
-    useEffect(() => {
-        if (!removeLoader) {
-            loaderScrollLeaseRef.current = acquireRootScrollLock(0, {
-                preventNativeScroll: true,
-            });
-            window.scrollTo(0, 0);
-        }
-
-        return () => {
-            loaderScrollLeaseRef.current?.release();
-            loaderScrollLeaseRef.current = null;
-        };
-    }, [removeLoader]);
+    const { lenisRef, overflowViewports } = usePageScrollRuntime({
+        bioVariant,
+        fontsReady,
+        removeLoader,
+        prefersReducedMotion,
+    });
 
     return (
         <>
