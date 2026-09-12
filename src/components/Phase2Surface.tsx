@@ -16,18 +16,22 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
   beginVSCodeScrollbarDrag,
+  captureVSCodeSession,
   createVSCodeRenderer,
   endVSCodeScrollbarDrag,
   handleVSCodeClick,
   handleVSCodeWheel,
   loadSourceManifest,
   loadSourceManifestVersion,
+  restoreVSCodeSession,
   setVSCodeLoadError,
   setVSCodeSources,
   updateVSCodeHover,
   updateVSCodeScrollbarDrag,
   type VSCodeScrollbarDrag,
   type VSCodeRenderer,
+  type VSCodeSessionSnapshot,
+  type SourceManifest,
 } from "@/lib/vscodeRenderer";
 import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
@@ -1727,6 +1731,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const vscodeRendererRef = useRef<VSCodeRenderer | null>(null);
+  const vscodeSessionRef = useRef<VSCodeSessionSnapshot | null>(null);
+  const sourceManifestRef = useRef<SourceManifest | null>(null);
   const dockTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const dockRendererRef = useRef<DockRenderer | null>(null);
   const toolbarTextureRef = useRef<THREE.CanvasTexture | null>(null);
@@ -1922,6 +1928,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     targetRef.current = null;
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = null;
+    if (vscodeRendererRef.current) {
+      endVSCodeScrollbarDrag(vscodeRendererRef.current);
+      vscodeSessionRef.current = captureVSCodeSession(vscodeRendererRef.current);
+    }
     vscodeTextureRef.current?.dispose();
     vscodeTextureRef.current = null;
     vscodeRendererRef.current = null;
@@ -1936,21 +1946,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     surfaceTransformRef.current = null;
     pageUvBoundsRef.current = null;
     browserLayoutRef.current = null;
-    windowRuntimesRef.current = {
-      safari: { state: "open", amount: 0, animation: null },
-      vscode: { state: "closed", amount: 0, animation: null },
-    };
-    activeAppRef.current = "safari";
-    pendingAppRef.current = null;
-    releaseRootScroll();
-    returnBridgeRef.current = null;
-    previousRevealRef.current = null;
-    sourceLoadStartedRef.current = false;
-    sourceRefreshPendingRef.current = false;
     vscodeScrollbarDragRef.current = null;
     suppressVSCodeClickRef.current = false;
-    setGeniePresentation(genieUniforms, 0, false);
-    setGeniePresentation(vscodeGenieUniforms, 0, false);
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
     if (surfaceGroupRef.current) {
@@ -1958,8 +1955,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       surfaceGroupRef.current.position.y = 0;
       surfaceGroupRef.current.scale.setScalar(1);
     }
-    if (windowGroupRef.current) windowGroupRef.current.visible = true;
-    if (vscodeWindowGroupRef.current) vscodeWindowGroupRef.current.visible = false;
   }, [
     genieUniforms,
     phase2.dockScale,
@@ -2023,7 +2018,9 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       try {
         const version = await loadSourceManifestVersion();
         if (renderer.sourceVersion !== version) {
-          setVSCodeSources(renderer, await loadSourceManifest(true));
+          const manifest = await loadSourceManifest(true);
+          sourceManifestRef.current = manifest;
+          setVSCodeSources(renderer, manifest);
         }
       } catch {
         return;
@@ -2147,8 +2144,15 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     loadSourceManifest()
       .then((manifest) => {
+        sourceManifestRef.current = manifest;
         if (vscodeRendererRef.current) {
           setVSCodeSources(vscodeRendererRef.current, manifest);
+          if (vscodeSessionRef.current) {
+            restoreVSCodeSession(
+              vscodeRendererRef.current,
+              vscodeSessionRef.current,
+            );
+          }
         }
       })
       .catch(() => {
@@ -2935,6 +2939,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (sourceManifestRef.current) {
+      setVSCodeSources(vscodeRenderer, sourceManifestRef.current);
+    }
+    if (vscodeSessionRef.current) {
+      restoreVSCodeSession(vscodeRenderer, vscodeSessionRef.current);
+    }
+
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = chromeTexture;
     vscodeTextureRef.current?.dispose();
@@ -3017,7 +3028,6 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     surfaceGroupRef.current.scale.setScalar(scale);
     surfaceGroupRef.current.position.y = -contentCenterY * scale;
     surfaceGroupRef.current.visible = revealVisible;
-    if (vscodeWindowGroupRef.current) vscodeWindowGroupRef.current.visible = false;
   }, 0.5);
 
   const handlePageClick = (event: ThreeEvent<MouseEvent>) => {

@@ -82,6 +82,15 @@ export type VSCodeRenderer = {
   loadState: "loading" | "ready" | "error";
 };
 
+export type VSCodeSessionSnapshot = {
+  expanded: string[];
+  selectedPath: string | null;
+  treeScroll: number;
+  editorScrollY: number;
+  editorScrollX: number;
+  loadState: "loading" | "ready" | "error";
+};
+
 type ScrollbarGeometry = {
   kind: VSCodeScrollbarKind;
   orientation: "horizontal" | "vertical";
@@ -906,6 +915,41 @@ export function createVSCodeRenderer({
   };
   drawVSCodeRenderer(renderer);
   return renderer;
+}
+
+export function captureVSCodeSession(
+  renderer: VSCodeRenderer,
+): VSCodeSessionSnapshot {
+  return {
+    expanded: [...renderer.expanded],
+    selectedPath: renderer.selectedPath,
+    treeScroll: renderer.treeScroll,
+    editorScrollY: renderer.editorScrollY,
+    editorScrollX: renderer.editorScrollX,
+    loadState: renderer.loadState,
+  };
+}
+
+export function restoreVSCodeSession(
+  renderer: VSCodeRenderer,
+  session: VSCodeSessionSnapshot,
+) {
+  renderer.expanded = new Set(session.expanded);
+  renderer.rows = flattenTree(renderer.root, renderer.expanded);
+  if (
+    session.selectedPath === null ||
+    findFile(renderer.root, session.selectedPath)?.file
+  ) {
+    renderer.selectedPath = session.selectedPath;
+  }
+  renderer.treeScroll = session.treeScroll;
+  renderer.editorScrollY = session.editorScrollY;
+  renderer.editorScrollX = session.editorScrollX;
+  renderer.hoveredPath = null;
+  renderer.hoveredScrollbar = null;
+  renderer.activeScrollbar = null;
+  if (renderer.sourceVersion === null) renderer.loadState = session.loadState;
+  drawVSCodeRenderer(renderer);
 }
 
 export function setVSCodeSources(
