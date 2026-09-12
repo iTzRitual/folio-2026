@@ -8,7 +8,9 @@
     "prebuild": "npm run generate:sources",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node scripts/check-monitor.mjs",
+    "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
