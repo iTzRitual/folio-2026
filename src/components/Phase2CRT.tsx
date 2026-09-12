@@ -41,6 +41,8 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
     const canvas = three.gl.domElement;
     let hovered = false;
     let savedCursor = "";
+    let hoverFrame = 0;
+    let pendingHover: { x: number; y: number } | null = null;
     let lastTap: { key: MonitorKnob; time: number } | null = null;
     let drag: { id: number; touch: boolean; moved: boolean; key: MonitorKnob; x: number; y: number; value: number; target: Element; cameraControls: { enabled: boolean } | null; enabled: boolean; locked: boolean } | null = null;
     const visible = () => {
@@ -48,20 +50,16 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
       while (object) { if (!object.visible) return false; object = object.parent; }
       return true;
     };
-    const pick = (event: MouseEvent) => {
+    const pick = ({ clientX, clientY }: { clientX: number; clientY: number }) => {
       if (!visible()) return;
       const bounds = canvas.getBoundingClientRect();
-      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return;
-      pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+      if (clientX < bounds.left || clientX > bounds.right || clientY < bounds.top || clientY > bounds.bottom) return;
+      pointer.set((clientX - bounds.left) / bounds.width * 2 - 1, -(clientY - bounds.top) / bounds.height * 2 + 1);
       model.updateWorldMatrix(true, true);
       three.raycaster.setFromCamera(pointer, three.camera);
       hits.length = 0;
-      three.raycaster.intersectObject(model, true, hits);
-      const hit = hits.find(hit => {
-        let object: Object3D | null = hit.object;
-        while (object && object !== model) { if (!object.visible) return false; object = object.parent; }
-        return true;
-      });
+      three.raycaster.intersectObjects(controls.pickTargets, true, hits);
+      const hit = hits[0];
       const control = hit && controls.resolve(hit.object);
       return control && (monitorState.power || control.id === "power") ? control : undefined;
     };
@@ -118,8 +116,15 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
         setMonitorKnob(monitorState, drag.key, drag.value + (event.clientX - drag.x + drag.y - event.clientY) / CONFIG.monitor.DRAG_PIXELS * 2);
         stop(event);
       } else {
-        const control = pick(event);
-        cursor(control ? control.kind === "knob" ? "grab" : "pointer" : null);
+        pendingHover = { x: event.clientX, y: event.clientY };
+        if (hoverFrame) return;
+        hoverFrame = requestAnimationFrame(() => {
+          hoverFrame = 0;
+          const point = pendingHover;
+          pendingHover = null;
+          const control = point ? pick({ clientX: point.x, clientY: point.y }) : undefined;
+          cursor(control ? control.kind === "knob" ? "grab" : "pointer" : null);
+        });
       }
     };
     const doubleClick = (event: MouseEvent) => {
@@ -143,6 +148,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
     window.addEventListener("touchmove", preventTouchScroll, { capture: true, passive: false });
     window.addEventListener("wheel", wheel, { capture: true, passive: false });
     return () => {
+      if (hoverFrame) cancelAnimationFrame(hoverFrame);
       finish(); cursor(null);
       window.removeEventListener("pointerdown", down, true);
       window.removeEventListener("pointermove", move, true);

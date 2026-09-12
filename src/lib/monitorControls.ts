@@ -85,8 +85,11 @@ export function createMonitorControls(model: THREE.Object3D) {
   materials.push(ledMaterial);
   const axis = new THREE.Vector3(0, 0, 1);
   const rotation = new THREE.Quaternion();
+  const occluders = ["CRT_Housing", "CRT_Bezel", "CRT_ControlPanel"]
+    .map(name => model.getObjectByName(name))
+    .filter((object): object is THREE.Object3D => object !== undefined);
   return {
-    controls, registry,
+    controls, registry, pickTargets: [...controls.map(control => control.group), ...occluders],
     resolve(object: THREE.Object3D | null) {
       while (object) {
         const control = registry.get(object);
