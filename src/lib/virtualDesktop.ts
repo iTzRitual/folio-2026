@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
-import type { DebugSettings } from "@/context/DebugSettingsContext";
+import type { DebugSettings } from "@/config/debugSettings";
 import { buildCustomAberrationProgram } from "@/lib/customAberrationShader";
 
 type DesktopTuning = DebugSettings["desktop"];

@@ -21,10 +21,8 @@ import { ThemeSweep } from "./ThemeSweep";
 import { Suspense } from "react";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { ThemeBridge, type ThemeContextValue } from "@/context/ThemeContext";
-import {
-  DebugSettingsBridge,
-  type DebugSettings,
-} from "@/context/DebugSettingsContext";
+import { DebugSettingsBridge } from "@/context/DebugSettingsContext";
+import type { DebugSettings } from "@/config/debugSettings";
 import type { BioVariant } from "@/data/content";
 import {
   SceneCapabilitiesProvider,

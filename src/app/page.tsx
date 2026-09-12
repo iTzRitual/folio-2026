@@ -16,7 +16,7 @@ import { useTheme } from "@/context/ThemeContext";
 import {
     DEBUG_DEFAULTS,
     type DebugSettings,
-} from "@/context/DebugSettingsContext";
+} from "@/config/debugSettings";
 
 const DynamicScene = dynamic(() => import("@/components/Scene"), {
     ssr: false,

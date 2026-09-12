@@ -7,7 +7,7 @@ import { bioVariants, type BioVariant } from "@/data/content";
 import {
     DEBUG_DEFAULTS,
     type DebugSettings,
-} from "@/context/DebugSettingsContext";
+} from "@/config/debugSettings";
 
 const D = DEBUG_DEFAULTS;
 
