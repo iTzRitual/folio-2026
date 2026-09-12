@@ -1,7 +1,7 @@
 "use client";
 
 import { useGLTF } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Box3, MathUtils, Mesh, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
@@ -18,6 +18,7 @@ export function Phase2Workstation({ width }: { width: number }) {
   const { workstation } = useDebugSettings();
   const { revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
+  const gl = useThree((state) => state.gl);
   const shadow = useMemo(() => createWorkstationShadow(), []);
   const shadowRef = useRef<Mesh>(null);
   const capturedSettings = useRef<typeof workstation | null>(null);
@@ -27,6 +28,10 @@ export function Phase2Workstation({ width }: { width: number }) {
     const deskSize = new Box3().setFromObject(desk).getSize(new Vector3());
     const keyboardModel = keyboard.clone(true);
     const deskModel = desk.clone(true);
+    const shadowMonitor = crt.clone(true);
+    for (const name of ["CRT_Screen", "CRT_Glass"]) {
+      shadowMonitor.getObjectByName(name)!.visible = false;
+    }
     for (const model of [keyboardModel, deskModel]) {
       model.traverse(object => {
         if (object instanceof Mesh) object.raycast = () => null;
@@ -37,6 +42,7 @@ export function Phase2Workstation({ width }: { width: number }) {
       deskSize,
       keyboardModel,
       deskModel,
+      shadowMonitor,
     };
   }, [crt, keyboard, desk]);
   const scale = width / resources.screenWidth;
@@ -44,22 +50,43 @@ export function Phase2Workstation({ width }: { width: number }) {
   const supportY = resources.supportY + deskPosition.y;
   const deskDepth = resources.deskSize.z * deskScale.z;
   const wallSize = CONFIG.phase2.WALL_SIZE;
-  useFrame(({ gl }) => {
+  useEffect(() => {
+    const capture = () => {
+      shadow.capture(
+        gl,
+        [resources.shadowMonitor, resources.keyboardModel.clone(true)],
+        new Vector3(
+          deskPosition.x,
+          supportY + CONFIG.phase2.CONTACT_SHADOW_OFFSET,
+          deskPosition.z,
+        ),
+        resources.deskSize.x * deskScale.x,
+        deskDepth,
+      );
+      capturedSettings.current = workstation;
+    };
+    const idleId = window.requestIdleCallback(capture, { timeout: 1000 });
+    return () => window.cancelIdleCallback(idleId);
+  }, [
+    deskDepth,
+    deskPosition.x,
+    deskPosition.z,
+    deskScale.x,
+    gl,
+    resources,
+    shadow,
+    supportY,
+    workstation,
+  ]);
+
+  useFrame(() => {
     const reveal = revealProgressRef.current;
-    if ((!reducedMotion && reveal < CONFIG.phase2.CONTACT_SHADOW_REVEAL) || reveal <= 0) return;
-    if (capturedSettings.current === workstation) return;
-    const monitor = crt.clone(true);
-    for (const name of ["CRT_Screen", "CRT_Glass"]) monitor.getObjectByName(name)!.visible = false;
-    const keyboardCapture = resources.keyboardModel.clone(true);
-    shadow.capture(
-      gl,
-      [monitor, keyboardCapture],
-      new Vector3(deskPosition.x, supportY + CONFIG.phase2.CONTACT_SHADOW_OFFSET, deskPosition.z),
-      resources.deskSize.x * deskScale.x,
-      deskDepth,
-    );
-    capturedSettings.current = workstation;
-    if (shadowRef.current) shadowRef.current.visible = true;
+    if (shadowRef.current) {
+      shadowRef.current.visible =
+        capturedSettings.current === workstation &&
+        reveal > 0 &&
+        (reducedMotion || reveal >= CONFIG.phase2.CONTACT_SHADOW_REVEAL);
+    }
   });
 
   return (
