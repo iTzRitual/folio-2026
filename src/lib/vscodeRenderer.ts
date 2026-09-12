@@ -884,6 +884,7 @@ export function createVSCodeRenderer({
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   const renderer: VSCodeRenderer = {
     canvas,
     context,

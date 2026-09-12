@@ -1004,6 +1004,7 @@ function createBrowserChromeTexture({
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   texture.needsUpdate = true;
   return texture;
 }
@@ -1030,6 +1031,7 @@ function createDockRenderer({
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   texture.needsUpdate = true;
   const renderer: DockRenderer = {
     canvas,
@@ -1370,6 +1372,7 @@ function createToolbarRenderer({
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   const renderer: ToolbarRenderer = {
     canvas,
     context,
