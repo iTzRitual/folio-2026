@@ -49,10 +49,14 @@ export function AnimatedRevealText({
     () => {
       if (!containerRef.current) return;
 
+      const elements = containerRef.current.hasAttribute("data-copy-wrapper")
+        ? Array.from(containerRef.current.children)
+        : [containerRef.current];
+
       if (prefersReducedMotion) {
         if (!startTrigger) return;
         const call = gsap.delayedCall(delay, () => {
-          onRevealRef.current?.(0);
+          elements.forEach((_, index) => onRevealRef.current?.(index));
         });
         return () => call.kill();
       }
@@ -65,14 +69,6 @@ export function AnimatedRevealText({
       if (visibilityRafRef.current !== null) {
         cancelAnimationFrame(visibilityRafRef.current);
         visibilityRafRef.current = null;
-      }
-
-      let elements: Element[] = [];
-
-      if (containerRef.current.hasAttribute("data-copy-wrapper")) {
-        elements = Array.from(containerRef.current.children);
-      } else {
-        elements = [containerRef.current];
       }
 
       elements.forEach((element) => {
@@ -235,6 +231,7 @@ export function AnimatedRevealText({
     },
     {
       scope: containerRef,
+      revertOnUpdate: true,
       dependencies: [
         animateOnScroll,
         delay,

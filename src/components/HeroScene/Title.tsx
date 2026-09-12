@@ -1,7 +1,13 @@
 import { Text, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { AnimatedRevealText } from "../AnimatedRevealText";
-import { useCallback, useRef, useState, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -47,6 +53,8 @@ export function Title({
   const stackedTopRef = useRef<THREE.MeshBasicMaterial>(null);
   const stackedBottomRef = useRef<THREE.MeshBasicMaterial>(null);
   const introTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const compactTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const hintTweenRef = useRef<gsap.core.Tween | null>(null);
   const hasUserScrolledRef = useRef(false);
   const compactAppliedRef = useRef(false);
   const hintVisibleRef = useRef(false);
@@ -100,16 +108,25 @@ export function Title({
   const visualFontCorrectionX =
     calculatedFontSize * CONFIG.title.VISUAL_FONT_CORRECTION_X;
 
-  useGSAP(() => {
-    if (
-      !startTrigger ||
-      textWidth3D === 0 ||
-      !textGroupRef.current ||
-      !htmlDivRef.current ||
-      !scrollTextRef.current
-    ) {
-      return;
-    }
+  useLayoutEffect(
+    () => () => {
+      compactTimelineRef.current?.kill();
+      hintTweenRef.current?.kill();
+    },
+    [],
+  );
+
+  useGSAP(
+    () => {
+      if (
+        !startTrigger ||
+        textWidth3D === 0 ||
+        !textGroupRef.current ||
+        !htmlDivRef.current ||
+        !scrollTextRef.current
+      ) {
+        return;
+      }
 
     if (prefersReducedMotion) {
       const reducedTargetX =
@@ -209,13 +226,24 @@ export function Title({
       fadePosition,
     );
 
-    return () => {
-      if (introTimelineRef.current === tl) {
-        introTimelineRef.current = null;
-      }
-      tl.kill();
-    };
-  }, [startTrigger, textWidth3D, viewportWidth, marginX, prefersReducedMotion]);
+      return () => {
+        if (introTimelineRef.current === tl) {
+          introTimelineRef.current = null;
+        }
+        tl.kill();
+      };
+    },
+    {
+      dependencies: [
+        startTrigger,
+        textWidth3D,
+        viewportWidth,
+        marginX,
+        prefersReducedMotion,
+      ],
+      revertOnUpdate: true,
+    },
+  );
 
   useFrame(() => {
     // The title stays pinned above the details sheet, drawn over everything on
@@ -256,26 +284,36 @@ export function Title({
       introTimelineRef.current?.kill();
       introTimelineRef.current = null;
 
-      gsap.to(textGroupRef.current.position, {
+      compactTimelineRef.current?.kill();
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          if (compactTimelineRef.current === timeline) {
+            compactTimelineRef.current = null;
+          }
+        },
+      });
+      compactTimelineRef.current = timeline;
+
+      timeline.to(textGroupRef.current.position, {
         x: targetX,
         duration: 0.2,
         ease: "power2.out",
         overwrite: true,
-      });
-      gsap.to(textGroupRef.current.scale, {
+      }, 0);
+      timeline.to(textGroupRef.current.scale, {
         x: targetScale,
         y: targetScale,
         z: targetScale,
         duration: 0.2,
         ease: "power2.out",
         overwrite: true,
-      });
-      gsap.to(htmlDivRef.current, {
+      }, 0);
+      timeline.to(htmlDivRef.current, {
         scale: targetScale,
         duration: 0.2,
         ease: "power2.out",
         overwrite: true,
-      });
+      }, 0);
 
       isFirstRun.current = false;
       compactAppliedRef.current = true;
@@ -311,11 +349,15 @@ export function Title({
 
       if (hintVisibleRef.current !== showHint) {
         hintVisibleRef.current = showHint;
-        gsap.to(scrollTextRef.current, {
+        hintTweenRef.current?.kill();
+        hintTweenRef.current = gsap.to(scrollTextRef.current, {
           opacity: showHint ? 1 : 0,
           duration: showHint ? 1.2 : 0.25,
           ease: "power2.out",
           overwrite: true,
+          onComplete: () => {
+            hintTweenRef.current = null;
+          },
         });
       }
     }
