@@ -22,7 +22,7 @@ function createPlayStationPlayback(monitorState: MonitorState) {
 
   const texture = new THREE.VideoTexture(video);
   const repeatX =
-    CONFIG.phase2.PLANE_ASPECT / CONFIG.monitor.PLAYSTATION_SOURCE_ASPECT;
+    CONFIG.workstation.PLANE_ASPECT / CONFIG.monitor.PLAYSTATION_SOURCE_ASPECT;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
@@ -83,13 +83,13 @@ function createPlayStationPlayback(monitorState: MonitorState) {
   };
 }
 
-export const Phase2PlayStationSignal = forwardRef<
+export const PlayStationSignal = forwardRef<
   PlayStationSignalHandle,
   {
     geometry: THREE.BufferGeometry;
     monitorState: MonitorState;
   }
->(function Phase2PlayStationSignal({ geometry, monitorState }, ref) {
+>(function PlayStationSignal({ geometry, monitorState }, ref) {
   const meshRef = useRef<THREE.Mesh>(null);
   const playback = useMemo(
     () => createPlayStationPlayback(monitorState),

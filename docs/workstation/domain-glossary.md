@@ -1,15 +1,15 @@
-# Phase 2 domain glossary
+# Workstation reveal domain glossary
 
 ## Plane
 
 The physical 4:3 surface that eventually represents the monitor screen. Its
 texture contains the live portfolio at its maximum scroll position, browser
-chrome, and future virtual desktop.
+chrome, and virtual desktop.
 
 ## Close portfolio view
 
-The existing Hero, Details, and About me composition as seen before the Phase 2
-reveal begins. Its appearance and responsive behavior remain unchanged.
+The existing Hero, Details, and About me composition as seen before the
+workstation reveal begins. Its appearance and responsive behavior remain unchanged.
 
 ## Reveal
 
@@ -19,8 +19,7 @@ from the close portfolio view.
 ## Surface content
 
 Everything displayed within the 4:3 plane texture, including the live
-portfolio at its maximum scroll position, the temporary black areas, Safari
-UI, and the future virtual desktop.
+portfolio at its maximum scroll position, Safari UI, and the virtual desktop.
 
 ## Safari UI
 
@@ -31,5 +30,5 @@ the virtual desktop. The complete Safari window uses contain fitting inside the
 
 ## Virtual desktop
 
-The future macOS-like desktop that occupies the plane around the portfolio
-after the reveal. It replaces the temporary black surface areas.
+The macOS-like desktop that occupies the plane around the portfolio after the
+reveal.

@@ -54,7 +54,7 @@ export function ThemeSweep() {
   const projected = useRef(new Vector3());
   const backdrop = useRef<Color>(null);
   const sweepPlane = useRef<Mesh>(null);
-  const wasPhase2Active = useRef(false);
+  const wasWorkstationActive = useRef(false);
 
   useEffect(() => {
     camera.layers.enable(THEME_SWEEP_LAYER);
@@ -64,20 +64,20 @@ export function ThemeSweep() {
   }, [camera]);
 
   useFrame((_, delta) => {
-    const phase2Active =
-      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
+    const workstationActive =
+      revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
     const run = runRef.current;
     const { style } = document.documentElement;
 
     camera.layers.enable(THEME_SWEEP_LAYER);
-    if (phase2Active) camera.layers.disable(THEME_SWEEP_LAYER);
+    if (workstationActive) camera.layers.disable(THEME_SWEEP_LAYER);
 
-    if (!phase2Active && wasPhase2Active.current) {
+    if (!workstationActive && wasWorkstationActive.current) {
       backdrop.current?.set(run.to.bg);
       for (const [, name] of CSS_VARS) style.removeProperty(name);
     }
 
-    wasPhase2Active.current = phase2Active;
+    wasWorkstationActive.current = workstationActive;
 
     if (!run.active && run.settled) return;
 
@@ -110,7 +110,7 @@ export function ThemeSweep() {
       );
     }
 
-    if (!phase2Active) {
+    if (!workstationActive) {
       const centre = sweepProgress(front, sweepCoord(0.5, 0.5));
       backdrop.current?.set(mixHex(run.from.bg, run.to.bg, centre));
 

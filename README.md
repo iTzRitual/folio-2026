@@ -16,17 +16,17 @@ My interactive portfolio for 2026. The project breaks standard web development c
 
 **[Work in Progress]**
 
-- **Phase 1:** ✅
-- **Phase 2:** ⏳
+- **WebGL portfolio:** ✅
+- **Interactive workstation reveal:** ✅
 
 ---
 
-## 📖 Context & Vision (Phased Approach)
+## 📖 Context & Vision
 
-At first glance, the site looks like a standard, flat website. However, this is a deliberate design choice. The project is divided into two phases:
+At first glance, the site looks like a standard, flat website. That appearance is deliberate. The experience now has two connected layers:
 
-- **Phase 1 (Current):** Building a "fake" flat UI using WebGL. The entire Hero Section is rendered on a canvas.
-- **Phase 2 (Planned):** After scrolling to the _Details_ section, a seamless transition will occur – the camera will zoom out, revealing that the "flat website" was actually a monitor screen in a full, interactive 3D scene of my workstation.
+- **Portfolio interface:** The hero, details, case studies, and synchronized accessible text are rendered through WebGL.
+- **Workstation reveal:** After the portfolio content, the camera pulls back to reveal that the interface is running on an interactive CRT monitor in a 3D workstation.
 
 Since the final vision relies heavily on **Three.js** and **React Three Fiber (R3F)**, I decided to build the foundation on this stack right from the start.
 
@@ -59,7 +59,7 @@ Creating a DOM-like interface inside a Canvas required an unconventional approac
 
 ### 4. Custom Shaders (Custom Aberration)
 
-**Problem:** A flat-looking website built in WebGL needs to offer something "extra" to justify the technology overhead before unlocking Phase 2.
+**Problem:** A flat-looking website built in WebGL needs to offer something "extra" to justify the technology overhead before the workstation reveal.
 **Solution:** A custom post-processing effect in `CustomAberration.tsx`.
 
 - **How it works:** I wrote a custom shader injected via `@react-three/postprocessing`. It tracks mouse position and **velocity** (`useFrame` and vector calculations). Fast cursor movement triggers smooth chromatic aberration (color splitting) and grid distortion, which then smoothly returns to normal using `MathUtils.lerp` and exponential decay (`Math.exp`).
@@ -124,7 +124,7 @@ You can access the debug mode by navigating to `/debug`. This will enable:
 
 [Work in Progress]
 
-The plan for this project is to quickly build **Phase One**: a minimalist digital CV. Following that, I will develop an **additional 3D layer** as a gimmick - a seamless camera transition pulling back to reveal my workstation as a full 3D scene.
+The original plan was to build a minimalist digital CV first, followed by an additional 3D layer: a seamless camera transition pulling back to reveal my workstation as a full 3D scene.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5c4d34bd-8123-4546-909e-428f41391157" width="49%" />

@@ -1,6 +1,6 @@
 # Compact low-profile keyboard
 
-An 84-key, photo-inspired 75% keyboard built for the Phase 2 workstation. The supplied overhead and three-quarter references determine the 16-unit layout, staggered modifiers, full-height navigation column, arrow cluster, gray key groups, thin charcoal frame, and orange Escape key. There is no added branding.
+An 84-key, photo-inspired 75% keyboard built for the Workstation reveal workstation. The supplied overhead and three-quarter references determine the 16-unit layout, staggered modifiers, full-height navigation column, arrow cluster, gray key groups, thin charcoal frame, and orange Escape key. There is no added branding.
 
 ## Deliverables
 
@@ -48,13 +48,13 @@ The atlas generator defaults to Windows Arial; set `KEYBOARD_FONT` to a sans-ser
 
 ## Workstation integration
 
-`Phase2Workstation.tsx` lives alongside the CRT in the existing animated surface group. Both use `getCRTReferenceFrame` to derive scale from `CRT_Screen` (352 mm wide), preserve the original screen alignment, and find the contact plane from `CRT_Stand`. The complete CRT's loose bounding box is deliberately not used: its badge contains unrelated outlying bounds, whereas the stand is the authoritative physical support.
+`WorkstationEnvironment.tsx` lives alongside the CRT in the existing animated surface group. Both use `getCRTReferenceFrame` to derive scale from `CRT_Screen` (352 mm wide), preserve the original screen alignment, and find the contact plane from `CRT_Stand`. The complete CRT's loose bounding box is deliberately not used: its badge contains unrelated outlying bounds, whereas the stand is the authoritative physical support.
 
 The desk's top is at the CRT feet's measured Y=-0.280866 m. Its 950 × 900 × 28 mm source asset is scaled to 5.225 m wide and 1.26 m deep in the scene and centered at Z=-0.28 m. The width keeps its side edges outside the desktop framing. The keyboard is at X=8 mm, Z=170 mm with a -2° yaw. Both assets meet the contact plane exactly. Conservative bounds give **40.86 mm clearance** between keyboard and CRT, **421.17 mm behind the CRT**, and **115.66 mm in front of the keyboard** before the desk edge. A matte charcoal wall meets the rear edge at Z=-0.91 m and follows desk position/depth changes.
 
-Defaults live in `CONFIG.phase2`; `/debug` exposes a separate Workstation folder for keyboard position/rotation/scale and desk position/scale. Positions are native asset meters, rotations are degrees, scales are multipliers. Keyboard Y is relative to the desk top; desk Y offsets the CRT's support plane. Moving the desk vertically or tilting the keyboard can intentionally break contact and should be checked visually.
+Defaults live in `CONFIG.workstation`; `/debug` exposes a separate Workstation folder for keyboard position/rotation/scale and desk position/scale. Positions are native asset meters, rotations are degrees, scales are multipliers. Keyboard Y is relative to the desk top; desk Y offsets the CRT's support plane. Moving the desk vertically or tilting the keyboard can intentionally break contact and should be checked visually.
 
-The camera's final Y moves down 75 mm in asset coordinates to keep the keyboard visible. Its orientation, zoom timing, screen UV system, pointer raycasts, and return transition remain intact. A cached 512px contact shadow is captured in an isolated scene in asset coordinates when the workstation is revealed. This avoids scaled-camera issues and is independent of viewport size. It renders only once, or again after editing workstation controls; allocated targets and materials are disposed on unmount. The existing environment lighting remains; the photographic backdrop has been replaced by the wall. Wall dimensions and material settings live in `CONFIG.phase2`.
+The camera's final Y moves down 75 mm in asset coordinates to keep the keyboard visible. Its orientation, zoom timing, screen UV system, pointer raycasts, and return transition remain intact. A cached 512px contact shadow is captured in an isolated scene in asset coordinates when the workstation is revealed. This avoids scaled-camera issues and is independent of viewport size. It renders only once, or again after editing workstation controls; allocated targets and materials are disposed on unmount. The existing environment lighting remains; the photographic backdrop has been replaced by the wall. Wall dimensions and material settings live in `CONFIG.workstation`.
 
 ## Scope and limitations
 

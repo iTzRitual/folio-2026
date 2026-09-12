@@ -51,7 +51,7 @@ export interface DebugSettings {
         attack: number;
         release: number;
     };
-    phase2: {
+    desktop: {
         dockScale: number;
         dockOffsetX: number;
         dockOffsetY: number;
@@ -129,23 +129,23 @@ export const DEBUG_DEFAULTS: DebugSettings = {
         attack: CONFIG.customAberration.SCROLL_ATTACK_MULT,
         release: CONFIG.customAberration.SCROLL_RELEASE_MULT,
     },
-    phase2: {
-        dockScale: CONFIG.phase2.DOCK_SCALE,
-        dockOffsetX: CONFIG.phase2.DOCK_OFFSET_X,
-        dockOffsetY: CONFIG.phase2.DOCK_OFFSET_Y,
+    desktop: {
+        dockScale: CONFIG.workstation.DOCK_SCALE,
+        dockOffsetX: CONFIG.workstation.DOCK_OFFSET_X,
+        dockOffsetY: CONFIG.workstation.DOCK_OFFSET_Y,
         dockMagnification: 0.5,
-        safariChromeScale: CONFIG.phase2.SAFARI_CHROME_SCALE,
-        safariControlsScale: CONFIG.phase2.SAFARI_CONTROLS_SCALE,
-        safariAddressScale: CONFIG.phase2.SAFARI_ADDRESS_SCALE,
-        safariBottomSafeArea: CONFIG.phase2.SAFARI_BOTTOM_SAFE_AREA,
+        safariChromeScale: CONFIG.workstation.SAFARI_CHROME_SCALE,
+        safariControlsScale: CONFIG.workstation.SAFARI_CONTROLS_SCALE,
+        safariAddressScale: CONFIG.workstation.SAFARI_ADDRESS_SCALE,
+        safariBottomSafeArea: CONFIG.workstation.SAFARI_BOTTOM_SAFE_AREA,
     },
     headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
     workstation: {
-        keyboardPosition: CONFIG.phase2.KEYBOARD_POSITION,
-        keyboardRotation: CONFIG.phase2.KEYBOARD_ROTATION,
-        keyboardScale: CONFIG.phase2.KEYBOARD_SCALE,
-        deskPosition: CONFIG.phase2.DESK_POSITION,
-        deskScale: CONFIG.phase2.DESK_SCALE,
+        keyboardPosition: CONFIG.workstation.KEYBOARD_POSITION,
+        keyboardRotation: CONFIG.workstation.KEYBOARD_ROTATION,
+        keyboardScale: CONFIG.workstation.KEYBOARD_SCALE,
+        deskPosition: CONFIG.workstation.DESK_POSITION,
+        deskScale: CONFIG.workstation.DESK_SCALE,
     },
 };
 

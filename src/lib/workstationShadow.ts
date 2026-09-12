@@ -8,7 +8,7 @@ import { VerticalBlurShader } from "three/addons/shaders/VerticalBlurShader.js";
 import { CONFIG } from "@/config/constants";
 
 export function createWorkstationShadow() {
-  const resolution = CONFIG.phase2.CONTACT_SHADOW_RESOLUTION;
+  const resolution = CONFIG.workstation.CONTACT_SHADOW_RESOLUTION;
   const target = new WebGLRenderTarget(resolution, resolution);
   const intermediate = new WebGLRenderTarget(resolution, resolution);
   target.texture.generateMipmaps = intermediate.texture.generateMipmaps = false;
@@ -28,7 +28,7 @@ export function createWorkstationShadow() {
   const material = new MeshBasicMaterial({
     map: target.texture,
     transparent: true,
-    opacity: CONFIG.phase2.CONTACT_SHADOW_OPACITY,
+    opacity: CONFIG.workstation.CONTACT_SHADOW_OPACITY,
     depthWrite: false,
     side: DoubleSide,
     toneMapped: false,
@@ -40,7 +40,7 @@ export function createWorkstationShadow() {
       const captureScene = new Scene();
       for (const model of models) captureScene.add(model);
       captureScene.overrideMaterial = depth;
-      const camera = new OrthographicCamera(-width / 2, width / 2, depthSize / 2, -depthSize / 2, 0, CONFIG.phase2.CONTACT_SHADOW_FAR);
+      const camera = new OrthographicCamera(-width / 2, width / 2, depthSize / 2, -depthSize / 2, 0, CONFIG.workstation.CONTACT_SHADOW_FAR);
       camera.position.copy(center);
       camera.up.set(0, 0, 1);
       camera.lookAt(center.clone().add(new Vector3(0, 1, 0)));
@@ -56,12 +56,12 @@ export function createWorkstationShadow() {
         gl.render(captureScene, camera);
         quad.material = horizontal;
         horizontal.uniforms.tDiffuse.value = target.texture;
-        horizontal.uniforms.h.value = CONFIG.phase2.CONTACT_SHADOW_BLUR / resolution;
+        horizontal.uniforms.h.value = CONFIG.workstation.CONTACT_SHADOW_BLUR / resolution;
         gl.setRenderTarget(intermediate);
         gl.render(quad, blurCamera);
         quad.material = vertical;
         vertical.uniforms.tDiffuse.value = intermediate.texture;
-        vertical.uniforms.v.value = CONFIG.phase2.CONTACT_SHADOW_BLUR / resolution;
+        vertical.uniforms.v.value = CONFIG.workstation.CONTACT_SHADOW_BLUR / resolution;
         gl.setRenderTarget(target);
         gl.render(quad, blurCamera);
       } finally {

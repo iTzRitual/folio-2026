@@ -38,7 +38,7 @@ export function HeroTransitionProvider({
       window.innerHeight * (CONFIG.scrollTimeline.VIEWPORTS - 1);
 
     const revealDistance = () =>
-      window.innerHeight * CONFIG.phase2.REVEAL_VIEWPORTS;
+      window.innerHeight * CONFIG.workstation.REVEAL_VIEWPORTS;
 
     const tween = gsap.to(scrollState, {
       progress: 1,

@@ -43,19 +43,19 @@ import { buildCustomAberrationProgram } from "./Effects/CustomAberrationEffect";
 import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
-import { Phase2CRT } from "./Phase2CRT";
-import { Phase2Workstation } from "./Phase2Workstation";
+import { CRTMonitor } from "./CRTMonitor";
+import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
-  Phase2CRTScreen,
-  type Phase2CRTScreenHandle,
-} from "./Phase2CRTScreen";
+  CRTDisplay,
+  type CRTDisplayHandle,
+} from "./CRTDisplay";
 import {
-  Phase2PlayStationSignal,
+  PlayStationSignal,
   type PlayStationSignalHandle,
-} from "./Phase2PlayStationSignal";
+} from "./PlayStationSignal";
 import { createCRTGeometry, crtMorph, getCRTReferenceFrame } from "@/lib/crtScreen";
 
-type Phase2Tuning = DebugSettings["phase2"];
+type DesktopTuning = DebugSettings["desktop"];
 
 type DockApp = {
   id: string;
@@ -77,7 +77,7 @@ const DOCK_APPS: DockApp[] = [
 
 const SAFARI_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "safari");
 const VSCODE_DOCK_INDEX = DOCK_APPS.findIndex((app) => app.id === "vscode");
-const PHASE2_WALLPAPER_SRC = "/media/phase2/wallpaper.jpeg";
+const WORKSTATION_WALLPAPER_SRC = "/media/workstation/wallpaper.jpeg";
 
 type WindowAppId = "safari" | "vscode";
 
@@ -131,25 +131,25 @@ function createPlaneGeometry(width: number, height: number): THREE.PlaneGeometry
   return new THREE.PlaneGeometry(
     width,
     height,
-    CONFIG.phase2.PLANE_SEGMENTS_X,
-    CONFIG.phase2.PLANE_SEGMENTS_Y,
+    CONFIG.workstation.PLANE_SEGMENTS_X,
+    CONFIG.workstation.PLANE_SEGMENTS_Y,
   );
 }
 
 function getTextureDimensions(sourceWidth: number, sourceHeight: number) {
   const rawWidth = Math.max(
     sourceWidth,
-    sourceHeight * CONFIG.phase2.PLANE_ASPECT,
+    sourceHeight * CONFIG.workstation.PLANE_ASPECT,
   );
   const scale = Math.min(
     1,
-    CONFIG.phase2.TEXTURE_MAX_DIMENSION / rawWidth,
+    CONFIG.workstation.TEXTURE_MAX_DIMENSION / rawWidth,
   );
   const width = Math.round(rawWidth * scale);
 
   return {
     width,
-    height: Math.round(width / CONFIG.phase2.PLANE_ASPECT),
+    height: Math.round(width / CONFIG.workstation.PLANE_ASPECT),
   };
 }
 
@@ -160,10 +160,10 @@ function getPageTargetDimensions(
 ) {
   const maxDimension =
     qualityTier === "low"
-      ? CONFIG.phase2.PAGE_TARGET_LOW_MAX_SIZE
+      ? CONFIG.workstation.PAGE_TARGET_LOW_MAX_SIZE
       : qualityTier === "balanced"
-        ? CONFIG.phase2.PAGE_TARGET_BALANCED_MAX_SIZE
-        : CONFIG.phase2.PAGE_TARGET_HIGH_MAX_SIZE;
+        ? CONFIG.workstation.PAGE_TARGET_BALANCED_MAX_SIZE
+        : CONFIG.workstation.PAGE_TARGET_HIGH_MAX_SIZE;
   const scale = Math.min(
     1,
     maxDimension / Math.max(sourceWidth, sourceHeight),
@@ -178,17 +178,17 @@ function getPageTargetDimensions(
 function getDockLayout(
   textureWidth: number,
   textureHeight: number,
-  tuning: Phase2Tuning,
+  tuning: DesktopTuning,
 ) {
   const screenMargin =
     Math.min(textureWidth, textureHeight) *
-    CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+    CONFIG.workstation.BROWSER_SAFE_MARGIN_MULT;
   const screenUnit = Math.min(textureWidth, textureHeight);
   const height =
     Math.min(textureWidth, textureHeight) *
-    CONFIG.phase2.DOCK_HEIGHT_MULT *
+    CONFIG.workstation.DOCK_HEIGHT_MULT *
     tuning.dockScale;
-  const itemGap = height * CONFIG.phase2.DOCK_ITEM_GAP_MULT;
+  const itemGap = height * CONFIG.workstation.DOCK_ITEM_GAP_MULT;
   const horizontalPadding = height * 0.16;
   const itemSize = height - horizontalPadding * 2;
   const itemsWidth =
@@ -220,11 +220,11 @@ function getBrowserLayout(
   textureHeight: number,
   sourceWidth: number,
   sourceHeight: number,
-  tuning: Phase2Tuning,
+  tuning: DesktopTuning,
 ) {
   const margin =
     Math.min(textureWidth, textureHeight) *
-    CONFIG.phase2.BROWSER_SAFE_MARGIN_MULT;
+    CONFIG.workstation.BROWSER_SAFE_MARGIN_MULT;
   const dock = getDockLayout(textureWidth, textureHeight, tuning);
   const availableWidth = textureWidth - margin * 2;
   const availableHeight = dock.safeTop - margin;
@@ -232,7 +232,7 @@ function getBrowserLayout(
     sourceWidth /
     (sourceHeight *
       (1 +
-        CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT *
+        CONFIG.workstation.BROWSER_CHROME_HEIGHT_MULT *
           tuning.safariChromeScale));
   let width = availableWidth;
   let height = width / browserAspect;
@@ -247,7 +247,7 @@ function getBrowserLayout(
   const contentHeight =
     height /
     (1 +
-      CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT * tuning.safariChromeScale);
+      CONFIG.workstation.BROWSER_CHROME_HEIGHT_MULT * tuning.safariChromeScale);
 
   return {
     x,
@@ -261,20 +261,20 @@ function getBrowserLayout(
 
 function getBrowserControlHit(
   layout: ReturnType<typeof getBrowserLayout>,
-  tuning: Phase2Tuning,
+  tuning: DesktopTuning,
   pointerX: number,
   pointerY: number,
   textureToCssScale: number,
 ) {
   const controlRadius =
     layout.chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_RADIUS_MULT *
     tuning.safariControlsScale;
   const sidePadding =
-    layout.chromeHeight * CONFIG.phase2.BROWSER_SIDE_PADDING_MULT;
+    layout.chromeHeight * CONFIG.workstation.BROWSER_SIDE_PADDING_MULT;
   const controlGap =
     layout.chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_GAP_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_GAP_MULT *
     tuning.safariControlsScale;
   const controlY = layout.y + layout.chromeHeight / 2;
   const firstControlX = layout.x + sidePadding;
@@ -282,7 +282,7 @@ function getBrowserControlHit(
   let closestIndex = -1;
   let closestDistance = Number.POSITIVE_INFINITY;
 
-  for (let index = 0; index < CONFIG.phase2.BROWSER_LIGHTS.length; index += 1) {
+  for (let index = 0; index < CONFIG.workstation.BROWSER_LIGHTS.length; index += 1) {
     const controlX = firstControlX + index * (controlRadius * 2 + controlGap);
     const distance = Math.abs(pointerX - controlX);
 
@@ -341,7 +341,7 @@ function configureGenieGeometry(
     toLocalX(targetCenterX),
     toLocalY(targetCenterY),
     (safari.width / browserLayout.width) *
-      CONFIG.phase2.GENIE_TARGET_SCALE_MULT,
+      CONFIG.workstation.GENIE_TARGET_SCALE_MULT,
   );
 }
 
@@ -659,8 +659,8 @@ function drawDockRunningIndicator(
   context.beginPath();
   context.arc(
     item.x + item.width / 2,
-    layout.y + layout.height * (1 - CONFIG.phase2.DOCK_RUNNING_DOT_BOTTOM_MULT),
-    layout.height * CONFIG.phase2.DOCK_RUNNING_DOT_RADIUS_MULT,
+    layout.y + layout.height * (1 - CONFIG.workstation.DOCK_RUNNING_DOT_BOTTOM_MULT),
+    layout.height * CONFIG.workstation.DOCK_RUNNING_DOT_RADIUS_MULT,
     0,
     Math.PI * 2,
   );
@@ -762,7 +762,7 @@ function getDockTarget(
 ) {
   const { itemGap, itemSize } = layout;
   const count = DOCK_APPS.length;
-  const radius = itemSize * CONFIG.phase2.DOCK_MAGNIFICATION_RADIUS_MULT;
+  const radius = itemSize * CONFIG.workstation.DOCK_MAGNIFICATION_RADIUS_MULT;
 
   if (pointerX === null || magnification === 0) {
     return {
@@ -792,7 +792,7 @@ function getDockTarget(
 
   const activeExtraScale = magnification;
   const neighborExtraScale =
-    (magnification * CONFIG.phase2.DOCK_MAGNIFICATION_TOTAL_MULT -
+    (magnification * CONFIG.workstation.DOCK_MAGNIFICATION_TOTAL_MULT -
       activeExtraScale) /
     Math.max(neighborInfluence, 0.0001);
   const scales = Array.from(
@@ -877,7 +877,7 @@ function updateDockRenderer(
     renderer.rightAnchor,
   );
   const target = pointerTarget;
-  const amount = 1 - Math.exp(-CONFIG.phase2.DOCK_MAGNIFICATION_RESPONSE * delta);
+  const amount = 1 - Math.exp(-CONFIG.workstation.DOCK_MAGNIFICATION_RESPONSE * delta);
 
   for (let index = 0; index < renderer.scales.length; index += 1) {
     const next = THREE.MathUtils.lerp(
@@ -933,7 +933,7 @@ function createBrowserChromeTexture({
 }: {
   sourceWidth: number;
   sourceHeight: number;
-  tuning: Phase2Tuning;
+  tuning: DesktopTuning;
 }) {
   const { width: textureWidth, height: textureHeight } = getTextureDimensions(
     sourceWidth,
@@ -975,7 +975,7 @@ function createBrowserChromeTexture({
   );
   textureContext.clip();
 
-  textureContext.fillStyle = CONFIG.phase2.BROWSER_BAR_COLOR;
+  textureContext.fillStyle = CONFIG.workstation.BROWSER_BAR_COLOR;
   textureContext.fillRect(browserX, browserY, browserWidth, chromeHeight);
   textureContext.clearRect(
     browserX,
@@ -986,18 +986,18 @@ function createBrowserChromeTexture({
 
   const controlRadius =
     chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_RADIUS_MULT *
     tuning.safariControlsScale;
   const sidePadding =
-    chromeHeight * CONFIG.phase2.BROWSER_SIDE_PADDING_MULT;
+    chromeHeight * CONFIG.workstation.BROWSER_SIDE_PADDING_MULT;
   const controlGap =
     chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_GAP_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_GAP_MULT *
     tuning.safariControlsScale;
   const controlY = browserY + chromeHeight / 2;
   const firstControlX = browserX + sidePadding;
 
-  CONFIG.phase2.BROWSER_LIGHTS.forEach((color, index) => {
+  CONFIG.workstation.BROWSER_LIGHTS.forEach((color, index) => {
     textureContext.fillStyle = color;
     textureContext.beginPath();
     textureContext.arc(
@@ -1012,22 +1012,22 @@ function createBrowserChromeTexture({
 
   const addressHeight =
     chromeHeight *
-    CONFIG.phase2.BROWSER_ADDRESS_HEIGHT_MULT *
+    CONFIG.workstation.BROWSER_ADDRESS_HEIGHT_MULT *
     tuning.safariAddressScale;
   const addressWidth =
     browserWidth *
-    CONFIG.phase2.BROWSER_ADDRESS_WIDTH_MULT *
+    CONFIG.workstation.BROWSER_ADDRESS_WIDTH_MULT *
     tuning.safariAddressScale;
-  textureContext.fillStyle = CONFIG.phase2.BROWSER_ADDRESS_COLOR;
+  textureContext.fillStyle = CONFIG.workstation.BROWSER_ADDRESS_COLOR;
   textureContext.fillRect(
     browserX + (browserWidth - addressWidth) / 2,
     controlY - addressHeight / 2,
     addressWidth,
     addressHeight,
   );
-  textureContext.fillStyle = CONFIG.phase2.BROWSER_ICON_COLOR;
+  textureContext.fillStyle = CONFIG.workstation.BROWSER_ICON_COLOR;
   textureContext.font = `400 ${
-    chromeHeight * CONFIG.phase2.BROWSER_ADDRESS_FONT_MULT
+    chromeHeight * CONFIG.workstation.BROWSER_ADDRESS_FONT_MULT
       * tuning.safariAddressScale
   }px Arial`;
   textureContext.textAlign = "center";
@@ -1051,7 +1051,7 @@ function createDockRenderer({
 }: {
   sourceWidth: number;
   sourceHeight: number;
-  tuning: Phase2Tuning;
+  tuning: DesktopTuning;
 }) {
   const { width, height } = getTextureDimensions(sourceWidth, sourceHeight);
   const canvas = document.createElement("canvas");
@@ -1473,7 +1473,7 @@ function setHtmlOverlayVisibility(
 
   for (const child of container.children) {
     if (child instanceof HTMLElement && !child.contains(canvas)) {
-      child.classList.toggle("phase2-html-overlay-hidden", hidden);
+      child.classList.toggle("workstation-html-overlay-hidden", hidden);
     }
   }
 }
@@ -1513,8 +1513,8 @@ vec3 applyGenie(vec3 sourcePosition) {
     0.0,
     1.0,
     clamp(
-      u_genieProgress * (1.0 + ${CONFIG.phase2.GENIE_ROW_STAGGER.toFixed(2)}) -
-        windowY * ${CONFIG.phase2.GENIE_ROW_STAGGER.toFixed(2)},
+      u_genieProgress * (1.0 + ${CONFIG.workstation.GENIE_ROW_STAGGER.toFixed(2)}) -
+        windowY * ${CONFIG.workstation.GENIE_ROW_STAGGER.toFixed(2)},
       0.0,
       1.0
     )
@@ -1703,9 +1703,9 @@ function isThemeToggleHit({
   );
 }
 
-export function Phase2Surface({ children }: { children: ReactNode }) {
+export function WorkstationScene({ children }: { children: ReactNode }) {
   const monitorState = useMemo(createMonitorState, []);
-  const { scene: crtModel } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
+  const { scene: crtModel } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const crtFrame = useMemo(() => getCRTReferenceFrame(crtModel), [crtModel]);
   const {
     viewport,
@@ -1717,10 +1717,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const { scrollVelocityRef } = useSceneMotion();
   const { camera, events, gl, scene, size } = useThree();
   if (!(camera instanceof THREE.PerspectiveCamera)) {
-    throw new Error("Phase 2 requires a perspective camera");
+    throw new Error("The workstation scene requires a perspective camera");
   }
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { scrollBlur: scroll, phase2 } = useDebugSettings();
+  const { scrollBlur: scroll, desktop } = useDebugSettings();
   const { inputMode, layoutMode, qualityTier } = useSceneCapabilities();
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
@@ -1733,7 +1733,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const dockMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const toolbarMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const interactionMeshRef = useRef<THREE.Mesh>(null);
-  const crtScreenRef = useRef<Phase2CRTScreenHandle>(null);
+  const crtScreenRef = useRef<CRTDisplayHandle>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const targetQualityRef = useRef(qualityTier);
@@ -1844,10 +1844,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const planeWidth = Math.max(
     viewport.width,
     viewport.height *
-      (1 + CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT) *
-      CONFIG.phase2.PLANE_ASPECT,
+      (1 + CONFIG.workstation.BROWSER_CHROME_HEIGHT_MULT) *
+      CONFIG.workstation.PLANE_ASPECT,
   );
-  const planeHeight = planeWidth / CONFIG.phase2.PLANE_ASPECT;
+  const planeHeight = planeWidth / CONFIG.workstation.PLANE_ASPECT;
   const desktopGeometry = useMemo(
     () => createPlaneGeometry(planeWidth, planeHeight),
     [planeWidth, planeHeight],
@@ -1873,14 +1873,14 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     let wallpaperTexture: THREE.Texture | null = null;
     let cancelled = false;
 
-    new THREE.TextureLoader().load(PHASE2_WALLPAPER_SRC, (texture) => {
+    new THREE.TextureLoader().load(WORKSTATION_WALLPAPER_SRC, (texture) => {
       if (cancelled) {
         texture.dispose();
         return;
       }
 
       const imageAspect = texture.image.width / texture.image.height;
-      const planeAspect = CONFIG.phase2.PLANE_ASPECT;
+      const planeAspect = CONFIG.workstation.PLANE_ASPECT;
       const repeatX = Math.min(1, planeAspect / imageAspect);
       const repeatY = Math.min(1, imageAspect / planeAspect);
 
@@ -1987,13 +1987,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     }
   }, [
     genieUniforms,
-    phase2.dockScale,
-    phase2.dockOffsetX,
-    phase2.dockOffsetY,
-    phase2.safariAddressScale,
-    phase2.safariBottomSafeArea,
-    phase2.safariChromeScale,
-    phase2.safariControlsScale,
+    desktop.dockScale,
+    desktop.dockOffsetX,
+    desktop.dockOffsetY,
+    desktop.safariAddressScale,
+    desktop.safariBottomSafeArea,
+    desktop.safariChromeScale,
+    desktop.safariControlsScale,
     size.height,
     size.width,
     vscodeGenieUniforms,
@@ -2059,7 +2059,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     };
     const interval = window.setInterval(
       refreshSources,
-      CONFIG.phase2.VSCODE_SOURCE_REFRESH_MS,
+      CONFIG.workstation.VSCODE_SOURCE_REFRESH_MS,
     );
 
     return () => window.clearInterval(interval);
@@ -2196,7 +2196,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     window.scrollY -
     scrollReveal *
       size.height *
-      CONFIG.phase2.REVEAL_VIEWPORTS;
+      CONFIG.workstation.REVEAL_VIEWPORTS;
 
   const beginReturnBridge = () => {
     const safariRuntime = windowRuntimesRef.current.safari;
@@ -2218,7 +2218,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (browserLayout && dockRenderer) {
       updateDockRenderer(
         dockRenderer,
-        phase2.dockMagnification,
+        desktop.dockMagnification,
         null,
         false,
         1,
@@ -2365,10 +2365,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     runtime.state = "animating";
     const distance = Math.abs(target - runtime.amount);
     const baseDuration = prefersReducedMotion
-      ? CONFIG.phase2.GENIE_REDUCED_DURATION
+      ? CONFIG.workstation.GENIE_REDUCED_DURATION
       : target === 1
-        ? CONFIG.phase2.GENIE_DURATION
-        : CONFIG.phase2.GENIE_RESTORE_DURATION;
+        ? CONFIG.workstation.GENIE_DURATION
+        : CONFIG.workstation.GENIE_RESTORE_DURATION;
     runtime.animation = {
       from: runtime.amount,
       to: target,
@@ -2406,7 +2406,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       setDockAppRunning(
         dockRenderer,
         appId,
-        1 + phase2.dockMagnification,
+        1 + desktop.dockMagnification,
       );
     }
     if (appId === "vscode") startSourceLoad();
@@ -2502,7 +2502,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useFrame((_, delta) => {
     const scrollReveal = THREE.MathUtils.clamp(revealProgressRef.current, 0, 1);
     const previousReveal = previousRevealRef.current;
-    const breakpoint = CONFIG.phase2.RETURN_BRIDGE_REVEAL_BREAKPOINT;
+    const breakpoint = CONFIG.workstation.RETURN_BRIDGE_REVEAL_BREAKPOINT;
 
     if (
       !returnBridgeRef.current &&
@@ -2559,18 +2559,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         const scrollSpeed = Math.abs(currentScrollY - bridge.lastScrollY) / delta;
         bridge.lastScrollY = currentScrollY;
         bridge.idleElapsed =
-          scrollSpeed < CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_MIN_SPEED
+          scrollSpeed < CONFIG.workstation.RETURN_BRIDGE_AUTO_SCROLL_MIN_SPEED
             ? bridge.idleElapsed + delta
             : 0;
 
         if (
-          bridge.idleElapsed >= CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_DELAY
+          bridge.idleElapsed >= CONFIG.workstation.RETURN_BRIDGE_AUTO_SCROLL_DELAY
         ) {
           bridge.autoScroll = {
             elapsed: 0,
             duration: prefersReducedMotion
-              ? CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_REDUCED_DURATION
-              : CONFIG.phase2.RETURN_BRIDGE_AUTO_SCROLL_DURATION,
+              ? CONFIG.workstation.RETURN_BRIDGE_AUTO_SCROLL_REDUCED_DURATION
+              : CONFIG.workstation.RETURN_BRIDGE_AUTO_SCROLL_DURATION,
             startY: currentScrollY,
             targetY: getReturnBridgeTargetY(scrollReveal),
           };
@@ -2579,7 +2579,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       }
 
       const appSpan = bridge.sourceApp
-        ? CONFIG.phase2.RETURN_BRIDGE_APP_SCROLL_SPAN
+        ? CONFIG.workstation.RETURN_BRIDGE_APP_SCROLL_SPAN
         : 0;
       const safariProgress = THREE.MathUtils.clamp(
         (returnProgress - appSpan) / (1 - appSpan),
@@ -2634,7 +2634,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         : 0
       : scrollReveal;
     updateSurface(crtMorph(reveal, prefersReducedMotion));
-    const hideHtmlOverlays = reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
+    const hideHtmlOverlays = reveal >= CONFIG.workstation.BROWSER_REVEAL_START;
 
     if (htmlOverlayHiddenRef.current !== hideHtmlOverlays) {
       setHtmlOverlayVisibility(
@@ -2646,7 +2646,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       );
       htmlOverlayHiddenRef.current = hideHtmlOverlays;
     }
-    const planeZ = CONFIG.phase2.PLANE_Z;
+    const planeZ = CONFIG.workstation.PLANE_Z;
     const restZ = CONFIG.scene.CAMERA_REST_Z;
     const restDistance = restZ - planeZ;
     const restHeight =
@@ -2656,19 +2656,19 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     const restWidth = restHeight * camera.aspect;
     const fit = Math.max(
       1,
-      planeWidth / (restWidth * CONFIG.phase2.REVEAL_CAMERA_FILL),
-      planeHeight / (restHeight * CONFIG.phase2.REVEAL_CAMERA_FILL),
+      planeWidth / (restWidth * CONFIG.workstation.REVEAL_CAMERA_FILL),
+      planeHeight / (restHeight * CONFIG.workstation.REVEAL_CAMERA_FILL),
     );
     const targetZ = planeZ + restDistance * fit;
 
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
       const cameraProgress = THREE.MathUtils.clamp(
-        (reveal - CONFIG.phase2.CRT_MORPH_END) /
-          (1 - CONFIG.phase2.CRT_MORPH_END), 0, 1,
+        (reveal - CONFIG.workstation.CRT_MORPH_END) /
+          (1 - CONFIG.workstation.CRT_MORPH_END), 0, 1,
       );
       camera.position.set(
         0,
-        CONFIG.phase2.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth * cameraProgress,
+        CONFIG.workstation.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth * cameraProgress,
         THREE.MathUtils.lerp(restZ, targetZ, cameraProgress),
       );
       camera.updateMatrixWorld();
@@ -2678,12 +2678,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       ? reveal
       : THREE.MathUtils.mapLinear(
           reveal,
-          CONFIG.phase2.CRT_MORPH_END,
+          CONFIG.workstation.CRT_MORPH_END,
           1,
           0,
           1,
         );
-    if (!capturedRef.current && reveal >= CONFIG.phase2.BROWSER_REVEAL_START) {
+    if (!capturedRef.current && reveal >= CONFIG.workstation.BROWSER_REVEAL_START) {
       if (!capturePendingRef.current) {
         capturePendingRef.current = true;
         return;
@@ -2692,7 +2692,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
     if (capturedRef.current && pageGroupRef.current) {
       pageGroupRef.current.visible =
-        reveal < CONFIG.phase2.BROWSER_REVEAL_START;
+        reveal < CONFIG.workstation.BROWSER_REVEAL_START;
     }
 
     if (surfaceGroupRef.current && capturedRef.current) {
@@ -2709,7 +2709,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
         );
       }
       surfaceGroupRef.current.visible =
-        reveal >= CONFIG.phase2.BROWSER_REVEAL_START;
+        reveal >= CONFIG.workstation.BROWSER_REVEAL_START;
     }
 
   });
@@ -2718,7 +2718,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (
       !capturedRef.current ||
       returnBridgeRef.current !== null ||
-      revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START ||
+      revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START ||
       !interactionMeshRef.current ||
       !pageUvBoundsRef.current ||
       !pageAberrationMaterialRef.current
@@ -2792,7 +2792,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (dockRenderer) {
       updateDockRenderer(
         dockRenderer,
-        phase2.dockMagnification,
+        desktop.dockMagnification,
         pointerInsideDock ? pointerX : null,
         inputMode === "fine",
         delta,
@@ -2865,7 +2865,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (
       (!capturePendingRef.current && !capturedRef.current) ||
       (capturedRef.current &&
-        revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) ||
+        revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) ||
       !pageGroupRef.current ||
       !surfaceGroupRef.current
     ) {
@@ -2937,24 +2937,24 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       textureHeight,
       sourceWidth,
       sourceHeight,
-      phase2,
+      desktop,
     );
     const chromeTexture = createBrowserChromeTexture({
       sourceWidth,
       sourceHeight,
-      tuning: phase2,
+      tuning: desktop,
     });
     const dockRenderer = createDockRenderer({
       sourceWidth,
       sourceHeight,
-      tuning: phase2,
+      tuning: desktop,
     });
     const toolbarRenderer = createToolbarRenderer({ sourceWidth, sourceHeight });
     const vscodeRenderer = createVSCodeRenderer({
       width: textureWidth,
       height: textureHeight,
       layout,
-      controlsScale: phase2.safariControlsScale,
+      controlsScale: desktop.safariControlsScale,
     });
     const pageMask = createPageMask(textureWidth, textureHeight, layout);
 
@@ -3035,7 +3035,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       pageMask,
       bounds,
     );
-    const restDistance = CONFIG.scene.CAMERA_REST_Z - CONFIG.phase2.PLANE_Z;
+    const restDistance = CONFIG.scene.CAMERA_REST_Z - CONFIG.workstation.PLANE_Z;
     const restHeight =
       2 *
       Math.tan(THREE.MathUtils.degToRad(captureCamera.fov) / 2) *
@@ -3056,7 +3056,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     capturedRef.current = true;
     capturePendingRef.current = false;
     const revealVisible =
-      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
+      revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
     pageGroupRef.current.visible = !revealVisible;
     surfaceGroupRef.current.scale.setScalar(scale);
     surfaceGroupRef.current.position.y = -contentCenterY * scale;
@@ -3175,7 +3175,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     if (browserLayout && activeApp && windowIsVisible) {
       const browserControl = getBrowserControlHit(
         browserLayout,
-        phase2,
+        desktop,
         pointerX,
         pointerY,
         textureWidth / size.width,
@@ -3302,18 +3302,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
       <group
         ref={surfaceGroupRef}
-        position={[0, 0, CONFIG.phase2.PLANE_Z]}
+        position={[0, 0, CONFIG.workstation.PLANE_Z]}
         visible={false}
       >
         <Suspense fallback={null}>
-          <Phase2CRT
+          <CRTMonitor
             width={planeWidth}
             monitorState={monitorState}
             onButtonPress={syncPlayStationSignal}
           />
-          <Phase2Workstation width={planeWidth} />
+          <WorkstationEnvironment width={planeWidth} />
         </Suspense>
-        <Phase2CRTScreen ref={crtScreenRef} monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
+        <CRTDisplay ref={crtScreenRef} monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <group ref={desktopSignalGroupRef}>
         <mesh
           geometry={desktopGeometry}
@@ -3388,12 +3388,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           />
         </mesh>
         </group>
-        <Phase2PlayStationSignal
+        <PlayStationSignal
           ref={playStationSignalRef}
           geometry={desktopGeometry}
           monitorState={monitorState}
         />
-        </Phase2CRTScreen>
+        </CRTDisplay>
         <mesh
           ref={interactionMeshRef}
           geometry={planeGeometry}

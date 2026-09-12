@@ -26,7 +26,7 @@ export function getCRTReferenceFrame(model: Object3D) {
 
 export function crtMorph(reveal: number, reducedMotion: boolean) {
   return reducedMotion ? 1 : MathUtils.smoothstep(reveal,
-    CONFIG.phase2.BROWSER_REVEAL_START, CONFIG.phase2.CRT_MORPH_END);
+    CONFIG.workstation.BROWSER_REVEAL_START, CONFIG.workstation.CRT_MORPH_END);
 }
 
 function perimeter(mesh: Mesh) {
@@ -51,7 +51,7 @@ function perimeter(mesh: Mesh) {
   const hull = [...half(points), ...half([...points].reverse())];
   return hull.flatMap((p, i) => {
     const next = hull[(i + 1) % hull.length];
-    const count = Math.max(1, Math.ceil(p.distanceTo(next) / CONFIG.phase2.CRT_CONTOUR_STEP));
+    const count = Math.max(1, Math.ceil(p.distanceTo(next) / CONFIG.workstation.CRT_CONTOUR_STEP));
     return Array.from({ length: count }, (_, j) => p.clone().lerp(next, j / count));
   });
 }
@@ -65,7 +65,7 @@ export function createCRTGeometry(model: Object3D, width: number) {
   const scale = width / (bounds.max.x - bounds.min.x);
   const contour = perimeter(glass);
   const glassBounds = new Box3().setFromPoints(contour);
-  const inset = CONFIG.phase2.CRT_INNER_BORDER_WIDTH;
+  const inset = CONFIG.workstation.CRT_INNER_BORDER_WIDTH;
   const halfWidth = (glassBounds.max.x - glassBounds.min.x) / 2;
   const halfHeight = (glassBounds.max.y - glassBounds.min.y) / 2;
   const sx = (halfWidth - inset) / halfWidth;
@@ -86,14 +86,14 @@ export function createCRTGeometry(model: Object3D, width: number) {
   const transform = (x: number, y: number, z: number) => [
     (x - center.x) * scale,
     (y - center.y) * scale,
-    (z - bounds.max.z - CONFIG.phase2.CRT_SCREEN_CLEARANCE) * scale,
+    (z - bounds.max.z - CONFIG.workstation.CRT_SCREEN_CLEARANCE) * scale,
   ];
   const vertices = [...transform(center.x, center.y, crown(center.x, center.y))];
   const uv = [0.5, 0.5];
   const edge = [0];
   const indices: number[] = [];
   const n = contour.length;
-  const rings = CONFIG.phase2.CRT_SCREEN_RINGS;
+  const rings = CONFIG.workstation.CRT_SCREEN_RINGS;
   for (let ring = 1; ring <= rings; ring += 1) {
     const t = ring / rings;
     for (const p of contour) {
@@ -102,7 +102,7 @@ export function createCRTGeometry(model: Object3D, width: number) {
       vertices.push(...transform(x, y, crown(x, y)));
       const u = (x - center.x) / (halfWidth * sx);
       const v = (y - center.y) / (halfHeight * sy);
-      const k = CONFIG.phase2.CRT_BARREL;
+      const k = CONFIG.workstation.CRT_BARREL;
       uv.push((u + k * u * v * v * (1 - u * u) + 1) / 2,
         (v + k * v * u * u * (1 - v * v) + 1) / 2);
       edge.push(t);
@@ -127,7 +127,7 @@ export function createCRTGeometry(model: Object3D, width: number) {
   const rimIndices: number[] = [];
   const rimUvs: number[] = [];
   const rimEdges: number[] = [];
-  const steps = CONFIG.phase2.CRT_BORDER_SEGMENTS;
+  const steps = CONFIG.workstation.CRT_BORDER_SEGMENTS;
   for (let step = 0; step <= steps; step += 1) {
     const t = step / steps;
     for (const p of contour) {
@@ -172,14 +172,14 @@ export function createCRTGeometry(model: Object3D, width: number) {
       const v = (y * expansion + 1) / 2;
       position.setXYZ(i,
         MathUtils.lerp((u - 0.5) * width, finalPositions[i * 3], amount),
-        MathUtils.lerp((v - 0.5) * width / CONFIG.phase2.PLANE_ASPECT, finalPositions[i * 3 + 1], amount),
+        MathUtils.lerp((v - 0.5) * width / CONFIG.workstation.PLANE_ASPECT, finalPositions[i * 3 + 1], amount),
         finalPositions[i * 3 + 2] * amount);
       const screenU = MathUtils.lerp(u, finalUvs[i * 2], amount);
       const screenV = MathUtils.lerp(v, finalUvs[i * 2 + 1], amount);
       const px = screenU * 2 - 1;
       const py = screenV * 2 - 1;
-      const inset = 1 - CONFIG.phase2.CRT_BORDER - CONFIG.phase2.CRT_EDGE_SOFTNESS;
-      const bow = CONFIG.phase2.CRT_ACTIVE_EDGE_BOW;
+      const inset = 1 - CONFIG.workstation.CRT_BORDER - CONFIG.workstation.CRT_EDGE_SOFTNESS;
+      const bow = CONFIG.workstation.CRT_ACTIVE_EDGE_BOW;
       screenCoord.setXY(i, screenU, screenV);
       texcoord.setXY(i,
         MathUtils.lerp(screenU, (px * (1 + bow * py * py) / inset + 1) / 2, amount),

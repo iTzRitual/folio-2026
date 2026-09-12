@@ -1,8 +1,8 @@
 {
   "modified": [
     "src/components/DebugPanel.tsx",
-    "src/components/Phase2CRT.tsx",
-    "src/components/Phase2Surface.tsx",
+    "src/components/CRTMonitor.tsx",
+    "src/components/WorkstationScene.tsx",
     "src/config/constants.ts",
     "src/context/DebugSettingsContext.tsx",
     "src/lib/crtScreen.ts"
@@ -39,7 +39,7 @@
     "assets/workstation-desk/workstation-desk.glb",
     "public/glbs/keyboard.glb",
     "public/glbs/workstation-desk.glb",
-    "src/components/Phase2Workstation.tsx",
+    "src/components/WorkstationEnvironment.tsx",
     "src/lib/workstationShadow.ts",
     "assets/keyboard/changed-files.json"
   ]

@@ -219,46 +219,46 @@ const EXCLUSION_SCHEMA = {
     },
 };
 
-const PHASE2_SCHEMA = {
-    dockScale: { value: D.phase2.dockScale, min: 0.6, max: 1.7, step: 0.01 },
+const DESKTOP_SCHEMA = {
+    dockScale: { value: D.desktop.dockScale, min: 0.6, max: 1.7, step: 0.01 },
     dockOffsetX: {
-        value: D.phase2.dockOffsetX,
+        value: D.desktop.dockOffsetX,
         min: -0.3,
         max: 0.3,
         step: 0.005,
     },
     dockOffsetY: {
-        value: D.phase2.dockOffsetY,
+        value: D.desktop.dockOffsetY,
         min: -0.3,
         max: 0.045,
         step: 0.005,
     },
     dockMagnification: {
-        value: D.phase2.dockMagnification,
+        value: D.desktop.dockMagnification,
         min: 0,
-        max: CONFIG.phase2.DOCK_MAGNIFICATION_MAX,
+        max: CONFIG.workstation.DOCK_MAGNIFICATION_MAX,
         step: 0.01,
     },
     safariChromeScale: {
-        value: D.phase2.safariChromeScale,
+        value: D.desktop.safariChromeScale,
         min: 0.6,
         max: 2,
         step: 0.01,
     },
     safariControlsScale: {
-        value: D.phase2.safariControlsScale,
+        value: D.desktop.safariControlsScale,
         min: 0.5,
         max: 2,
         step: 0.01,
     },
     safariAddressScale: {
-        value: D.phase2.safariAddressScale,
+        value: D.desktop.safariAddressScale,
         min: 0.5,
         max: 2,
         step: 0.01,
     },
     safariBottomSafeArea: {
-        value: D.phase2.safariBottomSafeArea,
+        value: D.desktop.safariBottomSafeArea,
         min: 0,
         max: 0.3,
         step: 0.005,
@@ -291,7 +291,7 @@ export default function DebugPanel({
     const header = useControls("Header", HEADER_SCHEMA);
     const edgeFade = useControls("Curl edge fade", EDGE_FADE_SCHEMA);
     const scrollBlur = useControls("Scroll blur", SCROLL_BLUR_SCHEMA);
-    const phase2 = useControls("CRT desktop", PHASE2_SCHEMA);
+    const desktop = useControls("CRT desktop", DESKTOP_SCHEMA);
     const workstation = useControls("Workstation", WORKSTATION_SCHEMA);
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
@@ -306,7 +306,7 @@ export default function DebugPanel({
             header,
             edgeFade,
             scrollBlur,
-            phase2,
+            desktop,
             workstation,
             headerExclusion,
         });
@@ -321,7 +321,7 @@ export default function DebugPanel({
         header,
         edgeFade,
         scrollBlur,
-        phase2,
+        desktop,
         workstation,
         headerExclusion,
     ]);

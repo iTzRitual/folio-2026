@@ -184,7 +184,7 @@ export default function Model() {
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
-    const phase2Revealed = revealProgressRef.current > 0.001;
+    const workstationRevealed = revealProgressRef.current > 0.001;
     const shouldLockInteraction =
       !directManipulation ||
       scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
@@ -252,7 +252,7 @@ export default function Model() {
         : CLIP_DISABLED;
 
     if (animGroupRef.current) {
-      animGroupRef.current.visible = !phase2Revealed;
+      animGroupRef.current.visible = !workstationRevealed;
       const heroYCurrent =
         CONFIG.model.BASE_MODEL_Y +
         scrollProgress *

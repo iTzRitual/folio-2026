@@ -1,11 +1,11 @@
-# ADR 0023: 4:3 plane reveal after About me
+# ADR 0023: Workstation reveal after About me
 
 - Status: Accepted
 - Date: 2026-08-19
 
 ## Context
 
-Phase 2 must not change the existing portfolio composition during the initial
+Workstation reveal must not change the existing portfolio composition during the initial
 view. The current close framing should remain visually identical through the
 Hero, Details, and About me stages. Only after the viewer scrolls below About
 me should the scene reveal that the portfolio is displayed inside a larger

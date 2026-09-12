@@ -1,6 +1,6 @@
 # Keyboard and workstation completion report
 
-Created and integrated an editable, procedural 84-key low-profile keyboard and a separate dark tabletop into the existing Phase 2 reveal. The model follows the supplied references: 16-unit compact rows, staggered modifiers, two gray key groups, a complete F-row, right navigation column, dedicated arrows, and orange Escape. The CRT asset and screen geometry remain byte-for-byte unchanged.
+Created and integrated an editable, procedural 84-key low-profile keyboard and a separate dark tabletop into the existing Workstation reveal reveal. The model follows the supplied references: 16-unit compact rows, staggered modifiers, two gray key groups, a complete F-row, right navigation column, dedicated arrows, and orange Escape. The CRT asset and screen geometry remain byte-for-byte unchanged.
 
 | Metric | Keyboard | Desk |
 | --- | --- | --- |
@@ -21,9 +21,9 @@ Legends use one embedded 1024px RGBA atlas and one joined decal mesh conforming 
 
 The tabletop is anchored to the measured minimum Y of `CRT_Stand`, -0.280866 m. The keyboard is centered approximately on the screen, offset 8 mm right and 170 mm forward with a subtle -2° yaw. Both contact gaps are zero. The conservative keyboard-to-monitor clearance is 40.86 mm; the desktop extends 61.17 mm behind the CRT and 115.66 mm beyond the keyboard. A cached contact-shadow capture adds grounding without continuous shadow passes. Its resources are disposed on unmount.
 
-`CONFIG.phase2` holds the asset URLs, transforms, contact-shadow settings, and a 75 mm downward camera endpoint adjustment needed to show the complete keyboard. The existing camera orientation, transition timing, desktop raycasts, and screen coordinate system are preserved. `/debug` exposes keyboard position, rotation, and scale, plus desk position and scale, in a Workstation folder.
+`CONFIG.workstation` holds the asset URLs, transforms, contact-shadow settings, and a 75 mm downward camera endpoint adjustment needed to show the complete keyboard. The existing camera orientation, transition timing, desktop raycasts, and screen coordinate system are preserved. `/debug` exposes keyboard position, rotation, and scale, plus desk position and scale, in a Workstation folder.
 
-Validation passed: exported GLB structure and resource checks; Blender GLB reimport with all materials, packed image, UVs, dimensions, and instances intact; placement and projection checks at six viewport sizes; ESLint; production build; existing 18-control/11-knob monitor checks. The final production page was inspected in the browser. The reveal, reverse to Phase 1, repeated reveal, code-editor dock interaction, and physical power control were checked. The debug keyboard scale was changed to 1.1, visually verified, and restored to 1.0. No production console errors were observed.
+Validation passed: exported GLB structure and resource checks; Blender GLB reimport with all materials, packed image, UVs, dimensions, and instances intact; placement and projection checks at six viewport sizes; ESLint; production build; existing 18-control/11-knob monitor checks. The final production page was inspected in the browser. The reveal, return to the close portfolio view, repeated reveal, code-editor dock interaction, and physical power control were checked. The debug keyboard scale was changed to 1.1, visually verified, and restored to 1.0. No production console errors were observed.
 
 Performance showed no material regression in the local checks. At 1280 × 720 and DPR 1.5, short paired samples measured 5.9 ms median / 6.0 ms p95 with the new meshes hidden, versus 5.8 ms / 6.2 ms with them visible. Those paired samples preceded the final cached-shadow correction; the final scene was separately observed at 162–165 FPS using the existing debug overlay. These are single-machine observations, not a cross-device benchmark.
 
@@ -43,6 +43,6 @@ Low-profile side view:
 
 ![Keyboard side view](side.png)
 
-Final production Phase 2 scene:
+Final production Workstation reveal scene:
 
 ![Production workstation](workstation.png)

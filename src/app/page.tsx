@@ -235,7 +235,7 @@ export default function Home() {
                             height: `${(
                                 TIMELINE_VIEWPORTS +
                                 overflowViewports +
-                                CONFIG.phase2.REVEAL_VIEWPORTS
+                                CONFIG.workstation.REVEAL_VIEWPORTS
                             ) * 100}dvh`,
                         }}
                     />

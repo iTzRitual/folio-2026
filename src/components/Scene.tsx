@@ -34,7 +34,7 @@ import type {
   SceneInputMode,
   SceneQualityTier,
 } from "@/lib/responsiveScene";
-import { Phase2Surface } from "./Phase2Surface";
+import { WorkstationScene } from "./WorkstationScene";
 import { CONFIG } from "@/config/constants";
 import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
@@ -65,7 +65,7 @@ function SceneContent({
               <Environment files="/hdri/city.hdr" />
 
               <Suspense fallback={null}>
-                <Phase2Surface>
+                <WorkstationScene>
                   <Model />
 
                   <Header />
@@ -74,7 +74,7 @@ function SceneContent({
                   <CurlEdgeFade />
                   <ProjectPreviewOverlay />
                   <CaseStudyScene />
-                </Phase2Surface>
+                </WorkstationScene>
               </Suspense>
               <EffectComposer multisampling={0}>
                 <>

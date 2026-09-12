@@ -11,12 +11,12 @@ import { acquireRootScrollLock, type RootScrollLockLease } from "@/lib/rootScrol
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { getCRTReferenceFrame } from "@/lib/crtScreen";
 
-export function Phase2CRT({ width, monitorState, onButtonPress }: {
+export function CRTMonitor({ width, monitorState, onButtonPress }: {
   width: number;
   monitorState: MonitorState;
   onButtonPress?: (button: MonitorButton) => void;
 }) {
-  const { scene } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
+  const { scene } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const three = useThree();
   const reducedMotion = usePrefersReducedMotion();
   const resources = useMemo(() => {
@@ -165,7 +165,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
 
   useFrame((_, delta) => runtime.current?.syncPhysicalControlsFromState(monitorState, delta, reducedMotion));
   const scale = width / screenWidth;
-  return <group name="Phase2CRT" scale={scale} position={[-screenCenter.x * scale, -screenCenter.y * scale, -(screenFront + CONFIG.phase2.CRT_SCREEN_CLEARANCE) * scale]} dispose={null}>
+  return <group name="CRTMonitor" scale={scale} position={[-screenCenter.x * scale, -screenCenter.y * scale, -(screenFront + CONFIG.workstation.CRT_SCREEN_CLEARANCE) * scale]} dispose={null}>
     <primitive object={model} />
   </group>;
 }

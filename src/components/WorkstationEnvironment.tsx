@@ -11,10 +11,10 @@ import { getCRTReferenceFrame, getRequiredObject } from "@/lib/crtScreen";
 import { createWorkstationShadow } from "@/lib/workstationShadow";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
-export function Phase2Workstation({ width }: { width: number }) {
-  const { scene: crt } = useGLTF(CONFIG.phase2.CRT_MODEL_URL);
-  const { scene: keyboard } = useGLTF(CONFIG.phase2.KEYBOARD_MODEL_URL);
-  const { scene: desk } = useGLTF(CONFIG.phase2.DESK_MODEL_URL);
+export function WorkstationEnvironment({ width }: { width: number }) {
+  const { scene: crt } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
+  const { scene: keyboard } = useGLTF(CONFIG.workstation.KEYBOARD_MODEL_URL);
+  const { scene: desk } = useGLTF(CONFIG.workstation.DESK_MODEL_URL);
   const { workstation } = useDebugSettings();
   const { revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
@@ -49,7 +49,7 @@ export function Phase2Workstation({ width }: { width: number }) {
   const { keyboardPosition, keyboardRotation, keyboardScale, deskPosition, deskScale } = workstation;
   const supportY = resources.supportY + deskPosition.y;
   const deskDepth = resources.deskSize.z * deskScale.z;
-  const wallSize = CONFIG.phase2.WALL_SIZE;
+  const wallSize = CONFIG.workstation.WALL_SIZE;
   useEffect(() => {
     const capture = () => {
       shadow.capture(
@@ -57,7 +57,7 @@ export function Phase2Workstation({ width }: { width: number }) {
         [resources.shadowMonitor, resources.keyboardModel.clone(true)],
         new Vector3(
           deskPosition.x,
-          supportY + CONFIG.phase2.CONTACT_SHADOW_OFFSET,
+          supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET,
           deskPosition.z,
         ),
         resources.deskSize.x * deskScale.x,
@@ -89,33 +89,33 @@ export function Phase2Workstation({ width }: { width: number }) {
       shadowRef.current.visible =
         capturedSettings.current === workstation &&
         reveal > 0 &&
-        (reducedMotion || reveal >= CONFIG.phase2.CONTACT_SHADOW_REVEAL);
+        (reducedMotion || reveal >= CONFIG.workstation.CONTACT_SHADOW_REVEAL);
     }
   });
 
   return (
     <group
-      name="Phase2Workstation"
+      name="WorkstationEnvironment"
       scale={scale}
       position={[
         -resources.screenCenter.x * scale,
         -resources.screenCenter.y * scale,
-        -(resources.screenFront + CONFIG.phase2.CRT_SCREEN_CLEARANCE) * scale,
+        -(resources.screenFront + CONFIG.workstation.CRT_SCREEN_CLEARANCE) * scale,
       ]}
     >
       <mesh
         name="Workstation_Wall"
         position={[
           deskPosition.x,
-          supportY + CONFIG.phase2.WALL_CENTER_Y,
+          supportY + CONFIG.workstation.WALL_CENTER_Y,
           deskPosition.z - deskDepth / 2 - wallSize.z / 2,
         ]}
         raycast={() => null}
       >
         <boxGeometry args={[wallSize.x, wallSize.y, wallSize.z]} />
         <meshStandardMaterial
-          color={CONFIG.phase2.WALL_COLOR}
-          roughness={CONFIG.phase2.WALL_ROUGHNESS}
+          color={CONFIG.workstation.WALL_COLOR}
+          roughness={CONFIG.workstation.WALL_ROUGHNESS}
         />
       </mesh>
       <primitive
@@ -135,7 +135,7 @@ export function Phase2Workstation({ width }: { width: number }) {
       />
       <mesh
         ref={shadowRef}
-        position={[deskPosition.x, supportY + CONFIG.phase2.CONTACT_SHADOW_OFFSET, deskPosition.z]}
+        position={[deskPosition.x, supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET, deskPosition.z]}
         rotation={[Math.PI / 2, 0, 0]}
         material={shadow.material}
         visible={false}

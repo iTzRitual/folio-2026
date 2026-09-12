@@ -29,7 +29,7 @@ export const HeaderExclusion = forwardRef<HeaderExclusionEffect>((_, ref) => {
 
   useFrame(() => {
     effect.setActive(
-      revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START,
+      revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START,
     );
   });
 

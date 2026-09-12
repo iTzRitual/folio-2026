@@ -53,19 +53,19 @@ export const CustomAberration = forwardRef<CustomAberrationEffect>((_, ref) => {
   }, [size, effect]);
 
   useFrame(() => {
-    const phase2SurfaceActive =
-      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
+    const workstationSurfaceActive =
+      revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
     effect.setPointer(
       pointerRef.current,
-      !phase2SurfaceActive && inputMode === "fine"
+      !workstationSurfaceActive && inputMode === "fine"
         ? pointerIntensityRef.current
         : 0,
-      phase2SurfaceActive ? 0 : pointerVelocityRef.current.x,
-      phase2SurfaceActive ? 0 : pointerVelocityRef.current.y,
+      workstationSurfaceActive ? 0 : pointerVelocityRef.current.x,
+      workstationSurfaceActive ? 0 : pointerVelocityRef.current.y,
     );
     const mobileIntensity = inputMode === "coarse" ? 0.55 : 1;
     effect.setScroll(
-      phase2SurfaceActive ? 0 : scrollVelocityRef.current,
+      workstationSurfaceActive ? 0 : scrollVelocityRef.current,
       scroll.blur * mobileIntensity,
       scroll.split * mobileIntensity,
       scroll.vignetteXWeight,

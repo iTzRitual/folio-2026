@@ -65,13 +65,13 @@ const crt = boundsModel('public/glbs/crt-monitor.glb');
 const keyboard = boundsModel('public/glbs/keyboard.glb');
 const desk = boundsModel('public/glbs/workstation-desk.glb');
 const frame = getCRTReferenceFrame(crt);
-const k = CONFIG.phase2.KEYBOARD_POSITION, r = CONFIG.phase2.KEYBOARD_ROTATION;
-const d = CONFIG.phase2.DESK_POSITION, s = CONFIG.phase2.DESK_SCALE;
+const k = CONFIG.workstation.KEYBOARD_POSITION, r = CONFIG.workstation.KEYBOARD_ROTATION;
+const d = CONFIG.workstation.DESK_POSITION, s = CONFIG.workstation.DESK_SCALE;
 desk.position.set(d.x, frame.supportY+d.y, d.z);
 desk.scale.set(s.x,s.y,s.z);
 keyboard.position.set(k.x,frame.supportY+d.y+k.y,k.z);
 keyboard.rotation.set(...[r.x,r.y,r.z].map(THREE.MathUtils.degToRad));
-keyboard.scale.setScalar(CONFIG.phase2.KEYBOARD_SCALE);
+keyboard.scale.setScalar(CONFIG.workstation.KEYBOARD_SCALE);
 const keyboardBounds = new THREE.Box3().setFromObject(keyboard);
 const deskBounds = new THREE.Box3().setFromObject(desk);
 const standBounds = new THREE.Box3().setFromObject(crt.getObjectByName('CRT_Stand'));
@@ -91,21 +91,21 @@ for (const bounds of [keyboardBounds,crtBounds]) {
 const projected = [];
 for (const [width,height] of [[1280,720],[1920,1080],[1440,900],[1024,768],[844,390],[390,844]]) {
   const camera = new THREE.PerspectiveCamera(75,width/height,.1,1000);
-  const viewportHeight = 2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*CONFIG.caseStudy.CAMERA_REST_Z;
-  const planeWidth = Math.max(viewportHeight*camera.aspect,viewportHeight*(1+CONFIG.phase2.BROWSER_CHROME_HEIGHT_MULT)*CONFIG.phase2.PLANE_ASPECT);
-  const planeHeight = planeWidth/CONFIG.phase2.PLANE_ASPECT;
-  const restDistance = CONFIG.caseStudy.CAMERA_REST_Z-CONFIG.phase2.PLANE_Z;
+  const viewportHeight = 2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*CONFIG.scene.CAMERA_REST_Z;
+  const planeWidth = Math.max(viewportHeight*camera.aspect,viewportHeight*(1+CONFIG.workstation.BROWSER_CHROME_HEIGHT_MULT)*CONFIG.workstation.PLANE_ASPECT);
+  const planeHeight = planeWidth/CONFIG.workstation.PLANE_ASPECT;
+  const restDistance = CONFIG.scene.CAMERA_REST_Z-CONFIG.workstation.PLANE_Z;
   const restHeight = 2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*restDistance;
-  const fit = Math.max(1,planeWidth/(restHeight*camera.aspect*CONFIG.phase2.REVEAL_CAMERA_FILL),planeHeight/(restHeight*CONFIG.phase2.REVEAL_CAMERA_FILL));
+  const fit = Math.max(1,planeWidth/(restHeight*camera.aspect*CONFIG.workstation.REVEAL_CAMERA_FILL),planeHeight/(restHeight*CONFIG.workstation.REVEAL_CAMERA_FILL));
   const scale = planeWidth/frame.screenWidth;
-  camera.position.set(0,CONFIG.phase2.WORKSTATION_CAMERA_Y*scale,CONFIG.phase2.PLANE_Z+restDistance*fit);
+  camera.position.set(0,CONFIG.workstation.WORKSTATION_CAMERA_Y*scale,CONFIG.workstation.PLANE_Z+restDistance*fit);
   camera.updateMatrixWorld(true);
   const points = [];
   for (const x of [keyboardBounds.min.x,keyboardBounds.max.x]) {
     for (const y of [keyboardBounds.min.y,keyboardBounds.max.y]) {
       for (const z of [keyboardBounds.min.z,keyboardBounds.max.z]) {
         points.push(new THREE.Vector3((x-frame.screenCenter.x)*scale,(y-frame.screenCenter.y)*scale,
-          (z-frame.screenFront-CONFIG.phase2.CRT_SCREEN_CLEARANCE)*scale+CONFIG.phase2.PLANE_Z).project(camera));
+          (z-frame.screenFront-CONFIG.workstation.CRT_SCREEN_CLEARANCE)*scale+CONFIG.workstation.PLANE_Z).project(camera));
       }
     }
   }

@@ -258,17 +258,17 @@ function drawTrafficLights(renderer: VSCodeRenderer) {
   const { context, layout, controlsScale } = renderer;
   const radius =
     layout.chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_RADIUS_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_RADIUS_MULT *
     controlsScale;
   const sidePadding =
-    layout.chromeHeight * CONFIG.phase2.BROWSER_SIDE_PADDING_MULT;
+    layout.chromeHeight * CONFIG.workstation.BROWSER_SIDE_PADDING_MULT;
   const gap =
     layout.chromeHeight *
-    CONFIG.phase2.BROWSER_CONTROL_GAP_MULT *
+    CONFIG.workstation.BROWSER_CONTROL_GAP_MULT *
     controlsScale;
   const centerY = layout.y + layout.chromeHeight / 2;
 
-  CONFIG.phase2.BROWSER_LIGHTS.forEach((color, index) => {
+  CONFIG.workstation.BROWSER_LIGHTS.forEach((color, index) => {
     context.fillStyle = color;
     context.beginPath();
     context.arc(
@@ -379,7 +379,7 @@ function createScrollbarGeometry(
   const thumbLength = Math.max(
     trackLength * (visibleAmount / totalAmount),
     renderer.layout.chromeHeight *
-      CONFIG.phase2.VSCODE_SCROLLBAR_MIN_THUMB_MULT,
+      CONFIG.workstation.VSCODE_SCROLLBAR_MIN_THUMB_MULT,
   );
   const maxScroll = totalAmount - visibleAmount;
   const thumbStart =
@@ -467,13 +467,13 @@ function drawScrollbar(
   const { context } = renderer;
   const thickness =
     renderer.layout.chromeHeight *
-    CONFIG.phase2.VSCODE_SCROLLBAR_THICKNESS_MULT;
+    CONFIG.workstation.VSCODE_SCROLLBAR_THICKNESS_MULT;
   const alpha =
     renderer.activeScrollbar === geometry.kind
-      ? CONFIG.phase2.VSCODE_SCROLLBAR_ACTIVE_ALPHA
+      ? CONFIG.workstation.VSCODE_SCROLLBAR_ACTIVE_ALPHA
       : renderer.hoveredScrollbar === geometry.kind
-        ? CONFIG.phase2.VSCODE_SCROLLBAR_HOVER_ALPHA
-        : CONFIG.phase2.VSCODE_SCROLLBAR_IDLE_ALPHA;
+        ? CONFIG.workstation.VSCODE_SCROLLBAR_HOVER_ALPHA
+        : CONFIG.workstation.VSCODE_SCROLLBAR_IDLE_ALPHA;
   context.fillStyle = `rgba(151, 151, 151, ${alpha})`;
 
   if (geometry.orientation === "vertical") {
@@ -992,7 +992,7 @@ function getScrollbarAt(
   y: number,
 ) {
   const hitRadius =
-    renderer.layout.chromeHeight * CONFIG.phase2.VSCODE_SCROLLBAR_HIT_MULT;
+    renderer.layout.chromeHeight * CONFIG.workstation.VSCODE_SCROLLBAR_HIT_MULT;
 
   return (
     getScrollbarGeometries(renderer).find((geometry) => {

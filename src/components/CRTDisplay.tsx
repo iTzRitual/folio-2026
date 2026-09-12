@@ -115,18 +115,18 @@ void main() {
 }
 `;
 
-export type Phase2CRTScreenHandle = {
+export type CRTDisplayHandle = {
   mapContentUv(source: THREE.Vector2, target: THREE.Vector2): boolean;
 };
 
-export const Phase2CRTScreen = forwardRef<Phase2CRTScreenHandle, {
+export const CRTDisplay = forwardRef<CRTDisplayHandle, {
   monitorState: MonitorState;
   width: number;
   height: number;
   geometry: THREE.BufferGeometry;
   borderGeometry: THREE.BufferGeometry;
   children: ReactNode;
-}>(function Phase2CRTScreen(
+}>(function CRTDisplay(
   { width, height, geometry, borderGeometry, monitorState, children },
   ref,
 ) {
@@ -152,7 +152,7 @@ export const Phase2CRTScreen = forwardRef<Phase2CRTScreenHandle, {
   );
 
   const resources = useMemo(() => {
-    const tuning = CONFIG.phase2;
+    const tuning = CONFIG.workstation;
     const target = new THREE.WebGLRenderTarget(tuning.CRT_TARGET_MAX_SIZE,
       Math.round(tuning.CRT_TARGET_MAX_SIZE / tuning.PLANE_ASPECT),
       { depthBuffer: false, stencilBuffer: false });
@@ -193,7 +193,7 @@ export const Phase2CRTScreen = forwardRef<Phase2CRTScreenHandle, {
 
   useFrame(({ camera: mainCamera, gl, size }, delta) => {
     monitorRuntime.update(monitorUniforms, monitorState, delta, reducedMotion);
-    if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) return;
+    if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) return;
     const { target, scene, camera: screenCamera, material } = resources;
     const cameraLeft = -width / 2;
     const cameraRight = width / 2;
@@ -220,25 +220,25 @@ export const Phase2CRTScreen = forwardRef<Phase2CRTScreenHandle, {
     const projectedHeight = Math.abs(top.y - center.y) * size.height;
     const qualityMax =
       qualityTier === "low"
-        ? CONFIG.phase2.CRT_TARGET_LOW_MAX_SIZE
+        ? CONFIG.workstation.CRT_TARGET_LOW_MAX_SIZE
         : qualityTier === "balanced"
-          ? CONFIG.phase2.CRT_TARGET_BALANCED_MAX_SIZE
-          : CONFIG.phase2.CRT_TARGET_MAX_SIZE;
+          ? CONFIG.workstation.CRT_TARGET_BALANCED_MAX_SIZE
+          : CONFIG.workstation.CRT_TARGET_MAX_SIZE;
     const desiredWidth = Math.ceil(
-      Math.max(projectedWidth, projectedHeight * CONFIG.phase2.PLANE_ASPECT) *
+      Math.max(projectedWidth, projectedHeight * CONFIG.workstation.PLANE_ASPECT) *
         gl.getPixelRatio() *
-        CONFIG.phase2.CRT_TARGET_PROJECTED_SCALE,
+        CONFIG.workstation.CRT_TARGET_PROJECTED_SCALE,
     );
     const targetWidth = Math.max(
-      CONFIG.phase2.CRT_TARGET_MIN_SIZE,
+      CONFIG.workstation.CRT_TARGET_MIN_SIZE,
       Math.min(qualityMax, desiredWidth),
     );
-    const targetHeight = Math.round(targetWidth / CONFIG.phase2.PLANE_ASPECT);
+    const targetHeight = Math.round(targetWidth / CONFIG.workstation.PLANE_ASPECT);
     const qualityChanged = targetQualityRef.current !== qualityTier;
     const resizeRatio = Math.abs(target.width - targetWidth) / target.width;
     if (
       qualityChanged ||
-      resizeRatio >= CONFIG.phase2.TARGET_RESIZE_THRESHOLD
+      resizeRatio >= CONFIG.workstation.TARGET_RESIZE_THRESHOLD
     ) {
       target.setSize(targetWidth, targetHeight);
       material.uniforms.texel.value.set(1 / targetWidth, 1 / targetHeight);

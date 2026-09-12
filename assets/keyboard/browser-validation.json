@@ -3,8 +3,8 @@
   "application": "folio-2026",
   "checks": {
     "phase_1_hero_renders": true,
-    "phase_2_reveal_renders": true,
-    "phase_2_return_to_phase_1_and_reveal_again": true,
+    "workstation_reveal_renders": true,
+    "workstation_return_and_repeat_reveal": true,
     "complete_keyboard_visible": true,
     "crt_dock_opens_vscode": true,
     "crt_power_off_and_on": true,
