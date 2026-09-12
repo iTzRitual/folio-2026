@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useCallback, useMemo, useRef, type MutableRefObject } from "react";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import * as THREE from "three";
-import { CONFIG } from "../../config/constants";
+import { CONFIG, FONTS } from "../../config/constants";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useSweptColor } from "@/context/ThemeContext";
 
@@ -185,7 +185,7 @@ export function ProfessionLabel({
           anchorY={anchorY}
           fontSize={fontSize}
           lineHeight={1}
-          font="fonts/Karla-Light.ttf"
+          font={FONTS.karlaLight}
           letterSpacing={CONFIG.professionLabel.LETTER_SPACING}
         >
           {children}

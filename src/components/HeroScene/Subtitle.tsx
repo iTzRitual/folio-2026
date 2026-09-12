@@ -2,7 +2,7 @@ import { Text, Html } from "@react-three/drei";
 import { AnimatedRevealText } from "../AnimatedRevealText";
 import { useCallback, useRef } from "react";
 import * as THREE from "three";
-import { CONFIG } from "../../config/constants";
+import { CONFIG, FONTS } from "../../config/constants";
 import { useSweptColor } from "@/context/ThemeContext";
 import type { OutlinedText } from "@/lib/troikaText";
 
@@ -43,7 +43,7 @@ export function Subtitle({
         anchorX="center"
         anchorY="bottom"
         fontSize={calculatedFontSize}
-        font="fonts/Karla-ExtraBold.ttf"
+        font={FONTS.karlaExtraBold}
         lineHeight={1}
         outlineWidth={CONFIG.subtitle.OUTLINE_WIDTH}
         outlineColor={color}

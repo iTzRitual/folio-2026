@@ -37,7 +37,7 @@ export function ThemeIconToggle({
 
   useLayoutEffect(() => {
     groupRef.current?.traverse((object) => object.layers.set(HEADER_LAYER));
-  }, []);
+  }, [isLight]);
 
   useLayoutEffect(() => {
     if (!startTrigger || !iconRef.current) return;
@@ -53,7 +53,7 @@ export function ThemeIconToggle({
       }),
     );
     return () => tweens.forEach((tween) => tween.kill());
-  }, [startTrigger, delay]);
+  }, [startTrigger, delay, isLight]);
 
   return (
     <group ref={groupRef} position={position}>
