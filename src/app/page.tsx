@@ -13,10 +13,11 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { calculateDetailsOverflowViewports } from "@/lib/detailsLayout";
-import { caseStudyStage } from "@/lib/caseStudyStage";
 import {
+    acquireRootScrollLock,
     rootScrollLock,
     subscribeRootScrollLock,
+    type RootScrollLockLease,
 } from "@/lib/rootScrollLock";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { useTheme } from "@/context/ThemeContext";
@@ -54,6 +55,7 @@ export default function Home() {
     const pathname = usePathname();
     const isDebug = pathname === "/debug";
     const lenisRef = useRef<LenisRef>(null);
+    const loaderScrollLeaseRef = useRef<RootScrollLockLease | null>(null);
     const lenis = useLenis();
     const [overflowViewports, setOverflowViewports] = useState(0);
     const fontsReady = useFontsReady();
@@ -95,6 +97,21 @@ export default function Home() {
     useEffect(() => {
         ScrollTrigger.refresh();
     }, [overflowViewports]);
+
+    useEffect(() => {
+        const syncNativeScrollLock = () => {
+            const overflow = rootScrollLock.preventNativeScroll ? "hidden" : "";
+            document.documentElement.style.overflow = overflow;
+            document.body.style.overflow = overflow;
+        };
+        const unsubscribe = subscribeRootScrollLock(syncNativeScrollLock);
+        syncNativeScrollLock();
+        return () => {
+            unsubscribe();
+            document.documentElement.style.overflow = "";
+            document.body.style.overflow = "";
+        };
+    }, []);
 
     useEffect(() => {
         if (!removeLoader || prefersReducedMotion) return;
@@ -169,28 +186,17 @@ export default function Home() {
     }, []);
 
     useEffect(() => {
-        const isLoaderActive = !removeLoader;
-
-        // A case study landed on directly is already open behind the loader,
-        // and it holds the root element for as long as it is up: handing the
-        // scroll back now would slide the sheet out from under a camera that
-        // has left it. It only ever locks the root, so the body is released
-        // either way — nothing else would give it back.
-        const release = () => {
-            document.body.style.overflow = "";
-            if (caseStudyStage.open) return;
-            document.documentElement.style.overflow = "";
-        };
-
-        if (isLoaderActive) {
-            document.documentElement.style.overflow = "hidden";
-            document.body.style.overflow = "hidden";
+        if (!removeLoader) {
+            loaderScrollLeaseRef.current = acquireRootScrollLock(0, {
+                preventNativeScroll: true,
+            });
             window.scrollTo(0, 0);
-        } else {
-            release();
         }
 
-        return release;
+        return () => {
+            loaderScrollLeaseRef.current?.release();
+            loaderScrollLeaseRef.current = null;
+        };
     }, [removeLoader]);
 
     return (

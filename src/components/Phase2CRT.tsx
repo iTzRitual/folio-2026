@@ -7,7 +7,7 @@ import { Mesh, Vector2, type Intersection, type Object3D } from "three";
 import { CONFIG } from "@/config/constants";
 import { createMonitorControls } from "@/lib/monitorControls";
 import { knobNormalized, resetMonitorKnob, setMonitorKnob, toggleMonitorButton, type MonitorButton, type MonitorKnob, type MonitorState } from "@/lib/monitorState";
-import { lockRootScroll, releaseRootScroll, rootScrollLock } from "@/lib/rootScrollLock";
+import { acquireRootScrollLock, type RootScrollLockLease } from "@/lib/rootScrollLock";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { getCRTReferenceFrame } from "@/lib/crtScreen";
 
@@ -44,7 +44,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
     let hoverFrame = 0;
     let pendingHover: { x: number; y: number } | null = null;
     let lastTap: { key: MonitorKnob; time: number } | null = null;
-    let drag: { id: number; touch: boolean; moved: boolean; key: MonitorKnob; x: number; y: number; value: number; target: Element; cameraControls: { enabled: boolean } | null; enabled: boolean; locked: boolean } | null = null;
+    let drag: { id: number; touch: boolean; moved: boolean; key: MonitorKnob; x: number; y: number; value: number; target: Element; cameraControls: { enabled: boolean } | null; enabled: boolean; scrollLease: RootScrollLockLease } | null = null;
     const visible = () => {
       let object: Object3D | null = model;
       while (object) { if (!object.visible) return false; object = object.parent; }
@@ -84,7 +84,7 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
       }
       if (previous.target.hasPointerCapture(previous.id)) previous.target.releasePointerCapture(previous.id);
       if (previous.cameraControls) previous.cameraControls.enabled = previous.enabled;
-      if (!previous.locked) releaseRootScroll();
+      previous.scrollLease.release();
       cursor(null);
       if (event) stop(event);
     };
@@ -102,10 +102,10 @@ export function Phase2CRT({ width, monitorState, onButtonPress }: {
       const cameraControls = (three.get().controls as { enabled: boolean } | null) ?? null;
       drag = { id: event.pointerId, touch: event.pointerType !== "mouse", moved: false, key: control.id, x: event.clientX, y: event.clientY,
         value: knobNormalized(monitorState, control.id), target, cameraControls,
-        enabled: cameraControls?.enabled ?? false, locked: rootScrollLock.active };
+        enabled: cameraControls?.enabled ?? false,
+        scrollLease: acquireRootScrollLock(window.scrollY) };
       target.setPointerCapture(event.pointerId);
       if (cameraControls) cameraControls.enabled = false;
-      if (!drag.locked) lockRootScroll(window.scrollY);
       cursor("grabbing");
     };
     const move = (event: PointerEvent) => {

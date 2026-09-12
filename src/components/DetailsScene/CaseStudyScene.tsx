@@ -20,6 +20,10 @@ import { CaseStudyReturn } from "./CaseStudyReturn";
 import { CaseStudyExternalLink } from "./CaseStudyExternalLink";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
+import {
+    acquireRootScrollLock,
+    type RootScrollLockLease,
+} from "@/lib/rootScrollLock";
 
 const cfg = CONFIG.caseStudy;
 
@@ -155,24 +159,19 @@ export function CaseStudyScene() {
     // back from the frame loop rather than from this effect's cleanup: the
     // cleanup runs when the close *starts*, and the sheet has to hold still all
     // the way through the return flight.
-    const scrollLock = useRef<{ scrollY: number; overflow: string } | null>(null);
+    const scrollLock = useRef<RootScrollLockLease | null>(null);
 
     const releaseScroll = useCallback(() => {
-        const lock = scrollLock.current;
-        if (!lock) return;
+        if (!scrollLock.current) return;
+        scrollLock.current.release();
         scrollLock.current = null;
-        document.documentElement.style.overflow = lock.overflow;
-        window.scrollTo(0, lock.scrollY);
     }, []);
 
     useEffect(() => {
         if (openIndex === null) return;
-        const root = document.documentElement;
-        scrollLock.current ??= {
-            scrollY: window.scrollY,
-            overflow: root.style.overflow,
-        };
-        root.style.overflow = "hidden";
+        scrollLock.current ??= acquireRootScrollLock(window.scrollY, {
+            preventNativeScroll: true,
+        });
     }, [openIndex]);
 
     // R3F derives the world size of a screen from the camera's live distance to

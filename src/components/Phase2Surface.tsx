@@ -11,7 +11,10 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import type { DebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { caseStudyStage } from "@/lib/caseStudyStage";
-import { lockRootScroll, releaseRootScroll } from "@/lib/rootScrollLock";
+import {
+  acquireRootScrollLock,
+  type RootScrollLockLease,
+} from "@/lib/rootScrollLock";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
@@ -1768,11 +1771,22 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   const sourceRefreshPendingRef = useRef(false);
   const vscodeScrollbarDragRef = useRef<VSCodeScrollbarDrag | null>(null);
   const suppressVSCodeClickRef = useRef(false);
+  const returnScrollLeaseRef = useRef<RootScrollLockLease | null>(null);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const prevMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const mouseIntensityRef = useRef(0);
   const intersectionsRef = useRef<THREE.Intersection[]>([]);
+
+  const lockReturnScroll = (y: number) => {
+    returnScrollLeaseRef.current ??= acquireRootScrollLock(y);
+    returnScrollLeaseRef.current.update(y);
+  };
+
+  const releaseReturnScroll = () => {
+    returnScrollLeaseRef.current?.release();
+    returnScrollLeaseRef.current = null;
+  };
 
   const taps = Math.min(
     scroll.taps,
@@ -1983,7 +1997,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
-      releaseRootScroll();
+      releaseReturnScroll();
       targetRef.current?.dispose();
       chromeTextureRef.current?.dispose();
       vscodeTextureRef.current?.dispose();
@@ -2046,7 +2060,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       if (bridge?.autoScroll) {
         bridge.autoScroll = null;
         bridge.idleElapsed = 0;
-        releaseRootScroll();
+        releaseReturnScroll();
       }
 
       const renderer = vscodeRendererRef.current;
@@ -2105,7 +2119,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       if (!bridge?.autoScroll) return;
       bridge.autoScroll = null;
       bridge.idleElapsed = 0;
-      releaseRootScroll();
+      releaseReturnScroll();
     };
 
     window.addEventListener("wheel", onWheel, {
@@ -2491,7 +2505,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
       scrollReveal > breakpoint
     ) {
       restoreReturnBridge(bridge);
-      releaseRootScroll();
+      releaseReturnScroll();
       returnBridgeRef.current = null;
       bridge = null;
     }
@@ -2517,13 +2531,13 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
           easeInOutQuint(progress),
         );
         bridge.lastScrollY = scrollY;
-        lockRootScroll(scrollY);
+        lockReturnScroll(scrollY);
         window.scrollTo(0, scrollY);
 
         if (progress >= 1) {
           bridge.autoScroll = null;
           bridge.idleElapsed = 0;
-          releaseRootScroll();
+          releaseReturnScroll();
         }
       } else if (returnProgress < 1) {
         const scrollSpeed = Math.abs(currentScrollY - bridge.lastScrollY) / delta;
@@ -2544,7 +2558,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
             startY: currentScrollY,
             targetY: getReturnBridgeTargetY(scrollReveal),
           };
-          lockRootScroll(currentScrollY);
+          lockReturnScroll(currentScrollY);
         }
       }
 
@@ -2591,7 +2605,7 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
 
       if (returnProgress >= 1) {
         commitReturnBridge(bridge);
-        releaseRootScroll();
+        releaseReturnScroll();
         returnBridgeRef.current = null;
         bridge = null;
       }

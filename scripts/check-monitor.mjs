@@ -47,7 +47,8 @@ function compile(sourceFile) {
 }
 
 try {
-  require(compile(path.join(root, "scripts", "check-monitor.ts")));
+  const entry = process.argv[2] ?? "scripts/check-monitor.ts";
+  require(compile(path.join(root, entry)));
 } finally {
   if (path.dirname(directory) !== path.resolve(tmpdir()) || !path.basename(directory).startsWith("folio-monitor-check-")) throw new Error("Unexpected monitor test directory");
   rmSync(directory, { recursive: true, force: true });
