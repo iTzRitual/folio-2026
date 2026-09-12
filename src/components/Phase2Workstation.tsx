@@ -65,8 +65,12 @@ export function Phase2Workstation({ width }: { width: number }) {
       );
       capturedSettings.current = workstation;
     };
-    const idleId = window.requestIdleCallback(capture, { timeout: 1000 });
-    return () => window.cancelIdleCallback(idleId);
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(capture, { timeout: 1000 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timeoutId = globalThis.setTimeout(capture, 200);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [
     deskDepth,
     deskPosition.x,

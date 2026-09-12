@@ -1971,6 +1971,18 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
+    const prepare = () => {
+      if (!capturedRef.current) capturePendingRef.current = true;
+    };
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(prepare, { timeout: 1000 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timeoutId = globalThis.setTimeout(prepare, 200);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [size.height, size.width]);
+
+  useEffect(() => {
     return () => {
       releaseRootScroll();
       targetRef.current?.dispose();
@@ -2810,7 +2822,8 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
   useFrame(() => {
     if (
       (!capturePendingRef.current && !capturedRef.current) ||
-      revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START ||
+      (capturedRef.current &&
+        revealProgressRef.current < CONFIG.phase2.BROWSER_REVEAL_START) ||
       !pageGroupRef.current ||
       !surfaceGroupRef.current
     ) {
@@ -2922,6 +2935,10 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     toolbarRendererRef.current = toolbarRenderer;
     pageMaskRef.current?.dispose();
     pageMaskRef.current = pageMask;
+    gl.initTexture(chromeTexture);
+    gl.initTexture(dockRenderer.texture);
+    gl.initTexture(toolbarRenderer.texture);
+    gl.initTexture(pageMask);
     chromeMaterialRef.current.uniforms.u_texture.value = chromeTexture;
     vscodeMaterialRef.current.uniforms.u_texture.value = vscodeRenderer.texture;
     dockMaterialRef.current.map = dockRenderer.texture;
@@ -2980,10 +2997,12 @@ export function Phase2Surface({ children }: { children: ReactNode }) {
     };
     capturedRef.current = true;
     capturePendingRef.current = false;
-    pageGroupRef.current.visible = false;
+    const revealVisible =
+      revealProgressRef.current >= CONFIG.phase2.BROWSER_REVEAL_START;
+    pageGroupRef.current.visible = !revealVisible;
     surfaceGroupRef.current.scale.setScalar(scale);
     surfaceGroupRef.current.position.y = -contentCenterY * scale;
-    surfaceGroupRef.current.visible = true;
+    surfaceGroupRef.current.visible = revealVisible;
     if (vscodeWindowGroupRef.current) vscodeWindowGroupRef.current.visible = false;
   }, 0.5);
 
