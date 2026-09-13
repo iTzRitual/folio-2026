@@ -110,7 +110,7 @@ assert(Math.hypot(C.ENERGY_CAN_POSITION.x - C.MOUSE_POSITION.x, C.ENERGY_CAN_POS
 const cubbyWidth = (C.CABINET_SIZE.x - C.CABINET_PANEL * 3) / 2;
 const cubbyHeight = (C.CABINET_SIZE.y - C.CABINET_PLINTH - C.CABINET_PANEL * 3) / 2;
 assert(Math.abs(cubbyWidth - cubbyHeight) < 1e-8 && cubbyWidth > C.RECORD_SIZE, "Four square cubbies fit LP sleeves");
-const lean = Math.acos((C.CABINET_POSITION.y - C.FEATURED_RECORD_POSITION.y) / C.RECORD_SIZE);
+const lean = THREE.MathUtils.degToRad(C.FEATURED_RECORD_LEAN);
 const yaw = THREE.MathUtils.degToRad(C.FEATURED_RECORD_YAW);
 const recordPoint = (x, y, z) => new THREE.Vector3(x, y, z)
   .applyAxisAngle(new THREE.Vector3(1, 0, 0), -lean)
@@ -122,13 +122,17 @@ for (const p of bottom) {
   assert(Math.abs(p.y) < 1e-8, "Entire record bottom edge rests on tabletop");
   assert(p.x >= db.min.x && p.x <= db.max.x && p.z >= db.min.z && p.z <= db.max.z, "Record bottom edge stays on desktop");
 }
-const top = [-1, 1].map(side => recordPoint(side * C.RECORD_SIZE / 2, C.RECORD_SIZE, -C.RECORD_THICKNESS / 2));
-const cabinetCorner = point(C.CABINET_POSITION).add(new THREE.Vector3(C.CABINET_SIZE.x / 2, 0, C.CABINET_SIZE.z / 2));
-const closest = new THREE.Line3(top[0], top[1]).closestPointToPoint(cabinetCorner, true, new THREE.Vector3());
-assert(closest.distanceTo(cabinetCorner) < 0.00001, "Record top edge contacts cabinet corner");
-for (let x = 0; x <= 10; x++) for (let y = 0; y < 10; y++) {
-  const p = recordPoint((x / 10 - 0.5) * C.RECORD_SIZE, y / 10 * C.RECORD_SIZE, -C.RECORD_THICKNESS / 2);
-  assert(p.x >= cabinetCorner.x || p.z >= cabinetCorner.z, "Leaning record stays outside cabinet volume");
+assert(Math.abs(bottom[0].x - bottom[1].x) < 1e-8, "Record bottom follows cabinet depth direction");
+const cabinetRight = C.CABINET_POSITION.x + C.CABINET_SIZE.x / 2;
+const contactY = C.CABINET_POSITION.y / Math.cos(lean);
+for (const side of [-1, 1]) {
+  const contact = recordPoint(side * C.RECORD_SIZE / 2, contactY, -C.RECORD_THICKNESS / 2);
+  assert(Math.abs(contact.x - cabinetRight) < 1e-8 && Math.abs(contact.y - C.CABINET_POSITION.y) < 1e-8, "Record back contacts right side upper rim");
+  assert(contact.z > C.CABINET_POSITION.z - C.CABINET_SIZE.z / 2 && contact.z < C.CABINET_POSITION.z + C.CABINET_SIZE.z / 2, "Record rests along side panel depth");
+}
+for (let y = 0; y < 10; y++) {
+  const p = recordPoint(0, y / 10 * contactY, -C.RECORD_THICKNESS / 2);
+  assert(p.x > cabinetRight, "Record stays outside cabinet below support rim");
 }
 const reports = [];
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {

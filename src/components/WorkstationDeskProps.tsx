@@ -14,7 +14,7 @@ export function DeskCollectionProps({ supportY }: { supportY: number }) {
   const speaker = CONFIG.workstation.SPEAKER_SIZE;
   const recordSize = CONFIG.workstation.RECORD_SIZE;
   const thickness = CONFIG.workstation.RECORD_THICKNESS;
-  const lean = Math.acos(MathUtils.clamp((w.cabinetPosition.y - w.featuredRecordPosition.y) / recordSize, 0, 1));
+  const lean = MathUtils.degToRad(CONFIG.workstation.FEATURED_RECORD_LEAN);
   return <group name="DeskCollectionProps">
     <group name="FeaturedRecord" position={position(w.featuredRecordPosition)}>
       <group rotation={[0, MathUtils.degToRad(CONFIG.workstation.FEATURED_RECORD_YAW), 0]}>
