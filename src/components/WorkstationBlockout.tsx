@@ -56,18 +56,24 @@ export function DesktopProxies({ supportY }: { supportY: number }) {
 export function MusicCabinet({ supportY, children }: { supportY: number; children: React.ReactNode }) {
   const { workstation: w } = useDebugSettings();
   const s = CONFIG.workstation.CABINET_SIZE;
+  const panel = CONFIG.workstation.CABINET_PANEL;
+  const plinth = CONFIG.workstation.CABINET_PLINTH;
+  const cubby = (s.x - panel * 3) / 2;
   return <group name="MusicCabinet" position={xyz(w.cabinetPosition, supportY)}>
-    <Block name="CabinetTop" size={[s.x, 0.025, s.z]} position={[0, -0.0125, 0]} />
-    <Block size={[s.x, 0.025, s.z]} position={[0, -s.y + 0.06, 0]} />
-    <Block name="MiddleShelf" size={[s.x, 0.025, s.z]} position={[0, -s.y / 2, 0]} />
-    <Block size={[0.018, s.y - 0.075, s.z]} position={[0, -s.y / 2, 0]} />
-    {[-1, 1].map(side => <Block key={side} size={[0.023, s.y, s.z]} position={[side * (s.x / 2 - 0.012), -s.y / 2, 0]} />)}
-    <Block size={[s.x, s.y, 0.016]} position={[0, -s.y / 2, -s.z / 2 + 0.008]} color="#413a33" />
-    {[-s.y + 0.0725, -s.y / 2 + 0.0125].map((shelfY, row) => <group name={`RecordRow${row}`} key={row} position={[0, shelfY, 0.035]}>
-      {[-1, 1].map(side => <group name={`RecordCompartment${side}`} key={side} position={[side * 0.127, 0, 0]}>
-        {Array.from({ length: 9 }, (_, i) => <Block key={i} name="VinylSleeve" size={[0.008, CONFIG.workstation.RECORD_SIZE, CONFIG.workstation.RECORD_SIZE]} position={[-0.084 + i * 0.02, CONFIG.workstation.RECORD_SIZE / 2 + 0.001, 0.005 * (i % 3)]} rotation={[0, 0, i > 6 ? -0.04 : 0.008 * (i % 3)]} color={["#9b8b71", "#41494c", "#74786a", "#afa28d"][i % 4]} />)}
-      </group>)}
-    </group>)}
+    <Block name="CabinetTop" size={[s.x, panel, s.z]} position={[0, -panel / 2, 0]} />
+    <Block name="CabinetPlinth" size={[s.x - 0.06, plinth, s.z - 0.06]} position={[0, -s.y + plinth / 2, 0]} color="#413a33" />
+    {[-1, 1].map(side => <Block key={side} size={[panel, s.y - plinth, s.z]} position={[side * (s.x - panel) / 2, -(s.y - plinth) / 2, 0]} />)}
+    <Block size={[s.x - panel * 2, s.y - plinth, 0.016]} position={[0, -(s.y - plinth) / 2, -s.z / 2 + 0.008]} color="#413a33" />
+    {[0, 1].map(row => {
+      const shelfTop = -panel - cubby - row * (cubby + panel);
+      return <group name={`RecordRow${row}`} key={row}>
+        <Block name="CubbyShelf" size={[s.x - panel * 2, panel, s.z]} position={[0, shelfTop - panel / 2, 0]} />
+        <Block name="CubbyDivider" size={[panel, cubby, s.z - 0.02]} position={[0, shelfTop + cubby / 2, -0.01]} />
+        {[-1, 1].map(side => <group name={`RecordCompartment${side}`} key={side} position={[side * (cubby + panel) / 2, shelfTop, 0.035]}>
+          {Array.from({ length: 12 }, (_, i) => <Block key={i} name="VinylSleeve" size={[0.008, CONFIG.workstation.RECORD_SIZE, CONFIG.workstation.RECORD_SIZE]} position={[-0.15 + i * 0.026, CONFIG.workstation.RECORD_SIZE / 2 + 0.001, 0.005 * (i % 3)]} rotation={[0, 0, i > 8 ? -0.04 : 0.008 * (i % 3)]} color={["#9b8b71", "#41494c", "#74786a", "#afa28d"][i % 4]} />)}
+        </group>)}
+      </group>;
+    })}
     {children}
   </group>;
 }

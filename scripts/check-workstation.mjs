@@ -107,6 +107,29 @@ const speakerBounds = [C.LEFT_SPEAKER_POSITION, C.RIGHT_SPEAKER_POSITION].map((p
 });
 assert(!speakerBounds[0].intersectsBox(speakerBounds[1]), "Speakers remain separate");
 assert(Math.hypot(C.ENERGY_CAN_POSITION.x - C.MOUSE_POSITION.x, C.ENERGY_CAN_POSITION.z - C.MOUSE_POSITION.z) > 0.2, "Can leaves mouse working space");
+const cubbyWidth = (C.CABINET_SIZE.x - C.CABINET_PANEL * 3) / 2;
+const cubbyHeight = (C.CABINET_SIZE.y - C.CABINET_PLINTH - C.CABINET_PANEL * 3) / 2;
+assert(Math.abs(cubbyWidth - cubbyHeight) < 1e-8 && cubbyWidth > C.RECORD_SIZE, "Four square cubbies fit LP sleeves");
+const lean = Math.acos((C.CABINET_POSITION.y - C.FEATURED_RECORD_POSITION.y) / C.RECORD_SIZE);
+const yaw = THREE.MathUtils.degToRad(C.FEATURED_RECORD_YAW);
+const recordPoint = (x, y, z) => new THREE.Vector3(x, y, z)
+  .applyAxisAngle(new THREE.Vector3(1, 0, 0), -lean)
+  .add(new THREE.Vector3(0, C.RECORD_THICKNESS / 2 * Math.sin(lean), 0))
+  .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
+  .add(point(C.FEATURED_RECORD_POSITION));
+const bottom = [-1, 1].map(side => recordPoint(side * C.RECORD_SIZE / 2, 0, -C.RECORD_THICKNESS / 2));
+for (const p of bottom) {
+  assert(Math.abs(p.y) < 1e-8, "Entire record bottom edge rests on tabletop");
+  assert(p.x >= db.min.x && p.x <= db.max.x && p.z >= db.min.z && p.z <= db.max.z, "Record bottom edge stays on desktop");
+}
+const top = [-1, 1].map(side => recordPoint(side * C.RECORD_SIZE / 2, C.RECORD_SIZE, -C.RECORD_THICKNESS / 2));
+const cabinetCorner = point(C.CABINET_POSITION).add(new THREE.Vector3(C.CABINET_SIZE.x / 2, 0, C.CABINET_SIZE.z / 2));
+const closest = new THREE.Line3(top[0], top[1]).closestPointToPoint(cabinetCorner, true, new THREE.Vector3());
+assert(closest.distanceTo(cabinetCorner) < 0.00001, "Record top edge contacts cabinet corner");
+for (let x = 0; x <= 10; x++) for (let y = 0; y < 10; y++) {
+  const p = recordPoint((x / 10 - 0.5) * C.RECORD_SIZE, y / 10 * C.RECORD_SIZE, -C.RECORD_THICKNESS / 2);
+  assert(p.x >= cabinetCorner.x || p.z >= cabinetCorner.z, "Leaning record stays outside cabinet volume");
+}
 const reports = [];
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const camera = new THREE.PerspectiveCamera(CONFIG.scene.CAMERA_FOV, width / height, 0.1, 1000);
@@ -135,6 +158,9 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const project = p => p.clone().applyMatrix4(toScreen).multiplyScalar(scale).add(new THREE.Vector3(0, 0, C.PLANE_Z)).project(camera);
   const corners = [-1, 1].map(side => project(new THREE.Vector3(C.DESK_POSITION.x + side * (db.max.x - db.min.x) / 2, db.max.y, db.max.z)));
   assert(Math.abs(corners[0].y - corners[1].y) < 1e-8, "Desk front edge is horizontal");
+  const boardRight = project(new THREE.Vector3(C.SKATEBOARD_POSITION.x + C.SKATEBOARD_SIZE.length / 2, frame.supportY + C.SKATEBOARD_POSITION.y, C.SKATEBOARD_POSITION.z));
+  const posterLeft = project(new THREE.Vector3(C.POSTER_POSITION.x - C.POSTER_SIZE.x / 2, frame.supportY + C.SKATEBOARD_POSITION.y, C.POSTER_POSITION.z));
+  assert(posterLeft.x - boardRight.x > 0.04, "Skateboard and poster have visible separation");
   const screenCenter = project(localScreen.clone().applyMatrix4(monitorTransform));
   assert(Math.abs(screenCenter.x) < 0.8 && Math.abs(screenCenter.y) < 0.8, "CRT remains in frame");
   reports.push({ viewport: [width, height], screenCenter: screenCenter.toArray() });

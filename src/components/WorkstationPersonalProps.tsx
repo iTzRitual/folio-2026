@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { DoubleSide, Shape, ShapeGeometry } from "three";
+import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { Block, Cylinder } from "./WorkstationPrimitives";
 
@@ -62,9 +63,9 @@ export function PersonalProps({ supportY }: { supportY: number }) {
       <Cylinder radius={0.018} height={1.2} position={[0, 0.85, -0.015]} color="#70634a" />
       {Array.from({ length: 10 }, (_, i) => {
         const side = i % 2 ? -1 : 1;
-        return <group key={i} position={[0, 0.36 + i * 0.105, 0]} rotation={[0, side * 0.28, side * -0.55]}>
+        return <group key={i} position={[0, 0.36 + i * 0.105, 0]} rotation={[0, side * 0.28, side * -CONFIG.workstation.FLOOR_PLANT_SPREAD]}>
           <Cylinder radius={0.004} height={0.21} position={[0, 0.105, 0]} color="#526049" />
-          <mesh geometry={leaf} position={[0, 0.3, 0.015]} rotation={[0.15 + (i % 3) * 0.1, side * 0.25, 0]} scale={0.72 + (i % 3) * 0.12} raycast={noRaycast}>
+          <mesh geometry={leaf} position={[0, 0.3, 0.015]} rotation={[0.15 + (i % 3) * 0.1, side * 0.25, 0]} scale={CONFIG.workstation.FLOOR_PLANT_LEAF_SCALE + (i % 3) * 0.05} raycast={noRaycast}>
             <meshStandardMaterial color={i % 3 ? "#435537" : "#68734a"} side={DoubleSide} roughness={0.8} envMapIntensity={0.1} />
           </mesh>
         </group>;

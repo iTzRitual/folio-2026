@@ -13,15 +13,17 @@ export function DeskCollectionProps({ supportY }: { supportY: number }) {
   const position = (p: { x: number; y: number; z: number }): [number, number, number] => [p.x, supportY + p.y, p.z];
   const speaker = CONFIG.workstation.SPEAKER_SIZE;
   const recordSize = CONFIG.workstation.RECORD_SIZE;
-  const rotation = CONFIG.workstation.FEATURED_RECORD_ROTATION;
-  const lean = MathUtils.degToRad(rotation.z);
+  const thickness = CONFIG.workstation.RECORD_THICKNESS;
+  const lean = Math.acos(MathUtils.clamp((w.cabinetPosition.y - w.featuredRecordPosition.y) / recordSize, 0, 1));
   return <group name="DeskCollectionProps">
     <group name="FeaturedRecord" position={position(w.featuredRecordPosition)}>
-      <group position={[0, Math.abs(Math.sin(lean)) * recordSize / 2, 0]} rotation={[MathUtils.degToRad(rotation.x), MathUtils.degToRad(rotation.y), lean]}>
-        <group position={[0, recordSize / 2, 0]}>
-          <Block size={[recordSize, recordSize, 0.009]} color="#232b2b" />
-          <Text position={[-0.14, 0.12, 0.007]} fontSize={0.035} anchorX="left" anchorY="top" color="#c4bba5" raycast={noRaycast}>{"MASSIVE\nATTACK"}</Text>
-          <Block size={[0.16, 0.16, 0.003]} position={[0.025, -0.045, 0.007]} rotation={[0, 0, 0.45]} color="#596765" />
+      <group rotation={[0, MathUtils.degToRad(CONFIG.workstation.FEATURED_RECORD_YAW), 0]}>
+        <group position={[0, thickness / 2 * Math.sin(lean), 0]} rotation={[-lean, 0, 0]}>
+          <group position={[0, recordSize / 2, 0]}>
+            <Block size={[recordSize, recordSize, thickness]} color="#232b2b" />
+            <Text position={[-0.14, 0.12, 0.007]} fontSize={0.035} anchorX="left" anchorY="top" color="#c4bba5" raycast={noRaycast}>{"MASSIVE\nATTACK"}</Text>
+            <Block size={[0.16, 0.16, 0.003]} position={[0.025, -0.045, 0.007]} rotation={[0, 0, 0.45]} color="#596765" />
+          </group>
         </group>
       </group>
     </group>
