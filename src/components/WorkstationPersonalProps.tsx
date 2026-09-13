@@ -72,11 +72,3 @@ export function PersonalProps({ supportY }: { supportY: number }) {
     </group>
   </group>;
 }
-
-export function PencilCup({ supportY }: { supportY: number }) {
-  const { workstation: w } = useDebugSettings();
-  return <group name="PencilCup" position={[w.pencilCupPosition.x, w.pencilCupPosition.y + supportY, w.pencilCupPosition.z]}>
-      <Cylinder radius={0.027} height={0.083} position={[0, 0.0415, 0]} color="#49483d" />
-      {[0, 1, 2, 3, 4, 5].map(i => <Cylinder key={i} radius={0.0022} height={0.12 + (i % 3) * 0.009} position={[(i % 3 - 1) * 0.011, 0.077, (Math.floor(i / 3) - 0.5) * 0.014]} rotation={[0.08 * (i % 2), 0, (i - 2.5) * 0.07]} color={i % 2 ? "#b2976e" : "#272e2c"} />)}
-    </group>;
-}

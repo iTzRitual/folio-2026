@@ -93,6 +93,20 @@ for (const axis of ["x", "z"]) {
 }
 assert(tb.min.z > C.WINDOW_POSITION.z + 0.1, "Open lid clears wall and sill");
 assert(tb.max.x < db.min.x, "Cabinet music area clears main desk");
+assert(Math.abs(C.CABINET_POSITION.y - C.CABINET_SIZE.y + 0.72) < 1e-6, "Raised cabinet remains grounded");
+const speakerBounds = [C.LEFT_SPEAKER_POSITION, C.RIGHT_SPEAKER_POSITION].map((p, i) => {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(C.SPEAKER_SIZE.x, C.SPEAKER_SIZE.y, C.SPEAKER_SIZE.z));
+  mesh.position.set(p.x, frame.supportY + p.y + C.SPEAKER_SIZE.y / 2, p.z);
+  mesh.rotation.y = THREE.MathUtils.degToRad(C.SPEAKER_YAW) * (i ? -1 : 1);
+  const box = bounds(mesh);
+  assert(!box.intersectsBox(mb) && !box.intersectsBox(kb), "Rear speakers clear the monitor and keyboard");
+  for (const axis of ["x", "z"]) assert(box.min[axis] > db.min[axis] && box.max[axis] < db.max[axis], "Speakers fit on desktop");
+  mesh.geometry.dispose();
+  mesh.material.dispose();
+  return box;
+});
+assert(!speakerBounds[0].intersectsBox(speakerBounds[1]), "Speakers remain separate");
+assert(Math.hypot(C.ENERGY_CAN_POSITION.x - C.MOUSE_POSITION.x, C.ENERGY_CAN_POSITION.z - C.MOUSE_POSITION.z) > 0.2, "Can leaves mouse working space");
 const reports = [];
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const camera = new THREE.PerspectiveCamera(CONFIG.scene.CAMERA_FOV, width / height, 0.1, 1000);

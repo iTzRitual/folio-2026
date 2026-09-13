@@ -4,7 +4,8 @@ import { MathUtils } from "three";
 import { Text } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
-import { PersonalProps, PencilCup } from "./WorkstationPersonalProps";
+import { PersonalProps } from "./WorkstationPersonalProps";
+import { DeskCollectionProps } from "./WorkstationDeskProps";
 import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
 export { Block } from "./WorkstationPrimitives";
 
@@ -18,7 +19,7 @@ const xyz = (p: Point, y: number): [number, number, number] => [p.x, p.y + y, p.
 export function DesktopProxies({ supportY }: { supportY: number }) {
   const { workstation: w, lighting } = useDebugSettings();
   return <group name="DesktopAccessories">
-    <PencilCup supportY={supportY} />
+    <DeskCollectionProps supportY={supportY} />
     <group name="Mouse" position={xyz(w.mousePosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.mouse), 0]}>
       <Ellipsoid size={[0.032, 0.019, 0.054]} position={[0, 0.019, 0]} />
       <Cylinder radius={0.007} height={0.006} rotation={[0, 0, Math.PI / 2]} position={[0, 0.036, -0.017]} />
@@ -58,18 +59,15 @@ export function MusicCabinet({ supportY, children }: { supportY: number; childre
   return <group name="MusicCabinet" position={xyz(w.cabinetPosition, supportY)}>
     <Block name="CabinetTop" size={[s.x, 0.025, s.z]} position={[0, -0.0125, 0]} />
     <Block size={[s.x, 0.025, s.z]} position={[0, -s.y + 0.06, 0]} />
-    <Block name="RecordShelf" size={[s.x, 0.018, s.z]} position={[0, -0.375, 0]} />
+    <Block name="MiddleShelf" size={[s.x, 0.025, s.z]} position={[0, -s.y / 2, 0]} />
     <Block size={[0.018, s.y - 0.075, s.z]} position={[0, -s.y / 2, 0]} />
     {[-1, 1].map(side => <Block key={side} size={[0.023, s.y, s.z]} position={[side * (s.x / 2 - 0.012), -s.y / 2, 0]} />)}
     <Block size={[s.x, s.y, 0.016]} position={[0, -s.y / 2, -s.z / 2 + 0.008]} color="#413a33" />
-    {[-1, 1].map(side => <group name={`RecordCompartment${side}`} key={side} position={[side * 0.127, -0.366, 0.035]}>
-      {Array.from({ length: 7 }, (_, i) => <Block key={i} name="VinylSleeve" size={[0.008, 0.315, 0.315]} position={[-0.084 + i * 0.024, 0.158, 0.005 * (i % 3)]} rotation={[0, 0, i > 4 ? -0.055 : 0.012 * (i % 3)]} color={["#9b8b71", "#41494c", "#74786a", "#afa28d"][i % 4]} />)}
+    {[-s.y + 0.0725, -s.y / 2 + 0.0125].map((shelfY, row) => <group name={`RecordRow${row}`} key={row} position={[0, shelfY, 0.035]}>
+      {[-1, 1].map(side => <group name={`RecordCompartment${side}`} key={side} position={[side * 0.127, 0, 0]}>
+        {Array.from({ length: 9 }, (_, i) => <Block key={i} name="VinylSleeve" size={[0.008, CONFIG.workstation.RECORD_SIZE, CONFIG.workstation.RECORD_SIZE]} position={[-0.084 + i * 0.02, CONFIG.workstation.RECORD_SIZE / 2 + 0.001, 0.005 * (i % 3)]} rotation={[0, 0, i > 6 ? -0.04 : 0.008 * (i % 3)]} color={["#9b8b71", "#41494c", "#74786a", "#afa28d"][i % 4]} />)}
+      </group>)}
     </group>)}
-    <group name="DisplayedAlbum" position={[0, -0.2075, s.z / 2 + 0.009]} rotation={[0, 0, 0.035]}>
-      <Block size={[0.315, 0.315, 0.009]} color="#232b2b" />
-      <Text position={[-0.14, 0.12, 0.007]} fontSize={0.035} anchorX="left" anchorY="top" color="#c4bba5" raycast={noRaycast}>{"MASSIVE\nATTACK"}</Text>
-      <Block size={[0.16, 0.16, 0.003]} position={[0.025, -0.045, 0.007]} rotation={[0, 0, 0.45]} color="#596765" />
-    </group>
     {children}
   </group>;
 }

@@ -79,7 +79,10 @@ export interface DebugSettings {
     plantPosition: { x: number; y: number; z: number };
     polaroidsPosition: { x: number; y: number; z: number };
     floorPlantPosition: { x: number; y: number; z: number };
-    pencilCupPosition: { x: number; y: number; z: number };
+    energyCanPosition: { x: number; y: number; z: number };
+    leftSpeakerPosition: { x: number; y: number; z: number };
+    rightSpeakerPosition: { x: number; y: number; z: number };
+    featuredRecordPosition: { x: number; y: number; z: number };
     sillBooksPosition: { x: number; y: number; z: number };
     monitorYaw: number;
     keyboardPosition: { x: number; y: number; z: number };
@@ -177,7 +180,10 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     plantPosition: CONFIG.workstation.PLANT_POSITION,
     polaroidsPosition: CONFIG.workstation.POLAROIDS_POSITION,
     floorPlantPosition: CONFIG.workstation.FLOOR_PLANT_POSITION,
-    pencilCupPosition: CONFIG.workstation.PENCIL_CUP_POSITION,
+    energyCanPosition: CONFIG.workstation.ENERGY_CAN_POSITION,
+    leftSpeakerPosition: CONFIG.workstation.LEFT_SPEAKER_POSITION,
+    rightSpeakerPosition: CONFIG.workstation.RIGHT_SPEAKER_POSITION,
+    featuredRecordPosition: CONFIG.workstation.FEATURED_RECORD_POSITION,
     sillBooksPosition: CONFIG.workstation.SILL_BOOKS_POSITION,
     monitorYaw: CONFIG.workstation.MONITOR_YAW,
     keyboardPosition: CONFIG.workstation.KEYBOARD_POSITION,

@@ -268,7 +268,10 @@ const DESKTOP_SCHEMA = {
 const WORKSTATION_SCHEMA = {
     polaroidsPosition: { value: D.workstation.polaroidsPosition, step: 0.01 },
     floorPlantPosition: { value: D.workstation.floorPlantPosition, step: 0.01 },
-    pencilCupPosition: { value: D.workstation.pencilCupPosition, step: 0.01 },
+    energyCanPosition: { value: D.workstation.energyCanPosition, step: 0.01 },
+    leftSpeakerPosition: { value: D.workstation.leftSpeakerPosition, step: 0.01 },
+    rightSpeakerPosition: { value: D.workstation.rightSpeakerPosition, step: 0.01 },
+    featuredRecordPosition: { value: D.workstation.featuredRecordPosition, step: 0.01 },
     sillBooksPosition: { value: D.workstation.sillBooksPosition, step: 0.01 },
 
     monitorPosition: { value: D.workstation.monitorPosition, step: 0.01 },
