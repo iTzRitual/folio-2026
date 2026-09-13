@@ -157,6 +157,10 @@ export default function Scene({
         eventPrefix="client"
         style={{ touchAction: inputMode === "coarse" ? "pan-y" : "auto" }}
         dpr={dpr}
+        camera={{
+          fov: CONFIG.scene.CAMERA_FOV,
+          position: [0, 0, CONFIG.scene.CAMERA_REST_Z],
+        }}
         gl={{
           // EffectComposer renders into its own targets, so MSAA on the default
           // framebuffer is paid for and then discarded.

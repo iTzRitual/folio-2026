@@ -147,7 +147,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     throw new Error("The workstation scene requires a perspective camera");
   }
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { scrollBlur: scroll, desktop } = useDebugSettings();
+  const { scrollBlur: scroll, desktop, sceneFraming } = useDebugSettings();
   const { inputMode, layoutMode, qualityTier } = useSceneCapabilities();
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
@@ -1075,6 +1075,21 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
     const planeZ = CONFIG.workstation.PLANE_Z;
     const restZ = CONFIG.scene.CAMERA_REST_Z;
+    const cameraProgress = THREE.MathUtils.clamp(
+      (reveal - CONFIG.workstation.CRT_MORPH_END) /
+        (1 - CONFIG.workstation.CRT_MORPH_END),
+      0,
+      1,
+    );
+    const cameraFov = THREE.MathUtils.lerp(
+      CONFIG.scene.CAMERA_FOV,
+      sceneFraming.cameraFov,
+      cameraProgress,
+    );
+    if (camera.fov !== cameraFov) {
+      camera.fov = cameraFov;
+      camera.updateProjectionMatrix();
+    }
     const restDistance = restZ - planeZ;
     const restHeight =
       2 *
@@ -1089,14 +1104,19 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     const targetZ = planeZ + restDistance * fit;
 
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
-      const cameraProgress = THREE.MathUtils.clamp(
-        (reveal - CONFIG.workstation.CRT_MORPH_END) /
-          (1 - CONFIG.workstation.CRT_MORPH_END), 0, 1,
-      );
       camera.position.set(
-        0,
-        CONFIG.workstation.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth * cameraProgress,
-        THREE.MathUtils.lerp(restZ, targetZ, cameraProgress),
+        sceneFraming.cameraOffset.x * cameraProgress,
+        (
+          CONFIG.workstation.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth +
+          sceneFraming.cameraOffset.y
+        ) * cameraProgress,
+        THREE.MathUtils.lerp(restZ, targetZ, cameraProgress) +
+          sceneFraming.cameraOffset.z * cameraProgress,
+      );
+      camera.rotation.set(
+        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.x) * cameraProgress,
+        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.y) * cameraProgress,
+        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.z) * cameraProgress,
       );
       camera.updateMatrixWorld();
     }

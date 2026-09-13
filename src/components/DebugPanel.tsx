@@ -276,6 +276,27 @@ const WORKSTATION_SCHEMA = {
     deskScale: { value: D.workstation.deskScale, min: 0.5, max: 6, step: 0.01 },
 };
 
+const SCENE_FRAMING_SCHEMA = {
+    cameraOffset: {
+        value: D.sceneFraming.cameraOffset,
+        min: -5,
+        max: 5,
+        step: 0.01,
+    },
+    cameraRotation: {
+        value: D.sceneFraming.cameraRotation,
+        min: -45,
+        max: 45,
+        step: 0.25,
+    },
+    cameraFov: {
+        value: D.sceneFraming.cameraFov,
+        min: 20,
+        max: 100,
+        step: 0.5,
+    },
+};
+
 /**
  * Every Leva control in the project lives here so that leva itself is only ever
  * pulled in on /debug. Nothing else may import it.
@@ -296,6 +317,7 @@ export default function DebugPanel({
     const scrollBlur = useControls("Scroll blur", SCROLL_BLUR_SCHEMA);
     const desktop = useControls("CRT desktop", DESKTOP_SCHEMA);
     const workstation = useControls("Workstation", WORKSTATION_SCHEMA);
+    const sceneFraming = useControls("3D scene framing", SCENE_FRAMING_SCHEMA);
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
     useEffect(() => {
@@ -311,6 +333,7 @@ export default function DebugPanel({
             scrollBlur,
             desktop,
             workstation,
+            sceneFraming,
             headerExclusion,
         });
     }, [
@@ -326,6 +349,7 @@ export default function DebugPanel({
         scrollBlur,
         desktop,
         workstation,
+        sceneFraming,
         headerExclusion,
     ]);
 

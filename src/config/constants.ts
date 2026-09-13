@@ -91,6 +91,7 @@ export const CONFIG = {
         HIGH_DPR: 1.5,
     },
     scene: {
+        CAMERA_FOV: 75,
         CAMERA_REST_Z: 5,
         DETAILS_GROUP_Z: -0.05,
     },

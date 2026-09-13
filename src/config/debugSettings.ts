@@ -58,6 +58,11 @@ export interface DebugSettings {
     safariAddressScale: number;
     safariBottomSafeArea: number;
   };
+  sceneFraming: {
+    cameraOffset: { x: number; y: number; z: number };
+    cameraRotation: { x: number; y: number; z: number };
+    cameraFov: number;
+  };
   headerExclusion: { strength: number; threshold: number; softness: number };
   workstation: {
     keyboardPosition: { x: number; y: number; z: number };
@@ -133,6 +138,11 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     safariControlsScale: CONFIG.workstation.SAFARI_CONTROLS_SCALE,
     safariAddressScale: CONFIG.workstation.SAFARI_ADDRESS_SCALE,
     safariBottomSafeArea: CONFIG.workstation.SAFARI_BOTTOM_SAFE_AREA,
+  },
+  sceneFraming: {
+    cameraOffset: { x: 0, y: 0, z: 0 },
+    cameraRotation: { x: 0, y: 0, z: 0 },
+    cameraFov: CONFIG.scene.CAMERA_FOV,
   },
   headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
   workstation: {
