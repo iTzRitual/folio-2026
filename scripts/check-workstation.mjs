@@ -63,7 +63,7 @@ const frame = getCRTReferenceFrame(crt);
 const C = CONFIG.workstation;
 const point = p => new THREE.Vector3(p.x, p.y, p.z);
 const workstation = { monitorPosition: C.MONITOR_POSITION, monitorYaw: C.MONITOR_YAW, deskPosition: C.DESK_POSITION };
-const settings = { workstation, sceneFraming: { cameraEnd: C.CAMERA_END, cameraTarget: C.CAMERA_TARGET, cameraCurve: C.CAMERA_CURVE, arcStart: C.CAMERA_ARC_START } };
+const settings = { workstation, sceneFraming: { finalFov: C.CAMERA_FINAL_FOV, cameraEnd: C.CAMERA_END, cameraTarget: C.CAMERA_TARGET, cameraCurve: C.CAMERA_CURVE, arcStart: C.CAMERA_ARC_START } };
 const toScreen = workstationToScreen(frame, workstation);
 const monitorTransform = new THREE.Matrix4().makeTranslation(C.MONITOR_POSITION.x, C.MONITOR_POSITION.y + C.DESK_POSITION.y, C.MONITOR_POSITION.z)
   .multiply(new THREE.Matrix4().makeRotationY(THREE.MathUtils.degToRad(C.MONITOR_YAW)));
@@ -114,6 +114,8 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   }
   assert(position.distanceTo(new THREE.Vector3(0, 0, CONFIG.scene.CAMERA_REST_Z)) < 1e-10, "Initial portfolio camera preserved");
   route.sample(1, camera.position, target);
+  camera.fov = C.CAMERA_FINAL_FOV;
+  camera.updateProjectionMatrix();
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
   const project = p => p.clone().applyMatrix4(toScreen).multiplyScalar(scale).add(new THREE.Vector3(0, 0, C.PLANE_Z)).project(camera);

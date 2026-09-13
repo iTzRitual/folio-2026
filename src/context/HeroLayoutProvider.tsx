@@ -21,7 +21,11 @@ export function HeroLayoutProvider({
   children,
   startAnimation,
 }: HeroLayoutProviderProps) {
-  const { size, viewport } = useThree();
+  const { size } = useThree();
+  const viewport = useMemo(() => {
+    const height = 2 * Math.tan(CONFIG.scene.CAMERA_FOV * Math.PI / 360) * CONFIG.scene.CAMERA_REST_Z;
+    return { width: height * size.width / size.height, height };
+  }, [size.width, size.height]);
   const { layoutMode, compactHeight } = useSceneCapabilities();
 
   const layoutValue: HeroLayoutContextType = useMemo(() => {

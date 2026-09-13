@@ -63,6 +63,7 @@ export interface DebugSettings {
     cameraTarget: { x: number; y: number; z: number };
     cameraCurve: { x: number; y: number; z: number };
     arcStart: number;
+    finalFov: number;
   };
   headerExclusion: { strength: number; threshold: number; softness: number };
   lighting: { mode: "day" | "night"; windowLight: number; lampLight: number; fillLight: number };
@@ -76,6 +77,10 @@ export interface DebugSettings {
     posterPosition: { x: number; y: number; z: number };
     skateboardPosition: { x: number; y: number; z: number };
     plantPosition: { x: number; y: number; z: number };
+    polaroidsPosition: { x: number; y: number; z: number };
+    floorPlantPosition: { x: number; y: number; z: number };
+    pencilCupPosition: { x: number; y: number; z: number };
+    sillBooksPosition: { x: number; y: number; z: number };
     monitorYaw: number;
     keyboardPosition: { x: number; y: number; z: number };
     keyboardRotation: { x: number; y: number; z: number };
@@ -156,6 +161,7 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     cameraTarget: CONFIG.workstation.CAMERA_TARGET,
     cameraCurve: CONFIG.workstation.CAMERA_CURVE,
     arcStart: CONFIG.workstation.CAMERA_ARC_START,
+    finalFov: CONFIG.workstation.CAMERA_FINAL_FOV,
   },
   lighting: { mode: CONFIG.workstation.LIGHTING_MODE, windowLight: CONFIG.workstation.WINDOW_LIGHT, lampLight: CONFIG.workstation.LAMP_LIGHT, fillLight: CONFIG.workstation.FILL_LIGHT },
   headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
@@ -169,6 +175,10 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     posterPosition: CONFIG.workstation.POSTER_POSITION,
     skateboardPosition: CONFIG.workstation.SKATEBOARD_POSITION,
     plantPosition: CONFIG.workstation.PLANT_POSITION,
+    polaroidsPosition: CONFIG.workstation.POLAROIDS_POSITION,
+    floorPlantPosition: CONFIG.workstation.FLOOR_PLANT_POSITION,
+    pencilCupPosition: CONFIG.workstation.PENCIL_CUP_POSITION,
+    sillBooksPosition: CONFIG.workstation.SILL_BOOKS_POSITION,
     monitorYaw: CONFIG.workstation.MONITOR_YAW,
     keyboardPosition: CONFIG.workstation.KEYBOARD_POSITION,
     keyboardRotation: CONFIG.workstation.KEYBOARD_ROTATION,

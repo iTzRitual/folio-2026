@@ -266,6 +266,11 @@ const DESKTOP_SCHEMA = {
 };
 
 const WORKSTATION_SCHEMA = {
+    polaroidsPosition: { value: D.workstation.polaroidsPosition, step: 0.01 },
+    floorPlantPosition: { value: D.workstation.floorPlantPosition, step: 0.01 },
+    pencilCupPosition: { value: D.workstation.pencilCupPosition, step: 0.01 },
+    sillBooksPosition: { value: D.workstation.sillBooksPosition, step: 0.01 },
+
     monitorPosition: { value: D.workstation.monitorPosition, step: 0.01 },
     cabinetPosition: { value: D.workstation.cabinetPosition, step: 0.01 },
     mousePosition: { value: D.workstation.mousePosition, step: 0.01 },
@@ -287,6 +292,7 @@ const WORKSTATION_SCHEMA = {
 };
 
 const SCENE_FRAMING_SCHEMA = {
+    finalFov: { value: D.sceneFraming.finalFov, min: 35, max: 75, step: 1 },
     cameraEnd: { value: D.sceneFraming.cameraEnd, step: 0.01 },
     cameraTarget: { value: D.sceneFraming.cameraTarget, step: 0.01 },
     cameraCurve: { value: D.sceneFraming.cameraCurve, step: 0.01 },

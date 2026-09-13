@@ -20,7 +20,7 @@ export function createWorkstationCameraPath(frame: CRTFrame, settings: DebugSett
   const narrow = 1 - MathUtils.smoothstep(aspect, 0.65, 1.35);
   const x = MathUtils.lerp(cameraEnd.x, settings.workstation.monitorPosition.x, narrow);
   const targetX = MathUtils.lerp(cameraTarget.x, settings.workstation.monitorPosition.x, narrow);
-  const z = MathUtils.lerp(cameraEnd.z, CONFIG.workstation.CAMERA_NARROW_WIDTH / (2 * Math.tan(MathUtils.degToRad(CONFIG.scene.CAMERA_FOV) / 2) * aspect), narrow);
+  const z = MathUtils.lerp(cameraEnd.z, CONFIG.workstation.CAMERA_NARROW_WIDTH / (2 * Math.tan(MathUtils.degToRad(settings.sceneFraming.finalFov) / 2) * aspect), narrow);
   const toScreen = (p: Vector3) => p.applyMatrix4(matrix).multiplyScalar(scale).add(new Vector3(0, 0, CONFIG.workstation.PLANE_Z));
   const end = toScreen(new Vector3(x, frame.supportY + cameraEnd.y, z));
   const target = toScreen(new Vector3(targetX, frame.supportY + cameraTarget.y, cameraTarget.z));

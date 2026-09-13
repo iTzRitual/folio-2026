@@ -1085,6 +1085,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         (1 - CONFIG.workstation.CRT_MORPH_END), 0, 1,
     );
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
+      const fov = THREE.MathUtils.lerp(CONFIG.scene.CAMERA_FOV, settings.sceneFraming.finalFov,
+        THREE.MathUtils.smootherstep(cameraProgress, 0, 1));
+      if (camera.fov !== fov) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+      }
       cameraPath.sample(cameraProgress, camera.position, cameraTarget);
       camera.up.set(0, 1, 0);
       camera.lookAt(cameraTarget);
@@ -1334,6 +1340,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     pageGroupRef.current.visible = true;
     captureCamera.position.set(0, 0, CONFIG.scene.CAMERA_REST_Z);
     captureCamera.rotation.set(0, 0, 0);
+    captureCamera.fov = CONFIG.scene.CAMERA_FOV;
+    captureCamera.updateProjectionMatrix();
     captureCamera.layers.enable(HEADER_LAYER);
     captureCamera.layers.enable(THEME_SWEEP_LAYER);
     captureCamera.updateMatrixWorld();

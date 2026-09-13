@@ -1,36 +1,40 @@
-# Workstation composition blockout
+# Workstation reference blockout
 
-The existing CRT, keyboard, and open-lid turntable GLBs are unchanged. The desktop slab is reused at a practical 1.30 × 0.82 m footprint. Legs, cabinet, LP sleeves, window opening, exterior, plant, poster, skateboard, controller, mouse, and lamp are temporary procedural proxies.
+The current pass follows the supplied workstation reference: window and music cabinet on the left, CRT at the center, horizontal skateboard above, taped photos between window and monitor, and a large band poster with an upright floor plant on the right. The desk stays frontal. The settled lens is 42 degrees, with a close crop of the desktop and partial legs.
 
-## Composition
+The existing CRT, keyboard, and open-lid turntable GLBs are unchanged. The existing mouse and controller proxies are reused. The desk slab is reused at a 1.30 by 0.82 m footprint. The monitor remains 5.5 cm right of desk center with a -6 degree yaw.
 
-The desk faces the final camera. The monitor sits 5.5 cm right of the desk center (4.2% of its width) with a -6° yaw. The keyboard retains its original scale, with a separate mouse area on its right and the controller to its left. The 53 cm square cabinet sits just left of the desk with its top 6.5 cm lower. Its footprint accommodates the turntable’s open lid and leaves rear clearance. This arrangement keeps the main desktop open; a rear-left desktop placement would put the music controls behind the working area and compress the monitor silhouette.
+## Editable props
+
+The cabinet sits immediately left of the desk, 6.5 cm below its top and farther back to keep its turntable and LP display readable. A shelf holds stored 31.5 cm sleeves and a front-facing Massive Attack placeholder. The horizontal skateboard deck measures 80.5 by 20.32 cm, with simple trucks and wheels.
+
+The window opening, exterior, sill plant, books, lamp, pencil cup, polaroids, poster, skateboard, record storage, and pole-trained monstera are procedural blockouts. Graphics are solid shapes and placeholder typography. The floor plant uses one shared, low-resolution split-leaf geometry. No new asset downloads, textures, or dependencies were added.
+
+The next art pass should refine leaf curvature and grouping, lamp shape, wall art, and the warm/cool lighting balance. The composition approximates the reference; it does not reproduce its photographic lighting or detailed silhouettes.
 
 ## Authoring
 
-Open `/debug` and expand the Leva panel:
+Open `/debug` and expand Leva:
 
-- **Workstation**: monitor position/yaw, keyboard and turntable transforms, desk dimensions, cabinet and prop positions. Turntable position is relative to the cabinet top; other object heights are relative to the desktop support plane.
-- **3D scene framing**: final camera position, viewing target, curve offset, and the point at which lateral/elevation movement begins. Camera coordinates use workstation meters; camera Y values are above the original support plane. The initial pose is deliberately derived from the display frame to preserve the full-screen portfolio.
-- **Environment lighting**: explicit day/night preview, window strength, lamp strength, and fill. This does not change the portfolio theme.
+- **Workstation** adjusts monitor placement, furniture and prop positions, keyboard and turntable transforms. Turntable position is relative to the cabinet; other heights are relative to the desktop support plane.
+- **3D scene framing** adjusts final camera position, target, final FOV, and curve shaping. Camera coordinates use workstation meters.
+- **Environment lighting** switches day/night and adjusts window, lamp, and fill strength. Night is the default and uses a simple dusk exterior. This is independent of the portfolio theme.
 
-Persist selected values in `CONFIG.workstation` in `src/config/constants.ts`. Cabinet/window dimensions, small prop yaw, and light offsets also live there. Proxy geometry is in `src/components/WorkstationBlockout.tsx`.
+Persist values in `CONFIG.workstation` in `src/config/constants.ts`. Geometry lives in `WorkstationBlockout.tsx`, `WorkstationPersonalProps.tsx`, and `WorkstationPrimitives.tsx`.
 
-## Reference frame and reveal
+## Reveal and layout
 
-`src/lib/workstationFrame.ts` maps workstation coordinates through the inverse monitor placement into screen-local space. Consequently the housing, glass/display shaders, control geometry, and pointer mesh retain one common reference frame. The monitor has no scroll-dependent position or rotation relative to its desk.
+The workstation-to-screen transform preserves a single reference frame for the CRT housing, display, controls, and pointer mapping. The monitor remains stationary relative to its desk. Scroll first reveals the desktop and physical monitor, then introduces the existing modest camera curve toward the frontal desk view. Reverse scrolling samples the same path.
 
-The existing portfolio capture, browser reveal, CRT morph, and surface-fit sequence are retained. The camera first retreats along the display normal, then smoothly introduces a small lateral/elevation curve and a separately controlled viewing target. It finishes with the camera and target sharing the same workstation X coordinate, so the desk front edge remains horizontal. FOV stays unchanged. The capture camera explicitly resets rotation, preserving the flat page rendered inside the CRT.
+The lens narrows smoothly only during the physical camera reveal. The initial portfolio and its capture camera retain the original FOV. `HeroLayoutProvider` derives its viewport from that original projection, so resizing in the workstation cannot change the portfolio's world-space scale. Narrow screens prioritize the CRT instead of fitting the decorative scene.
 
-The path is a pure function of reveal progress. Narrow aspect ratios smoothly recenter framing on the CRT. Reduced motion retains the existing direct transition to the final scene. Static contact shadows are captured once per placement change: one for the desk, one for the cabinet top.
+Desktop contact shadows include the pencil cup, lamp, mouse, controller, keyboard, and correctly transformed monitor. The cabinet has a separate turntable contact capture. Captures update on placement changes rather than continuously.
 
 ## Verification
 
-- `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` passed.
-- `scripts/check-workstation.mjs` checks monitor/display reference alignment, actual GLB support contact, keyboard and open-lid clearances, desk/cabinet footprints, horizontal desk framing, sampled camera/asset collisions, and exact forward/reverse poses at 1440×900, 1920×1080, and 390×844.
-- The running application was inspected at all three viewport sizes, with actual screenshots stored here. Early browser context, physical CRT, camera arc, final day/night, and return to portfolio were inspected.
-- CRT power off/on, the VS Code dock target, and reverse-scroll restoration from VS Code were exercised through the browser. The initial portfolio composition and actual DOM heading bounds were inspected.
-- Production visitor view was smoke-tested on port 3001 with no console errors.
-- No asset files were replaced, no loader bypass remains, and no new dependency was introduced.
+- Lint, TypeScript, all existing tests, and the production build passed.
+- The workstation check covers physical support, keyboard/cabinet fit, open-lid clearance, monitor/display alignment, horizontal desk framing, camera collision samples, and exact reverse paths at laptop, wide, and mobile aspect ratios. It projects the final frame with the new settled FOV.
+- Browser inspection covered 1440 by 810, 1440 by 900, 1920 by 1080, and 390 by 844, plus initial/reverse endpoints, intermediate reveal, day/night previews, and resizing with the workstation visible. No browser console errors were reported.
+- `reference-*.png` are application captures from this pass. Older captures in this directory document the earlier composition. The browser screenshot surface clips images wider than 1500 pixels, so the full 16:9 capture uses 1440 by 810.
 
-Screenshots are application captures, not generated artwork. They document a spatial blockout rather than finished modeling. Lighting uses inexpensive unshadowed local lights plus cached vertical contact shadows; it is not a physically accurate room-lighting simulation. Browser checks used the desktop browser at mobile dimensions, not a physical phone. Reduced motion is covered by the existing code path and deterministic pose checks, not an OS-level browser preference test.
+The props and light pools remain intentionally simple. Day/night use inexpensive local lighting and cached contact shadows, not a physically accurate room simulation. Responsive inspection used a desktop browser at mobile dimensions.
