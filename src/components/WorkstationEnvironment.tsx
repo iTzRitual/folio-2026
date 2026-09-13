@@ -1,168 +1,105 @@
 "use client";
 
 import { useGLTF } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { Box3, MathUtils, Mesh, Vector3 } from "three";
+import { Box3, Group, MathUtils, Mesh, MeshStandardMaterial, Matrix4, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
-import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { getCRTReferenceFrame, getRequiredObject } from "@/lib/crtScreen";
 import { createWorkstationShadow } from "@/lib/workstationShadow";
-import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { workstationToScreen } from "@/lib/workstationFrame";
+import { Block, DesktopProxies, MusicCabinet, WallProxies } from "./WorkstationBlockout";
 
 export function WorkstationEnvironment({ width }: { width: number }) {
   const { scene: crt } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const { scene: keyboard } = useGLTF(CONFIG.workstation.KEYBOARD_MODEL_URL);
   const { scene: turntable } = useGLTF(CONFIG.workstation.TURNTABLE_MODEL_URL);
   const { scene: desk } = useGLTF(CONFIG.workstation.DESK_MODEL_URL);
-  const { workstation } = useDebugSettings();
-  const { revealProgressRef } = useHeroTransition();
-  const reducedMotion = usePrefersReducedMotion();
+  const { workstation: w, lighting } = useDebugSettings();
   const gl = useThree((state) => state.gl);
-  const shadow = useMemo(() => createWorkstationShadow(), []);
-  const shadowRef = useRef<Mesh>(null);
-  const capturedSettings = useRef<typeof workstation | null>(null);
-  useEffect(() => () => shadow.dispose(), [shadow]);
+  const accessories = useRef<Group>(null);
+  const shadows = useMemo(() => [createWorkstationShadow(), createWorkstationShadow()], []);
+  useEffect(() => () => shadows.forEach(shadow => shadow.dispose()), [shadows]);
   const resources = useMemo(() => {
     const frame = getCRTReferenceFrame(crt);
     const deskSize = new Box3().setFromObject(desk).getSize(new Vector3());
-    const keyboardModel = keyboard.clone(true);
-    const turntableModel = turntable.clone(true);
-    const deskModel = desk.clone(true);
-    const shadowMonitor = crt.clone(true);
-    for (const name of ["CRT_Screen", "CRT_Glass"]) {
-      getRequiredObject(shadowMonitor, name).visible = false;
-    }
-    for (const model of [keyboardModel, turntableModel, deskModel]) {
+    const models = [keyboard, turntable, desk].map(source => {
+      const model = source.clone(true);
       model.traverse(object => {
-        if (object instanceof Mesh) object.raycast = () => null;
+        if (!(object instanceof Mesh)) return;
+        object.raycast = () => null;
+        object.material = Array.isArray(object.material) ? object.material.map(m => m.clone()) : object.material.clone();
+      });
+      return model;
+    });
+    const shadowMonitor = crt.clone(true);
+    for (const name of ["CRT_Screen", "CRT_Glass"]) getRequiredObject(shadowMonitor, name).visible = false;
+    return { ...frame, deskSize, keyboardModel: models[0], turntableModel: models[1], deskModel: models[2], shadowMonitor };
+  }, [crt, keyboard, turntable, desk]);
+  useEffect(() => () => {
+    for (const model of [resources.keyboardModel, resources.turntableModel, resources.deskModel]) {
+      model.traverse(object => {
+        if (object instanceof Mesh) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => m.dispose());
       });
     }
-    return {
-      ...frame,
-      deskSize,
-      keyboardModel,
-      turntableModel,
-      deskModel,
-      shadowMonitor,
-    };
-  }, [crt, keyboard, turntable, desk]);
+  }, [resources]);
+  useEffect(() => {
+    for (const model of [resources.keyboardModel, resources.turntableModel, resources.deskModel]) {
+      model.traverse(object => {
+        if (!(object instanceof Mesh)) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+          if (material instanceof MeshStandardMaterial) material.envMapIntensity = lighting.mode === "day" ? 0.4 : 0.12;
+        }
+      });
+    }
+  }, [resources, lighting.mode]);
   const scale = width / resources.screenWidth;
-  const { keyboardPosition, keyboardRotation, keyboardScale, deskPosition, deskScale } = workstation;
-  const { turntablePosition, turntableRotation, turntableScale } = workstation;
-  const supportY = resources.supportY + deskPosition.y;
-  const deskDepth = resources.deskSize.z * deskScale.z;
-  const wallSize = CONFIG.workstation.WALL_SIZE;
+  const matrix = useMemo(() => new Matrix4().makeScale(scale, scale, scale).multiply(workstationToScreen(resources, w)), [resources, scale, w]);
+  const supportY = resources.supportY + w.deskPosition.y;
+  const deskWidth = resources.deskSize.x * w.deskScale.x;
+  const deskDepth = resources.deskSize.z * w.deskScale.z;
+  const cabinet = CONFIG.workstation.CABINET_SIZE;
+  const degrees = (r: { x: number; y: number; z: number }): [number, number, number] => [r.x, r.y, r.z].map(MathUtils.degToRad) as [number, number, number];
   useEffect(() => {
     const capture = () => {
-      const shadowTurntable = resources.turntableModel.clone(true);
-      shadowTurntable.traverse(object => {
+      const monitor = resources.shadowMonitor.clone(true);
+      monitor.position.set(w.monitorPosition.x, w.monitorPosition.y + w.deskPosition.y, w.monitorPosition.z);
+      monitor.rotation.y = MathUtils.degToRad(w.monitorYaw);
+      const desktop = [monitor, resources.keyboardModel.clone(true)];
+      if (accessories.current) desktop.push(accessories.current.clone(true));
+      shadows[0].capture(gl, desktop, new Vector3(w.deskPosition.x, supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET, w.deskPosition.z), deskWidth, deskDepth);
+      const recordPlayer = resources.turntableModel.clone(true);
+      recordPlayer.traverse(object => {
         if (!(object instanceof Mesh)) return;
-        const materials = Array.isArray(object.material) ? object.material : [object.material];
-        if (materials.every(material => material.transparent)) object.visible = false;
+        if ((Array.isArray(object.material) ? object.material : [object.material]).every(m => m.transparent)) object.visible = false;
       });
-      shadow.capture(
-        gl,
-        [resources.shadowMonitor, resources.keyboardModel.clone(true), shadowTurntable],
-        new Vector3(
-          deskPosition.x,
-          supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET,
-          deskPosition.z,
-        ),
-        resources.deskSize.x * deskScale.x,
-        deskDepth,
-      );
-      capturedSettings.current = workstation;
+      shadows[1].capture(gl, [recordPlayer], new Vector3(0, CONFIG.workstation.CONTACT_SHADOW_OFFSET, 0), cabinet.x, cabinet.z);
     };
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(capture, { timeout: 1000 });
-      return () => window.cancelIdleCallback(idleId);
-    }
-    const timeoutId = globalThis.setTimeout(capture, 200);
-    return () => globalThis.clearTimeout(timeoutId);
-  }, [
-    deskDepth,
-    deskPosition.x,
-    deskPosition.z,
-    deskScale.x,
-    gl,
-    resources,
-    shadow,
-    supportY,
-    workstation,
-  ]);
-
-  useFrame(() => {
-    const reveal = revealProgressRef.current;
-    if (shadowRef.current) {
-      shadowRef.current.visible =
-        capturedSettings.current === workstation &&
-        reveal > 0 &&
-        (reducedMotion || reveal >= CONFIG.workstation.CONTACT_SHADOW_REVEAL);
-    }
-  });
-
-  return (
-    <group
-      name="WorkstationEnvironment"
-      scale={scale}
-      position={[
-        -resources.screenCenter.x * scale,
-        -resources.screenCenter.y * scale,
-        -(resources.screenFront + CONFIG.workstation.CRT_SCREEN_CLEARANCE) * scale,
-      ]}
-    >
-      <mesh
-        name="Workstation_Wall"
-        position={[
-          deskPosition.x,
-          supportY + CONFIG.workstation.WALL_CENTER_Y,
-          deskPosition.z - deskDepth / 2 - wallSize.z / 2,
-        ]}
-        raycast={() => null}
-      >
-        <boxGeometry args={[wallSize.x, wallSize.y, wallSize.z]} />
-        <meshStandardMaterial
-          color={CONFIG.workstation.WALL_COLOR}
-          roughness={CONFIG.workstation.WALL_ROUGHNESS}
-        />
-      </mesh>
-      <primitive
-        object={resources.deskModel}
-        position={[deskPosition.x, supportY, deskPosition.z]}
-        scale={[deskScale.x, deskScale.y, deskScale.z]}
-      />
-      <primitive
-        object={resources.keyboardModel}
-        position={[keyboardPosition.x, supportY + keyboardPosition.y, keyboardPosition.z]}
-        rotation={[
-          MathUtils.degToRad(keyboardRotation.x),
-          MathUtils.degToRad(keyboardRotation.y),
-          MathUtils.degToRad(keyboardRotation.z),
-        ]}
-        scale={keyboardScale}
-      />
-      <primitive
-        object={resources.turntableModel}
-        position={[turntablePosition.x, supportY + turntablePosition.y, turntablePosition.z]}
-        rotation={[
-          MathUtils.degToRad(turntableRotation.x),
-          MathUtils.degToRad(turntableRotation.y),
-          MathUtils.degToRad(turntableRotation.z),
-        ]}
-        scale={turntableScale}
-      />
-      <mesh
-        ref={shadowRef}
-        position={[deskPosition.x, supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET, deskPosition.z]}
-        rotation={[Math.PI / 2, 0, 0]}
-        material={shadow.material}
-        visible={false}
-        raycast={() => null}
-      >
-        <planeGeometry args={[resources.deskSize.x * deskScale.x, deskDepth]} />
+    const id = requestAnimationFrame(capture);
+    return () => cancelAnimationFrame(id);
+  }, [gl, resources, shadows, w, supportY, deskWidth, deskDepth, cabinet]);
+  const night = lighting.mode === "night";
+  return <group name="WorkstationEnvironment" matrix={matrix} matrixAutoUpdate={false}>
+    <group name="MainDesk">
+      <primitive object={resources.deskModel} position={[w.deskPosition.x, supportY, w.deskPosition.z]} scale={[w.deskScale.x, w.deskScale.y, w.deskScale.z]} />
+      {[-1, 1].flatMap(x => [-1, 1].map(z => <Block key={`${x}:${z}`} size={[0.038, 0.68, 0.038]} position={[w.deskPosition.x + x * (deskWidth / 2 - 0.065), supportY - 0.38, w.deskPosition.z + z * (deskDepth / 2 - 0.08)]} color="#353a37" />))}
+      <primitive object={resources.keyboardModel} position={[w.keyboardPosition.x, supportY + w.keyboardPosition.y, w.keyboardPosition.z]} rotation={degrees(w.keyboardRotation)} scale={w.keyboardScale} />
+      <group ref={accessories}><DesktopProxies supportY={supportY} /></group>
+      <mesh name="DeskContactShadow" position={[w.deskPosition.x, supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET, w.deskPosition.z]} rotation={[Math.PI / 2, 0, 0]} material={shadows[0].material} raycast={() => null}>
+        <planeGeometry args={[deskWidth, deskDepth]} />
       </mesh>
     </group>
-  );
+    <MusicCabinet supportY={supportY}>
+      <primitive object={resources.turntableModel} position={[w.turntablePosition.x, w.turntablePosition.y, w.turntablePosition.z]} rotation={degrees(w.turntableRotation)} scale={w.turntableScale} />
+      <mesh name="TurntableContactShadow" position={[0, CONFIG.workstation.CONTACT_SHADOW_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]} material={shadows[1].material} raycast={() => null}>
+        <planeGeometry args={[cabinet.x, cabinet.z]} />
+      </mesh>
+    </MusicCabinet>
+    <WallProxies supportY={supportY} />
+    <Block name="Floor" size={[CONFIG.workstation.WALL_SIZE.x, 0.04, 6]} position={[0, supportY - 0.74, 0]} color="#51554f" />
+    <ambientLight intensity={lighting.fillLight * (night ? CONFIG.workstation.LIGHT_NIGHT_FILL_MULT : 1)} color={night ? "#a8b9db" : "#e1dfd0"} />
+    <pointLight name="WindowLight" position={[w.windowPosition.x, supportY + w.windowPosition.y, w.windowPosition.z + CONFIG.workstation.LIGHT_WINDOW_OFFSET_Z]} intensity={lighting.windowLight * (night ? CONFIG.workstation.LIGHT_NIGHT_WINDOW_MULT : 1) * scale * scale} distance={3 * scale} decay={2} color={night ? "#6c94ce" : "#d9eceb"} />
+    <pointLight name="LampLight" position={[w.lampPosition.x + CONFIG.workstation.LIGHT_LAMP_OFFSET.x, supportY + w.lampPosition.y + CONFIG.workstation.LIGHT_LAMP_OFFSET.y, w.lampPosition.z + CONFIG.workstation.LIGHT_LAMP_OFFSET.z]} intensity={lighting.lampLight * (night ? 1 : CONFIG.workstation.LIGHT_DAY_LAMP_MULT) * scale * scale * CONFIG.workstation.LIGHT_LAMP_POWER_MULT} distance={1.2 * scale} decay={2} color="#ffd096" />
+  </group>;
 }

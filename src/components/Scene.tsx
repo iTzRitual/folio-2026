@@ -59,11 +59,11 @@ function SceneContent({
           <ProjectHoverProvider>
             <CaseStudyProvider>
               <ThemeSweep />
-              <directionalLight intensity={3} position={[0, 3, 2]} />
               <Environment files="/hdri/city.hdr" />
 
               <Suspense fallback={null}>
                 <WorkstationScene>
+                  <directionalLight intensity={3} position={[0, 3, 2]} />
                   <Model />
 
                   <Header />

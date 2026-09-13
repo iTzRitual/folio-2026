@@ -3,7 +3,8 @@
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { Mesh, Vector2, type Intersection, type Object3D } from "three";
+import { Mesh, MeshStandardMaterial, Vector2, type Intersection, type Object3D } from "three";
+import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { CONFIG } from "@/config/constants";
 import { createMonitorControls } from "@/lib/monitorControls";
 import { knobNormalized, resetMonitorKnob, setMonitorKnob, toggleMonitorButton, type MonitorButton, type MonitorKnob, type MonitorState } from "@/lib/monitorState";
@@ -18,11 +19,13 @@ export function CRTMonitor({ width, monitorState, onButtonPress }: {
 }) {
   const { scene } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const three = useThree();
+  const { lighting } = useDebugSettings();
   const reducedMotion = usePrefersReducedMotion();
   const resources = useMemo(() => {
     const model = scene.clone(true);
     const frame = getCRTReferenceFrame(model);
     model.traverse(object => {
+      if (object instanceof Mesh) object.material = Array.isArray(object.material) ? object.material.map(m => m.clone()) : object.material.clone();
       if (object.name === "CRT_Screen" || object.name === "CRT_Glass") {
         object.visible = false;
         if (object instanceof Mesh) object.raycast = () => null;
@@ -31,6 +34,19 @@ export function CRTMonitor({ width, monitorState, onButtonPress }: {
     return { model, ...frame };
   }, [scene]);
   const { model, screenCenter, screenWidth, screenFront } = resources;
+  useEffect(() => {
+    model.traverse(object => {
+      if (!(object instanceof Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (material instanceof MeshStandardMaterial) material.envMapIntensity = lighting.mode === "day" ? 0.4 : 0.12;
+      }
+    });
+  }, [model, lighting.mode]);
+  useEffect(() => () => {
+    model.traverse(object => {
+      if (object instanceof Mesh) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => m.dispose());
+    });
+  }, [model]);
   const runtime = useRef<ReturnType<typeof createMonitorControls> | null>(null);
 
   useEffect(() => {

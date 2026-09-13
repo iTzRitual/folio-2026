@@ -59,12 +59,24 @@ export interface DebugSettings {
     safariBottomSafeArea: number;
   };
   sceneFraming: {
-    cameraOffset: { x: number; y: number; z: number };
-    cameraRotation: { x: number; y: number; z: number };
-    cameraFov: number;
+    cameraEnd: { x: number; y: number; z: number };
+    cameraTarget: { x: number; y: number; z: number };
+    cameraCurve: { x: number; y: number; z: number };
+    arcStart: number;
   };
   headerExclusion: { strength: number; threshold: number; softness: number };
+  lighting: { mode: "day" | "night"; windowLight: number; lampLight: number; fillLight: number };
   workstation: {
+    monitorPosition: { x: number; y: number; z: number };
+    cabinetPosition: { x: number; y: number; z: number };
+    mousePosition: { x: number; y: number; z: number };
+    controllerPosition: { x: number; y: number; z: number };
+    lampPosition: { x: number; y: number; z: number };
+    windowPosition: { x: number; y: number; z: number };
+    posterPosition: { x: number; y: number; z: number };
+    skateboardPosition: { x: number; y: number; z: number };
+    plantPosition: { x: number; y: number; z: number };
+    monitorYaw: number;
     keyboardPosition: { x: number; y: number; z: number };
     keyboardRotation: { x: number; y: number; z: number };
     keyboardScale: number;
@@ -140,12 +152,24 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     safariBottomSafeArea: CONFIG.workstation.SAFARI_BOTTOM_SAFE_AREA,
   },
   sceneFraming: {
-    cameraOffset: { x: 0, y: 0, z: 0 },
-    cameraRotation: { x: 0, y: 0, z: 0 },
-    cameraFov: CONFIG.scene.CAMERA_FOV,
+    cameraEnd: CONFIG.workstation.CAMERA_END,
+    cameraTarget: CONFIG.workstation.CAMERA_TARGET,
+    cameraCurve: CONFIG.workstation.CAMERA_CURVE,
+    arcStart: CONFIG.workstation.CAMERA_ARC_START,
   },
+  lighting: { mode: CONFIG.workstation.LIGHTING_MODE, windowLight: CONFIG.workstation.WINDOW_LIGHT, lampLight: CONFIG.workstation.LAMP_LIGHT, fillLight: CONFIG.workstation.FILL_LIGHT },
   headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
   workstation: {
+    monitorPosition: CONFIG.workstation.MONITOR_POSITION,
+    cabinetPosition: CONFIG.workstation.CABINET_POSITION,
+    mousePosition: CONFIG.workstation.MOUSE_POSITION,
+    controllerPosition: CONFIG.workstation.CONTROLLER_POSITION,
+    lampPosition: CONFIG.workstation.LAMP_POSITION,
+    windowPosition: CONFIG.workstation.WINDOW_POSITION,
+    posterPosition: CONFIG.workstation.POSTER_POSITION,
+    skateboardPosition: CONFIG.workstation.SKATEBOARD_POSITION,
+    plantPosition: CONFIG.workstation.PLANT_POSITION,
+    monitorYaw: CONFIG.workstation.MONITOR_YAW,
     keyboardPosition: CONFIG.workstation.KEYBOARD_POSITION,
     keyboardRotation: CONFIG.workstation.KEYBOARD_ROTATION,
     keyboardScale: CONFIG.workstation.KEYBOARD_SCALE,

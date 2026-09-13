@@ -266,6 +266,16 @@ const DESKTOP_SCHEMA = {
 };
 
 const WORKSTATION_SCHEMA = {
+    monitorPosition: { value: D.workstation.monitorPosition, step: 0.01 },
+    cabinetPosition: { value: D.workstation.cabinetPosition, step: 0.01 },
+    mousePosition: { value: D.workstation.mousePosition, step: 0.01 },
+    controllerPosition: { value: D.workstation.controllerPosition, step: 0.01 },
+    lampPosition: { value: D.workstation.lampPosition, step: 0.01 },
+    windowPosition: { value: D.workstation.windowPosition, step: 0.01 },
+    posterPosition: { value: D.workstation.posterPosition, step: 0.01 },
+    skateboardPosition: { value: D.workstation.skateboardPosition, step: 0.01 },
+    plantPosition: { value: D.workstation.plantPosition, step: 0.01 },
+    monitorYaw: { value: D.workstation.monitorYaw, min: -15, max: 15, step: 0.5 },
     keyboardPosition: { value: D.workstation.keyboardPosition, step: 0.001 },
     keyboardRotation: { value: D.workstation.keyboardRotation, step: 0.5 },
     keyboardScale: { value: D.workstation.keyboardScale, min: 0.5, max: 1.5, step: 0.01 },
@@ -277,24 +287,17 @@ const WORKSTATION_SCHEMA = {
 };
 
 const SCENE_FRAMING_SCHEMA = {
-    cameraOffset: {
-        value: D.sceneFraming.cameraOffset,
-        min: -5,
-        max: 5,
-        step: 0.01,
-    },
-    cameraRotation: {
-        value: D.sceneFraming.cameraRotation,
-        min: -45,
-        max: 45,
-        step: 0.25,
-    },
-    cameraFov: {
-        value: D.sceneFraming.cameraFov,
-        min: 20,
-        max: 100,
-        step: 0.5,
-    },
+    cameraEnd: { value: D.sceneFraming.cameraEnd, step: 0.01 },
+    cameraTarget: { value: D.sceneFraming.cameraTarget, step: 0.01 },
+    cameraCurve: { value: D.sceneFraming.cameraCurve, step: 0.01 },
+    arcStart: { value: D.sceneFraming.arcStart, min: 0, max: 0.6, step: 0.01 },
+};
+
+const LIGHTING_SCHEMA = {
+    mode: { value: D.lighting.mode, options: ["day", "night"] },
+    windowLight: { value: D.lighting.windowLight, min: 0, max: 6, step: 0.1 },
+    lampLight: { value: D.lighting.lampLight, min: 0, max: 6, step: 0.1 },
+    fillLight: { value: D.lighting.fillLight, min: 0, max: 2, step: 0.05 },
 };
 
 /**
@@ -316,6 +319,7 @@ export default function DebugPanel({
     const edgeFade = useControls("Curl edge fade", EDGE_FADE_SCHEMA);
     const scrollBlur = useControls("Scroll blur", SCROLL_BLUR_SCHEMA);
     const desktop = useControls("CRT desktop", DESKTOP_SCHEMA);
+    const lighting = useControls("Environment lighting", LIGHTING_SCHEMA);
     const workstation = useControls("Workstation", WORKSTATION_SCHEMA);
     const sceneFraming = useControls("3D scene framing", SCENE_FRAMING_SCHEMA);
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
@@ -332,6 +336,7 @@ export default function DebugPanel({
             edgeFade,
             scrollBlur,
             desktop,
+            lighting: { ...lighting, mode: lighting.mode as DebugSettings["lighting"]["mode"] },
             workstation,
             sceneFraming,
             headerExclusion,
@@ -348,6 +353,7 @@ export default function DebugPanel({
         edgeFade,
         scrollBlur,
         desktop,
+        lighting,
         workstation,
         sceneFraming,
         headerExclusion,

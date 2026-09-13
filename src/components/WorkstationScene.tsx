@@ -42,6 +42,7 @@ import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { CRTMonitor } from "./CRTMonitor";
+import { createWorkstationCameraPath } from "@/lib/workstationFrame";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
   CRTDisplay,
@@ -147,7 +148,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     throw new Error("The workstation scene requires a perspective camera");
   }
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { scrollBlur: scroll, desktop, sceneFraming } = useDebugSettings();
+  const settings = useDebugSettings();
+  const { scrollBlur: scroll, desktop } = settings;
   const { inputMode, layoutMode, qualityTier } = useSceneCapabilities();
   const { theme, setTheme } = useTheme();
   const pageGroupRef = useRef<THREE.Group>(null);
@@ -275,6 +277,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       CONFIG.workstation.PLANE_ASPECT,
   );
   const planeHeight = planeWidth / CONFIG.workstation.PLANE_ASPECT;
+  const cameraPath = useMemo(
+    () => createWorkstationCameraPath(crtFrame, settings, planeWidth, size.width / size.height),
+    [crtFrame, settings, planeWidth, size.width, size.height],
+  );
+  const cameraTarget = useMemo(() => new THREE.Vector3(), []);
   const desktopGeometry = useMemo(
     () => createPlaneGeometry(planeWidth, planeHeight),
     [planeWidth, planeHeight],
@@ -1073,51 +1080,14 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       );
       htmlOverlayHiddenRef.current = hideHtmlOverlays;
     }
-    const planeZ = CONFIG.workstation.PLANE_Z;
-    const restZ = CONFIG.scene.CAMERA_REST_Z;
     const cameraProgress = THREE.MathUtils.clamp(
       (reveal - CONFIG.workstation.CRT_MORPH_END) /
-        (1 - CONFIG.workstation.CRT_MORPH_END),
-      0,
-      1,
+        (1 - CONFIG.workstation.CRT_MORPH_END), 0, 1,
     );
-    const cameraFov = THREE.MathUtils.lerp(
-      CONFIG.scene.CAMERA_FOV,
-      sceneFraming.cameraFov,
-      cameraProgress,
-    );
-    if (camera.fov !== cameraFov) {
-      camera.fov = cameraFov;
-      camera.updateProjectionMatrix();
-    }
-    const restDistance = restZ - planeZ;
-    const restHeight =
-      2 *
-      Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
-      restDistance;
-    const restWidth = restHeight * camera.aspect;
-    const fit = Math.max(
-      1,
-      planeWidth / (restWidth * CONFIG.workstation.REVEAL_CAMERA_FILL),
-      planeHeight / (restHeight * CONFIG.workstation.REVEAL_CAMERA_FILL),
-    );
-    const targetZ = planeZ + restDistance * fit;
-
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
-      camera.position.set(
-        sceneFraming.cameraOffset.x * cameraProgress,
-        (
-          CONFIG.workstation.WORKSTATION_CAMERA_Y * planeWidth / crtFrame.screenWidth +
-          sceneFraming.cameraOffset.y
-        ) * cameraProgress,
-        THREE.MathUtils.lerp(restZ, targetZ, cameraProgress) +
-          sceneFraming.cameraOffset.z * cameraProgress,
-      );
-      camera.rotation.set(
-        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.x) * cameraProgress,
-        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.y) * cameraProgress,
-        THREE.MathUtils.degToRad(sceneFraming.cameraRotation.z) * cameraProgress,
-      );
+      cameraPath.sample(cameraProgress, camera.position, cameraTarget);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(cameraTarget);
       camera.updateMatrixWorld();
     }
 
@@ -1363,6 +1333,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     surfaceGroupRef.current.visible = false;
     pageGroupRef.current.visible = true;
     captureCamera.position.set(0, 0, CONFIG.scene.CAMERA_REST_Z);
+    captureCamera.rotation.set(0, 0, 0);
     captureCamera.layers.enable(HEADER_LAYER);
     captureCamera.layers.enable(THEME_SWEEP_LAYER);
     captureCamera.updateMatrixWorld();
