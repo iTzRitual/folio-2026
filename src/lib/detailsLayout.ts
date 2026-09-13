@@ -173,6 +173,7 @@ function calculateWideDetailsLayout({
         experience: [...DETAILS_SECTION_CONTENT.experience.wideLines],
         skills: [...DETAILS_SECTION_CONTENT.skills.wideLines],
         projects: [...DETAILS_SECTION_CONTENT.projects.wideLines],
+        achievements: [...DETAILS_SECTION_CONTENT.achievements.wideLines],
         education: [...DETAILS_SECTION_CONTENT.education.wideLines],
         courses: [...DETAILS_SECTION_CONTENT.courses.wideLines],
     };
@@ -180,6 +181,7 @@ function calculateWideDetailsLayout({
     const lineHeights: Record<DetailsListSectionKey, number> = {
         experience: bodyLineHeight,
         projects: projectLineHeight,
+        achievements: bodyLineHeight,
         education: bodyLineHeight,
         courses: bodyLineHeight,
         skills: bodyLineHeight,
@@ -346,6 +348,9 @@ function calculateNarrowDetailsLayout({
         ),
         skills: [...DETAILS_SECTION_CONTENT.skills.narrowLines],
         projects: [...DETAILS_SECTION_CONTENT.projects.narrowLines],
+        achievements: wrapItems(
+            DETAILS_SECTION_CONTENT.achievements.narrowLines,
+        ),
         education: wrapItems(
             DETAILS_SECTION_CONTENT.education.narrowLines,
         ),
@@ -394,6 +399,7 @@ function calculateNarrowDetailsLayout({
     cursor += modelInterludeHeight + sectionGap;
 
     place("projects", projectsData.length, projectLineHeight);
+    place("achievements", sectionLines.achievements.length, bodyLineHeight);
     place("education", sectionLines.education.length, bodyLineHeight);
     place("courses", sectionLines.courses.length, bodyLineHeight);
 

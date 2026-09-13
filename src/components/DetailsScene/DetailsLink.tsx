@@ -257,8 +257,12 @@ export function DetailsLink({
   const finishPress = (event: ThreeEvent<PointerEvent>) => {
     const press = pressRef.current;
     if (press.startedAt === null || press.opened) return;
-    if (event.button !== 0 || caseStudyIndex === undefined) return;
+    if (event.button !== 0) return;
     event.stopPropagation();
+    if (caseStudyIndex === undefined) {
+      twinRef.current?.click();
+      return;
+    }
     openCaseStudy(caseStudyIndex);
   };
 

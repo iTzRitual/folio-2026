@@ -205,6 +205,13 @@ export const educationData = [
     },
 ] as const;
 
+export const achievementsData = [
+    {
+        name: "micro1 Frontier Engineering Challenge 2026 / Recognized Submission — Top 50",
+        link: "https://github.com/iTzRitual/blackhole-micro1-hackereath",
+    },
+] as const;
+
 export const coursesData = [
     {
         title: "Animations on the Web - Advanced Interactions",

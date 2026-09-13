@@ -2,6 +2,7 @@ import Image from "next/image";
 import {
     bioData,
     bioImage,
+    achievementsData,
     educationData,
     coursesData,
     experienceData,
@@ -48,6 +49,30 @@ export function NoJsDetails() {
                                 className="underline decoration-(--text-hint) underline-offset-4 transition-colors hover:text-(--text-primary)"
                             >
                                 {item.name}
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="w-full border-b border-(--border) pb-2 text-left text-3xl font-black text-(--text-primary)">
+                    {DETAILS_SECTION_HEADINGS.achievements}
+                </h3>
+                <ul className="mt-4 space-y-3">
+                    {achievementsData.map((achievement) => (
+                        <li
+                            key={achievement.name}
+                            className="text-left text-lg leading-relaxed font-karla text-(--text-body)"
+                        >
+                            -{" "}
+                            <a
+                                href={achievement.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline decoration-(--text-hint) underline-offset-4 transition-colors hover:text-(--text-primary)"
+                            >
+                                {achievement.name}
                             </a>
                         </li>
                     ))}

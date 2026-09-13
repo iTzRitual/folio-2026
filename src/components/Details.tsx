@@ -16,6 +16,7 @@ import {
 import { BioSection } from "./DetailsScene/BioSection";
 import {
   projectsData,
+  achievementsData,
   DEFAULT_BIO_VARIANT,
   type BioVariant,
 } from "@/data/content";
@@ -84,6 +85,7 @@ export function Details({
 
   const experienceHeadingRef = useRef<Group>(null);
   const projectsHeadingRef = useRef<Group>(null);
+  const achievementsHeadingRef = useRef<Group>(null);
   const educationHeadingRef = useRef<Group>(null);
   const coursesHeadingRef = useRef<Group>(null);
   const skillsHeadingRef = useRef<Group>(null);
@@ -196,6 +198,7 @@ export function Details({
 
     stickHeading(experienceHeadingRef.current, "experience");
     stickHeading(projectsHeadingRef.current, "projects");
+    stickHeading(achievementsHeadingRef.current, "achievements");
     stickHeading(educationHeadingRef.current, "education");
     stickHeading(coursesHeadingRef.current, "courses");
     if (layoutMode === "narrow") {
@@ -310,6 +313,15 @@ export function Details({
     [layout.sectionLines.education],
   );
 
+  const achievementItems: DetailsSectionItem[] = useMemo(
+    () =>
+      achievementsData.map((achievement, index) => ({
+        text: layout.sectionLines.achievements[index],
+        href: achievement.link,
+      })),
+    [layout.sectionLines.achievements],
+  );
+
   const coursesItems: DetailsSectionItem[] = useMemo(
     () => layout.sectionLines.courses.map((text) => ({ text })),
     [layout.sectionLines.courses],
@@ -379,6 +391,21 @@ export function Details({
         staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
         {...shared}
         bodyLineHeight={layout.projectLineHeight * pxTo3DHeight}
+      />
+
+      <DetailsSection
+        heading={DETAILS_SECTION_HEADINGS.achievements}
+        items={achievementItems}
+        headingX={leftX}
+        headingY={sectionY("achievements").headingY}
+        bodyX={bodyColumnX}
+        bodyY={sectionY("achievements").bodyY}
+        bodyAnchorX="left"
+        direction="leftToRight"
+        startTrigger={startTrigger && !!revealed.achievements}
+        headingGroupRef={achievementsHeadingRef}
+        staggerStep={CONFIG.detailsTimings.BODY_STAGGER_STEP}
+        {...shared}
       />
 
       <DetailsSection
