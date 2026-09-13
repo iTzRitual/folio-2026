@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "file": "turntable.glb",
+  "sha256": "07e503f75c9dcab1fc86bdae1508a6bd014dc876c4c91b9bff23685b7bd6b648",
+  "bytes": 890380,
+  "rendered_triangles": 38570,
+  "mesh_nodes": 62,
+  "materials": 8,
+  "embedded_images": 1,
+  "external_resources": 0,
+  "lights": 0,
+  "cameras": 0,
+  "acrylic_alpha_mode": "BLEND",
+  "acrylic_single_sided": true,
+  "closed_dimensions_m": {
+    "width": 0.359499990940094,
+    "depth": 0.3733399957418442,
+    "height": 0.09749999642372131
+  },
+  "bottom_contact_y_m": 0.0,
+  "production_copy_identical": true,
+  "named_components_present": true,
+  "unit_scales": true
+}

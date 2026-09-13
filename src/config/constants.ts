@@ -101,6 +101,10 @@ export const CONFIG = {
     workstation: {
         CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd-closed-badge",
         KEYBOARD_MODEL_URL: "/glbs/keyboard.glb",
+        TURNTABLE_MODEL_URL: "/glbs/turntable.glb",
+        TURNTABLE_POSITION: { x: 0.635, y: 0, z: -0.32 },
+        TURNTABLE_ROTATION: { x: 0, y: -3, z: 0 },
+        TURNTABLE_SCALE: 1,
         DESK_MODEL_URL: "/glbs/workstation-desk.glb",
         KEYBOARD_POSITION: { x: 0.008, y: 0, z: 0.17 },
         KEYBOARD_ROTATION: { x: 0, y: -2, z: 0 },

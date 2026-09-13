@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "blender_version": "5.2.1 LTS",
+  "blender_import_axis": "Z up, -Y front",
+  "closed_dimensions_m": [
+    0.359499990940094,
+    0.3733399957418442,
+    0.09749999642372131
+  ],
+  "open_bounds_m": {
+    "min": [
+      -0.179749995470047,
+      -0.18669000267982483,
+      0.0
+    ],
+    "max": [
+      0.179749995470047,
+      0.22114332020282745,
+      0.3824216425418854
+    ]
+  },
+  "closed_bounds_m": {
+    "min": [
+      -0.179749995470047,
+      -0.18669000267982483,
+      0.0
+    ],
+    "max": [
+      0.179749995470047,
+      0.18664999306201935,
+      0.09749999642372131
+    ]
+  },
+  "mesh_objects": 62,
+  "materials": 8,
+  "packed_images": 1,
+  "cover_pivot_preserved": true,
+  "cover_alpha_preserved": true,
+  "bottom_contact_preserved": true,
+  "cameras": 0,
+  "lights": 0
+}

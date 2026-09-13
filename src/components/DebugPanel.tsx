@@ -269,6 +269,9 @@ const WORKSTATION_SCHEMA = {
     keyboardPosition: { value: D.workstation.keyboardPosition, step: 0.001 },
     keyboardRotation: { value: D.workstation.keyboardRotation, step: 0.5 },
     keyboardScale: { value: D.workstation.keyboardScale, min: 0.5, max: 1.5, step: 0.01 },
+    turntablePosition: { value: D.workstation.turntablePosition, step: 0.001 },
+    turntableRotation: { value: D.workstation.turntableRotation, step: 0.5 },
+    turntableScale: { value: D.workstation.turntableScale, min: 0.5, max: 1.5, step: 0.01 },
     deskPosition: { value: D.workstation.deskPosition, step: 0.001 },
     deskScale: { value: D.workstation.deskScale, min: 0.5, max: 6, step: 0.01 },
 };

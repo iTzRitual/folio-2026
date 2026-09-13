@@ -1,0 +1,32 @@
+{
+  "product": "Audio-Technica AT-LP60X black, non-Bluetooth",
+  "units": "meters",
+  "axis": "X right, Y up, +Z front",
+  "closed_bounds_m": {
+    "min": [
+      -0.179749995470047,
+      0.0,
+      -0.18664999306201935
+    ],
+    "max": [
+      0.179749995470047,
+      0.09749999642372131,
+      0.18664999306201935
+    ]
+  },
+  "open_bounds_m": {
+    "min": [
+      -0.179749995470047,
+      0.0,
+      -0.22114332020282745
+    ],
+    "max": [
+      0.179749995470047,
+      0.3824216425418854,
+      0.18664999306201935
+    ]
+  },
+  "cover_angle_degrees": 65,
+  "mesh_objects": 45,
+  "materials": 7
+}

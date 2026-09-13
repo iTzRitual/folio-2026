@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-09-13",
+  "application": "folio-2026",
+  "url": "http://localhost:3001/",
+  "build": "Next.js production build",
+  "asset_sha256": "07e503f75c9dcab1fc86bdae1508a6bd014dc876c4c91b9bff23685b7bd6b648",
+  "checks": {
+    "production_scene_visually_inspected": true,
+    "viewport_1280x720": true,
+    "viewport_1440x900": true,
+    "viewport_1920x1080": true,
+    "complete_keyboard_and_turntable_framed": true,
+    "platter_and_tonearm_visible": true,
+    "screen_unobstructed": true,
+    "acrylic_transparency_visible": true,
+    "acrylic_diagonal_artifact_corrected": true,
+    "feet_and_contact_shadow_grounded": true,
+    "crt_power_off_and_on": true,
+    "crt_dock_opens_vscode": true,
+    "safari_restored_from_dock": true,
+    "scroll_return_to_portfolio": true,
+    "repeated_reveal": true,
+    "debug_transform_controls_present": true,
+    "debug_scale_changed_to_0_9_and_restored_to_1": true,
+    "contact_shadow_follows_debug_scale": true,
+    "production_console_errors": 0,
+    "npm_run_lint": true,
+    "npm_test": true,
+    "npm_run_build": true,
+    "npm_run_typecheck": true
+  },
+  "performance": {
+    "observation": "Existing Stats overlay showed 165 FPS in the production /debug scene at 1920x1080 with the turntable present, including after restoring scale 1.",
+    "limitation": "Single-machine visual observation, not a comparative or cross-device benchmark.",
+    "new_continuous_shadow_passes": 0,
+    "refractive_transmission_passes": 0
+  },
+  "existing_asset_sha256": {
+    "crt-monitor.glb": "dd80f7e530c38c3645a59258ce1daf689781050027f851eb8dfcd5abe8db041d",
+    "keyboard.glb": "bf54c885132a7ebc12c5966d1c61745df21f9e40ed8f3b2de358158a92be8838",
+    "workstation-desk.glb": "dc48717dfe4fa8aec2b441b44ced8fac08ba43ed9613a5996811eca2bc170271"
+  },
+  "notes": [
+    "The initial development hot reload requested the turntable before the first production copy existed; those development errors were resolved by exporting/copying and reloading. No errors from the production URL were observed.",
+    "Portrait framing retains the existing responsive camera and can crop the secondary prop; the requested desktop sizes show it completely.",
+    "The browser's native JPEG screenshot bytes are retained without image alteration."
+  ]
+}

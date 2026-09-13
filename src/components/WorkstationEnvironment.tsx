@@ -14,6 +14,7 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 export function WorkstationEnvironment({ width }: { width: number }) {
   const { scene: crt } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const { scene: keyboard } = useGLTF(CONFIG.workstation.KEYBOARD_MODEL_URL);
+  const { scene: turntable } = useGLTF(CONFIG.workstation.TURNTABLE_MODEL_URL);
   const { scene: desk } = useGLTF(CONFIG.workstation.DESK_MODEL_URL);
   const { workstation } = useDebugSettings();
   const { revealProgressRef } = useHeroTransition();
@@ -27,12 +28,13 @@ export function WorkstationEnvironment({ width }: { width: number }) {
     const frame = getCRTReferenceFrame(crt);
     const deskSize = new Box3().setFromObject(desk).getSize(new Vector3());
     const keyboardModel = keyboard.clone(true);
+    const turntableModel = turntable.clone(true);
     const deskModel = desk.clone(true);
     const shadowMonitor = crt.clone(true);
     for (const name of ["CRT_Screen", "CRT_Glass"]) {
       getRequiredObject(shadowMonitor, name).visible = false;
     }
-    for (const model of [keyboardModel, deskModel]) {
+    for (const model of [keyboardModel, turntableModel, deskModel]) {
       model.traverse(object => {
         if (object instanceof Mesh) object.raycast = () => null;
       });
@@ -41,20 +43,28 @@ export function WorkstationEnvironment({ width }: { width: number }) {
       ...frame,
       deskSize,
       keyboardModel,
+      turntableModel,
       deskModel,
       shadowMonitor,
     };
-  }, [crt, keyboard, desk]);
+  }, [crt, keyboard, turntable, desk]);
   const scale = width / resources.screenWidth;
   const { keyboardPosition, keyboardRotation, keyboardScale, deskPosition, deskScale } = workstation;
+  const { turntablePosition, turntableRotation, turntableScale } = workstation;
   const supportY = resources.supportY + deskPosition.y;
   const deskDepth = resources.deskSize.z * deskScale.z;
   const wallSize = CONFIG.workstation.WALL_SIZE;
   useEffect(() => {
     const capture = () => {
+      const shadowTurntable = resources.turntableModel.clone(true);
+      shadowTurntable.traverse(object => {
+        if (!(object instanceof Mesh)) return;
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        if (materials.every(material => material.transparent)) object.visible = false;
+      });
       shadow.capture(
         gl,
-        [resources.shadowMonitor, resources.keyboardModel.clone(true)],
+        [resources.shadowMonitor, resources.keyboardModel.clone(true), shadowTurntable],
         new Vector3(
           deskPosition.x,
           supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET,
@@ -132,6 +142,16 @@ export function WorkstationEnvironment({ width }: { width: number }) {
           MathUtils.degToRad(keyboardRotation.z),
         ]}
         scale={keyboardScale}
+      />
+      <primitive
+        object={resources.turntableModel}
+        position={[turntablePosition.x, supportY + turntablePosition.y, turntablePosition.z]}
+        rotation={[
+          MathUtils.degToRad(turntableRotation.x),
+          MathUtils.degToRad(turntableRotation.y),
+          MathUtils.degToRad(turntableRotation.z),
+        ]}
+        scale={turntableScale}
       />
       <mesh
         ref={shadowRef}

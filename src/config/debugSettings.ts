@@ -63,6 +63,9 @@ export interface DebugSettings {
     keyboardPosition: { x: number; y: number; z: number };
     keyboardRotation: { x: number; y: number; z: number };
     keyboardScale: number;
+    turntablePosition: { x: number; y: number; z: number };
+    turntableRotation: { x: number; y: number; z: number };
+    turntableScale: number;
     deskPosition: { x: number; y: number; z: number };
     deskScale: { x: number; y: number; z: number };
   };
@@ -136,6 +139,9 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     keyboardPosition: CONFIG.workstation.KEYBOARD_POSITION,
     keyboardRotation: CONFIG.workstation.KEYBOARD_ROTATION,
     keyboardScale: CONFIG.workstation.KEYBOARD_SCALE,
+    turntablePosition: CONFIG.workstation.TURNTABLE_POSITION,
+    turntableRotation: CONFIG.workstation.TURNTABLE_ROTATION,
+    turntableScale: CONFIG.workstation.TURNTABLE_SCALE,
     deskPosition: CONFIG.workstation.DESK_POSITION,
     deskScale: CONFIG.workstation.DESK_SCALE,
   },
