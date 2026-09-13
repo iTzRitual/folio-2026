@@ -84,13 +84,17 @@ export function WallProxies({ supportY }: { supportY: number }) {
   const s = CONFIG.workstation.WINDOW_SIZE;
   const wallZ = win.z - 0.07;
   const halfWall = CONFIG.workstation.WALL_SIZE.x / 2;
+  const cornerX = CONFIG.workstation.RIGHT_WALL_X;
+  const wallDepth = CONFIG.workstation.RIGHT_WALL_DEPTH;
+  const wallThickness = CONFIG.workstation.WALL_SIZE.z;
   const left = win.x - s.x / 2;
   const right = win.x + s.x / 2;
   const wall = "#777c76";
   return <group name="RoomBlockout">
     <group name="RearWallOpening" position={[0, supportY, 0]}>
       <Block size={[left + halfWall, 4, 0.12]} position={[(left - halfWall) / 2, 0.5, wallZ]} color={wall} />
-      <Block size={[halfWall - right, 4, 0.12]} position={[(halfWall + right) / 2, 0.5, wallZ]} color={wall} />
+      <Block size={[cornerX - right, 4, wallThickness]} position={[(cornerX + right) / 2, 0.5, wallZ]} color={wall} />
+      <Block name="RightSideWall" size={[wallThickness, CONFIG.workstation.WALL_SIZE.y, wallDepth]} position={[cornerX + wallThickness / 2, 0.5, wallZ + (wallDepth - wallThickness) / 2]} color={CONFIG.workstation.RIGHT_WALL_COLOR} />
       <Block size={[s.x, win.y - s.y / 2 + 1.5, 0.12]} position={[win.x, (win.y - s.y / 2 - 1.5) / 2, wallZ]} color={wall} />
       <Block size={[s.x, 2.5 - win.y - s.y / 2, 0.12]} position={[win.x, (2.5 + win.y + s.y / 2) / 2, wallZ]} color={wall} />
     </group>
