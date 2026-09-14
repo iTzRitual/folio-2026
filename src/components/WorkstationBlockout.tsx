@@ -1,7 +1,7 @@
 "use client";
 
-import { MathUtils } from "three";
-import { Text } from "@react-three/drei";
+import { MathUtils, SRGBColorSpace, type Texture } from "three";
+import { useTexture } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
@@ -13,8 +13,29 @@ type Point = { x: number; y: number; z: number };
 const charcoal = "#282d30";
 const bone = "#b9b4a7";
 const noRaycast = () => null;
+const configureArtworkTextures = (textures: Texture[]) => {
+  for (const texture of textures) texture.colorSpace = SRGBColorSpace;
+};
 
 const xyz = (p: Point, y: number): [number, number, number] => [p.x, p.y + y, p.z];
+
+function FramedArtwork({ name, position, size, rotation, texture }: {
+  name: string;
+  position: [number, number, number];
+  size: { x: number; y: number };
+  rotation: number;
+  texture: Texture;
+}) {
+  const border = 0.014;
+  return <group name={name} position={position} rotation={[0, 0, MathUtils.degToRad(rotation)]}>
+    <Block size={[size.x, size.y, 0.014]} color="#252928" />
+    <Block size={[size.x - border, size.y - border, 0.003]} position={[0, 0, 0.009]} color={bone} />
+    <mesh position={[0, 0, 0.012]} raycast={noRaycast}>
+      <planeGeometry args={[size.x - border * 2, size.y - border * 2]} />
+      <meshStandardMaterial map={texture} roughness={0.88} envMapIntensity={0.08} />
+    </mesh>
+  </group>;
+}
 
 export function DesktopProxies({ supportY }: { supportY: number }) {
   const { workstation: w, lighting } = useDebugSettings();
@@ -80,6 +101,10 @@ export function MusicCabinet({ supportY, children }: { supportY: number; childre
 
 export function WallProxies({ supportY }: { supportY: number }) {
   const { workstation: w, lighting } = useDebugSettings();
+  const [portraitArtwork, ronaldoArtwork] = useTexture([
+    CONFIG.workstation.ARTWORK_PORTRAIT_URL,
+    CONFIG.workstation.ARTWORK_RONALDO_URL,
+  ], configureArtworkTextures);
   const win = w.windowPosition;
   const s = CONFIG.workstation.WINDOW_SIZE;
   const wallZ = win.z - 0.07;
@@ -113,13 +138,20 @@ export function WallProxies({ supportY }: { supportY: number }) {
       <Block size={[s.x, 0.13, 0.02]} position={[0, -0.3, -0.1]} color={lighting.mode === "day" ? "#758d83" : "#273d46"} />
     </group>
     <PersonalProps supportY={supportY} />
-    <group name="BandPoster" position={xyz(w.posterPosition, supportY)}>
-      <Block size={[CONFIG.workstation.POSTER_SIZE.x, CONFIG.workstation.POSTER_SIZE.y, 0.018]} color={bone} />
-      <Block size={[CONFIG.workstation.POSTER_SIZE.x - 0.02, CONFIG.workstation.POSTER_SIZE.y - 0.02, 0.003]} position={[0, 0, 0.011]} color="#222725" />
-      <Text position={[-0.22, 0.36, 0.015]} fontSize={0.063} lineHeight={0.95} color="#b9b09a" anchorX="left" anchorY="top" raycast={noRaycast}>{"THE\n  PRODIGY"}</Text>
-      <Block size={[0.22, 0.26, 0.003]} position={[0, -0.02, 0.015]} rotation={[0, 0, Math.PI / 4]} color="#51594e" />
-      <Text position={[-0.22, -0.29, 0.015]} fontSize={0.022} lineHeight={1.15} color="#b9b09a" anchorX="left" anchorY="top" raycast={noRaycast}>{"MUSIC\nPEOPLE\nTECHNOLOGY"}</Text>
-    </group>
+    <FramedArtwork
+      name="PortraitArtwork"
+      position={xyz(w.portraitArtworkPosition, supportY)}
+      size={CONFIG.workstation.ARTWORK_PORTRAIT_SIZE}
+      rotation={CONFIG.workstation.ARTWORK_ROTATION.portrait}
+      texture={portraitArtwork}
+    />
+    <FramedArtwork
+      name="RonaldoArtwork"
+      position={xyz(w.ronaldoArtworkPosition, supportY)}
+      size={CONFIG.workstation.ARTWORK_RONALDO_SIZE}
+      rotation={CONFIG.workstation.ARTWORK_ROTATION.ronaldo}
+      texture={ronaldoArtwork}
+    />
     <group name="WallSkateboard" position={xyz(w.skateboardPosition, supportY)} rotation={[0, 0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.skateboard)]}>
       <Block size={[CONFIG.workstation.SKATEBOARD_SIZE.width, CONFIG.workstation.SKATEBOARD_SIZE.length - CONFIG.workstation.SKATEBOARD_SIZE.width, CONFIG.workstation.SKATEBOARD_SIZE.thickness]} color="#514d40" />
       {[-1, 1].map(side => <group key={side}>

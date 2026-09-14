@@ -87,11 +87,11 @@ export interface DebugSettings {
     controllerPosition: { x: number; y: number; z: number };
     lampPosition: { x: number; y: number; z: number };
     windowPosition: { x: number; y: number; z: number };
-    posterPosition: { x: number; y: number; z: number };
+    portraitArtworkPosition: { x: number; y: number; z: number };
+    ronaldoArtworkPosition: { x: number; y: number; z: number };
     skateboardPosition: { x: number; y: number; z: number };
     plantPosition: { x: number; y: number; z: number };
     polaroidsPosition: { x: number; y: number; z: number };
-    floorPlantPosition: { x: number; y: number; z: number };
     energyCanPosition: { x: number; y: number; z: number };
     leftSpeakerPosition: { x: number; y: number; z: number };
     rightSpeakerPosition: { x: number; y: number; z: number };
@@ -201,11 +201,11 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     controllerPosition: CONFIG.workstation.CONTROLLER_POSITION,
     lampPosition: CONFIG.workstation.LAMP_POSITION,
     windowPosition: CONFIG.workstation.WINDOW_POSITION,
-    posterPosition: CONFIG.workstation.POSTER_POSITION,
+    portraitArtworkPosition: CONFIG.workstation.ARTWORK_PORTRAIT_POSITION,
+    ronaldoArtworkPosition: CONFIG.workstation.ARTWORK_RONALDO_POSITION,
     skateboardPosition: CONFIG.workstation.SKATEBOARD_POSITION,
     plantPosition: CONFIG.workstation.PLANT_POSITION,
     polaroidsPosition: CONFIG.workstation.POLAROIDS_POSITION,
-    floorPlantPosition: CONFIG.workstation.FLOOR_PLANT_POSITION,
     energyCanPosition: CONFIG.workstation.ENERGY_CAN_POSITION,
     leftSpeakerPosition: CONFIG.workstation.LEFT_SPEAKER_POSITION,
     rightSpeakerPosition: CONFIG.workstation.RIGHT_SPEAKER_POSITION,

@@ -85,6 +85,7 @@ for (const name of ["CRT_Housing", "CRT_RearCasing", "CRT_RearPowerInlet", "CRT_
 assert(Math.abs(kb.min.y - db.max.y) < 1e-6, "Keyboard rests on desk");
 assert(Math.abs(bounds(crt.getObjectByName("CRT_Stand")).min.y - db.max.y) < 1e-6, "Rotated monitor rests on desk");
 assert(Math.abs(tb.min.y - frame.supportY - C.CABINET_POSITION.y) < 1e-6, "Turntable rests on cabinet");
+assert(Math.abs(db.max.x - C.RIGHT_WALL_X) < 1e-6, "Continuous desktop reaches the right wall");
 assert(!tb.intersectsBox(mb) && !tb.intersectsBox(kb), "Turntable clears monitor and keyboard");
 assert(!mb.intersectsBox(kb), "Keyboard clears monitor");
 for (const axis of ["x", "z"]) {
@@ -135,6 +136,18 @@ for (let y = 0; y < 10; y++) {
   assert(p.x > cabinetRight, "Record stays outside cabinet below support rim");
 }
 const reports = [];
+const boardRightX = C.SKATEBOARD_POSITION.x + C.SKATEBOARD_SIZE.length / 2;
+const artworks = [
+  [C.ARTWORK_PORTRAIT_POSITION, C.ARTWORK_PORTRAIT_SIZE, C.ARTWORK_ROTATION.portrait],
+  [C.ARTWORK_RONALDO_POSITION, C.ARTWORK_RONALDO_SIZE, C.ARTWORK_ROTATION.ronaldo],
+];
+for (const [position, size, rotation] of artworks) {
+  const radians = THREE.MathUtils.degToRad(rotation);
+  const halfWidth = (Math.abs(size.x * Math.cos(radians)) + Math.abs(size.y * Math.sin(radians))) / 2;
+  assert(position.x - halfWidth > boardRightX, "Framed artworks clear the skateboard");
+  assert(position.x + halfWidth < C.RIGHT_WALL_X, "Framed artworks stay clear of the room corner");
+}
+assert(C.ARTWORK_ROTATION.portrait * C.ARTWORK_ROTATION.ronaldo < 0, "Framed artworks retain a casual opposing tilt");
 assert.equal(workstationCameraProgress(1, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT, "Maximum zoom out caps the displayed camera path");
 assert.equal(workstationCameraProgress(0.5, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT / 2, "Zoom-out control preserves the full scroll range");
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
@@ -162,9 +175,8 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const project = p => p.clone().applyMatrix4(toScreen).multiplyScalar(scale).add(new THREE.Vector3(0, 0, C.PLANE_Z)).project(camera);
   const corners = [-1, 1].map(side => project(new THREE.Vector3(C.DESK_POSITION.x + side * (db.max.x - db.min.x) / 2, db.max.y, db.max.z)));
   assert(Math.abs(corners[0].y - corners[1].y) < 1e-8, "Desk front edge is horizontal");
-  const boardRight = project(new THREE.Vector3(C.SKATEBOARD_POSITION.x + C.SKATEBOARD_SIZE.length / 2, frame.supportY + C.SKATEBOARD_POSITION.y, C.SKATEBOARD_POSITION.z));
-  const posterLeft = project(new THREE.Vector3(C.POSTER_POSITION.x - C.POSTER_SIZE.x / 2, frame.supportY + C.SKATEBOARD_POSITION.y, C.POSTER_POSITION.z));
-  assert(posterLeft.x - boardRight.x > 0.04, "Skateboard and poster have visible separation");
+  const artworkCenters = artworks.map(([position]) => project(new THREE.Vector3(position.x, frame.supportY + position.y, position.z)));
+  if (width > 1000) assert(artworkCenters.every(center => Math.abs(center.x) < 1 && Math.abs(center.y) < 1), "Both framed artworks remain visible");
   const screenCenter = project(localScreen.clone().applyMatrix4(monitorTransform));
   assert(Math.abs(screenCenter.x) < 0.8 && Math.abs(screenCenter.y) < 0.8, "CRT remains in frame");
   reports.push({ viewport: [width, height], screenCenter: screenCenter.toArray() });

@@ -267,7 +267,6 @@ const DESKTOP_SCHEMA = {
 
 const WORKSTATION_SCHEMA = {
     polaroidsPosition: { value: D.workstation.polaroidsPosition, step: 0.01 },
-    floorPlantPosition: { value: D.workstation.floorPlantPosition, step: 0.01 },
     energyCanPosition: { value: D.workstation.energyCanPosition, step: 0.01 },
     leftSpeakerPosition: { value: D.workstation.leftSpeakerPosition, step: 0.01 },
     rightSpeakerPosition: { value: D.workstation.rightSpeakerPosition, step: 0.01 },
@@ -280,7 +279,8 @@ const WORKSTATION_SCHEMA = {
     controllerPosition: { value: D.workstation.controllerPosition, step: 0.01 },
     lampPosition: { value: D.workstation.lampPosition, step: 0.01 },
     windowPosition: { value: D.workstation.windowPosition, step: 0.01 },
-    posterPosition: { value: D.workstation.posterPosition, step: 0.01 },
+    portraitArtworkPosition: { value: D.workstation.portraitArtworkPosition, step: 0.01 },
+    ronaldoArtworkPosition: { value: D.workstation.ronaldoArtworkPosition, step: 0.01 },
     skateboardPosition: { value: D.workstation.skateboardPosition, step: 0.01 },
     plantPosition: { value: D.workstation.plantPosition, step: 0.01 },
     monitorYaw: { value: D.workstation.monitorYaw, min: -15, max: 15, step: 0.5 },
