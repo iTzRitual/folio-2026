@@ -65,6 +65,18 @@ export interface DebugSettings {
     arcStart: number;
     finalFov: number;
   };
+  pointerCamera: {
+    enabled: boolean;
+    horizontalStrength: number;
+    verticalStrength: number;
+    focusDepth: number;
+    smoothTime: number;
+    returnDuration: number;
+    deadzone: number;
+    revealStart: number;
+    revealFull: number;
+    scrollAttenuation: number;
+  };
   headerExclusion: { strength: number; threshold: number; softness: number };
   lighting: { mode: "day" | "night"; windowLight: number; lampLight: number; fillLight: number };
   workstation: {
@@ -167,6 +179,18 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     finalFov: CONFIG.workstation.CAMERA_FINAL_FOV,
   },
   lighting: { mode: CONFIG.workstation.LIGHTING_MODE, windowLight: CONFIG.workstation.WINDOW_LIGHT, lampLight: CONFIG.workstation.LAMP_LIGHT, fillLight: CONFIG.workstation.FILL_LIGHT },
+  pointerCamera: {
+    enabled: CONFIG.pointerCamera.ENABLED,
+    horizontalStrength: CONFIG.pointerCamera.HORIZONTAL_STRENGTH,
+    verticalStrength: CONFIG.pointerCamera.VERTICAL_STRENGTH,
+    focusDepth: CONFIG.pointerCamera.FOCUS_DEPTH,
+    smoothTime: CONFIG.pointerCamera.SMOOTH_TIME,
+    returnDuration: CONFIG.pointerCamera.RETURN_DURATION,
+    deadzone: CONFIG.pointerCamera.DEADZONE,
+    revealStart: CONFIG.pointerCamera.REVEAL_START,
+    revealFull: CONFIG.pointerCamera.REVEAL_FULL,
+    scrollAttenuation: CONFIG.pointerCamera.SCROLL_ATTENUATION,
+  },
   headerExclusion: { strength: 1, threshold: 0.05, softness: 0.15 },
   workstation: {
     monitorPosition: CONFIG.workstation.MONITOR_POSITION,

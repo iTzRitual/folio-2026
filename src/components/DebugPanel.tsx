@@ -302,6 +302,19 @@ const SCENE_FRAMING_SCHEMA = {
     arcStart: { value: D.sceneFraming.arcStart, min: 0, max: 0.6, step: 0.01 },
 };
 
+const POINTER_CAMERA_SCHEMA = {
+    enabled: D.pointerCamera.enabled,
+    horizontalStrength: { value: D.pointerCamera.horizontalStrength, label: "Horizontal / focus", min: 0, max: 0.5, step: 0.01 },
+    verticalStrength: { value: D.pointerCamera.verticalStrength, label: "Vertical / focus", min: 0, max: 0.25, step: 0.005 },
+    focusDepth: { value: D.pointerCamera.focusDepth, label: "Focus depth", min: 0.25, max: 1, step: 0.05 },
+    smoothTime: { value: D.pointerCamera.smoothTime, label: "Smooth time (s)", min: 0.1, max: 2, step: 0.05 },
+    returnDuration: { value: D.pointerCamera.returnDuration, label: "Return target (s)", min: 0.1, max: 5, step: 0.1 },
+    deadzone: { value: D.pointerCamera.deadzone, min: 0, max: 0.2, step: 0.01 },
+    revealStart: { value: D.pointerCamera.revealStart, min: 0.5, max: 1, step: 0.01 },
+    revealFull: { value: D.pointerCamera.revealFull, min: 0.5, max: 1, step: 0.01 },
+    scrollAttenuation: { value: D.pointerCamera.scrollAttenuation, min: 0, max: 1, step: 0.05 },
+};
+
 const LIGHTING_SCHEMA = {
     mode: { value: D.lighting.mode, options: ["day", "night"] },
     windowLight: { value: D.lighting.windowLight, min: 0, max: 6, step: 0.1 },
@@ -331,6 +344,7 @@ export default function DebugPanel({
     const lighting = useControls("Environment lighting", LIGHTING_SCHEMA);
     const workstation = useControls("Workstation", WORKSTATION_SCHEMA);
     const sceneFraming = useControls("3D scene framing", SCENE_FRAMING_SCHEMA);
+    const pointerCamera = useControls("Pointer Camera", POINTER_CAMERA_SCHEMA, { collapsed: true });
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
     useEffect(() => {
@@ -348,6 +362,7 @@ export default function DebugPanel({
             lighting: { ...lighting, mode: lighting.mode as DebugSettings["lighting"]["mode"] },
             workstation,
             sceneFraming,
+            pointerCamera,
             headerExclusion,
         });
     }, [
@@ -365,6 +380,7 @@ export default function DebugPanel({
         lighting,
         workstation,
         sceneFraming,
+        pointerCamera,
         headerExclusion,
     ]);
 

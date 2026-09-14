@@ -2,7 +2,7 @@
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -43,6 +43,7 @@ import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { CRTMonitor } from "./CRTMonitor";
 import { createWorkstationCameraPath } from "@/lib/workstationFrame";
+import { applyPointerCamera, bindPointerCameraInput, createPointerCameraRuntime } from "@/lib/pointerCamera";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
   CRTDisplay,
@@ -142,7 +143,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     rightX,
   } = useHeroLayout();
   const { revealProgressRef } = useHeroTransition();
-  const { scrollVelocityRef } = useSceneMotion();
+  const { scrollVelocityRef, scrollSpeedRef } = useSceneMotion();
   const { camera, events, gl, scene, size } = useThree();
   if (!(camera instanceof THREE.PerspectiveCamera)) {
     throw new Error("The workstation scene requires a perspective camera");
@@ -282,6 +283,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     [crtFrame, settings, planeWidth, size.width, size.height],
   );
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
+  const pointerCamera = useMemo(createPointerCameraRuntime, []);
+  useLayoutEffect(
+    () => bindPointerCameraInput(pointerCamera, gl.domElement),
+    [pointerCamera, gl],
+  );
   const desktopGeometry = useMemo(
     () => createPlaneGeometry(planeWidth, planeHeight),
     [planeWidth, planeHeight],
@@ -1094,6 +1100,9 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       cameraPath.sample(cameraProgress, camera.position, cameraTarget);
       camera.up.set(0, 1, 0);
       camera.lookAt(cameraTarget);
+      applyPointerCamera(pointerCamera, camera, cameraTarget, settings.pointerCamera,
+        scrollReveal, scrollSpeedRef.current, delta,
+        inputMode === "fine" && !prefersReducedMotion);
       camera.updateMatrixWorld();
     }
 

@@ -20,6 +20,7 @@ type SceneMotionContextValue = {
   pointerVelocityRef: MutableRefObject<Vector2>;
   pointerIntensityRef: MutableRefObject<number>;
   scrollVelocityRef: MutableRefObject<number>;
+  scrollSpeedRef: MutableRefObject<number>;
 };
 
 const SceneMotionContext = createContext<SceneMotionContextValue | undefined>(
@@ -47,6 +48,7 @@ export function SceneMotionProvider({ children }: { children: ReactNode }) {
   const previousScrollYRef = useRef<number | null>(null);
   const targetScrollVelocityRef = useRef(0);
   const scrollVelocityRef = useRef(0);
+  const scrollSpeedRef = useRef(0);
 
   const value = useMemo(
     () => ({
@@ -54,6 +56,7 @@ export function SceneMotionProvider({ children }: { children: ReactNode }) {
       pointerVelocityRef,
       pointerIntensityRef,
       scrollVelocityRef,
+      scrollSpeedRef,
     }),
     [],
   );
@@ -102,6 +105,7 @@ export function SceneMotionProvider({ children }: { children: ReactNode }) {
         ? 0
         : scrollY - previousScrollYRef.current;
     previousScrollYRef.current = scrollY;
+    scrollSpeedRef.current = scrollDelta / (size.height * safeDelta);
 
     if (revealProgressRef.current > 0) {
       targetScrollVelocityRef.current *= Math.exp(
