@@ -295,7 +295,7 @@ const WORKSTATION_SCHEMA = {
 };
 
 const SCENE_FRAMING_SCHEMA = {
-    finalFov: { value: D.sceneFraming.finalFov, min: 35, max: 75, step: 1 },
+    maxZoomOut: { value: D.sceneFraming.maxZoomOut, label: "Maximum zoom out", min: 0, max: 1, step: 0.01 },
     cameraEnd: { value: D.sceneFraming.cameraEnd, step: 0.01 },
     cameraTarget: { value: D.sceneFraming.cameraTarget, step: 0.01 },
     cameraCurve: { value: D.sceneFraming.cameraCurve, step: 0.01 },
@@ -304,6 +304,7 @@ const SCENE_FRAMING_SCHEMA = {
 
 const POINTER_CAMERA_SCHEMA = {
     enabled: D.pointerCamera.enabled,
+    sensitivity: { value: D.pointerCamera.sensitivity, label: "Sensitivity", min: 0, max: 1.5, step: 0.05 },
     horizontalStrength: { value: D.pointerCamera.horizontalStrength, label: "Horizontal / focus", min: 0, max: 0.5, step: 0.01 },
     verticalStrength: { value: D.pointerCamera.verticalStrength, label: "Vertical / focus", min: 0, max: 0.25, step: 0.005 },
     focusDepth: { value: D.pointerCamera.focusDepth, label: "Focus depth", min: 0.25, max: 1, step: 0.05 },

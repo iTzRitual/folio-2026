@@ -63,10 +63,11 @@ export interface DebugSettings {
     cameraTarget: { x: number; y: number; z: number };
     cameraCurve: { x: number; y: number; z: number };
     arcStart: number;
-    finalFov: number;
+    maxZoomOut: number;
   };
   pointerCamera: {
     enabled: boolean;
+    sensitivity: number;
     horizontalStrength: number;
     verticalStrength: number;
     focusDepth: number;
@@ -176,11 +177,12 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     cameraTarget: CONFIG.workstation.CAMERA_TARGET,
     cameraCurve: CONFIG.workstation.CAMERA_CURVE,
     arcStart: CONFIG.workstation.CAMERA_ARC_START,
-    finalFov: CONFIG.workstation.CAMERA_FINAL_FOV,
+    maxZoomOut: CONFIG.workstation.CAMERA_MAX_ZOOM_OUT,
   },
   lighting: { mode: CONFIG.workstation.LIGHTING_MODE, windowLight: CONFIG.workstation.WINDOW_LIGHT, lampLight: CONFIG.workstation.LAMP_LIGHT, fillLight: CONFIG.workstation.FILL_LIGHT },
   pointerCamera: {
     enabled: CONFIG.pointerCamera.ENABLED,
+    sensitivity: CONFIG.pointerCamera.SENSITIVITY,
     horizontalStrength: CONFIG.pointerCamera.HORIZONTAL_STRENGTH,
     verticalStrength: CONFIG.pointerCamera.VERTICAL_STRENGTH,
     focusDepth: CONFIG.pointerCamera.FOCUS_DEPTH,

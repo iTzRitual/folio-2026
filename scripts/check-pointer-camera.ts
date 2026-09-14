@@ -72,7 +72,7 @@ for (let i = 0; i < 900; i++) {
   previous = edge.runtime.x;
 }
 const displacement = edge.camera.position.clone().sub(base.position);
-assert(Math.abs(displacement.length() / distance - 0.25 * settings.focusDepth * lensScale) < 1e-12);
+assert(Math.abs(displacement.length() / distance - settings.horizontalStrength * settings.sensitivity * settings.focusDepth * lensScale) < 1e-12);
 assert(displacement.clone().normalize().add(right).length() < 1e-12, "Camera translates left for a rightward pointer");
 const pivotProjection = pivot.clone().project(edge.camera);
 assert(Math.hypot(pivotProjection.x, pivotProjection.y) < 1e-12, "Nearer aim point stays fixed");
@@ -83,7 +83,7 @@ assert(foreground.project(edge.camera).x > 0, "Foreground and background have ge
 const vertical = run(60, 0, 1);
 vertical.advance(15);
 const verticalTravel = vertical.camera.position.clone().sub(base.position);
-assert(Math.abs(verticalTravel.length() / displacement.length() - 0.5) < 1e-12);
+assert(Math.abs(verticalTravel.length() / displacement.length() - settings.verticalStrength / settings.horizontalStrength) < 1e-12);
 assert(verticalTravel.clone().normalize().distanceTo(new Vector3(0, -1, 0)) < 1e-12,
   "Upward pointer lowers the camera while lookAt supplies pitch");
 assert(focus.clone().project(vertical.camera).y < 0);
@@ -150,7 +150,7 @@ referenceRuntime.x = 1;
 referenceRuntime.y = 1;
 referenceRuntime.pressed = true;
 applyPointerCamera(referenceRuntime, referenceCamera, referenceFocus, { ...settings, focusDepth: 1 }, 1, 0, 1 / 60, true);
-assert(referenceCamera.position.distanceTo(new Vector3(-0.25, 0.31348, 1.5383)) < 1e-12,
+assert(referenceCamera.position.distanceTo(new Vector3(-settings.horizontalStrength * settings.sensitivity, 0.43848 - settings.verticalStrength * settings.sensitivity, 1.5383)) < 1e-12,
   "Reference lens and aim distance reproduce Shopify's exact corner translation");
 
 const raycaster = new Raycaster();

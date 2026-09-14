@@ -17,7 +17,7 @@ function moduleFromSource(file, dependencies = {}) {
 }
 const { CONFIG } = moduleFromSource("src/config/constants.ts");
 const { getCRTReferenceFrame } = moduleFromSource("src/lib/crtScreen.ts", { three: THREE, "@/config/constants": { CONFIG } });
-const { workstationToScreen, createWorkstationCameraPath } = moduleFromSource("src/lib/workstationFrame.ts", { three: THREE, "@/config/constants": { CONFIG } });
+const { workstationToScreen, createWorkstationCameraPath, workstationCameraProgress } = moduleFromSource("src/lib/workstationFrame.ts", { three: THREE, "@/config/constants": { CONFIG } });
 function boundsModel(file) {
   const raw = readFileSync(path.join(root, file));
   const length = raw.readUInt32LE(12);
@@ -63,7 +63,7 @@ const frame = getCRTReferenceFrame(crt);
 const C = CONFIG.workstation;
 const point = p => new THREE.Vector3(p.x, p.y, p.z);
 const workstation = { monitorPosition: C.MONITOR_POSITION, monitorYaw: C.MONITOR_YAW, deskPosition: C.DESK_POSITION };
-const settings = { workstation, sceneFraming: { finalFov: C.CAMERA_FINAL_FOV, cameraEnd: C.CAMERA_END, cameraTarget: C.CAMERA_TARGET, cameraCurve: C.CAMERA_CURVE, arcStart: C.CAMERA_ARC_START } };
+const settings = { workstation, sceneFraming: { cameraEnd: C.CAMERA_END, cameraTarget: C.CAMERA_TARGET, cameraCurve: C.CAMERA_CURVE, arcStart: C.CAMERA_ARC_START, maxZoomOut: C.CAMERA_MAX_ZOOM_OUT } };
 const toScreen = workstationToScreen(frame, workstation);
 const monitorTransform = new THREE.Matrix4().makeTranslation(C.MONITOR_POSITION.x, C.MONITOR_POSITION.y + C.DESK_POSITION.y, C.MONITOR_POSITION.z)
   .multiply(new THREE.Matrix4().makeRotationY(THREE.MathUtils.degToRad(C.MONITOR_YAW)));
@@ -135,6 +135,8 @@ for (let y = 0; y < 10; y++) {
   assert(p.x > cabinetRight, "Record stays outside cabinet below support rim");
 }
 const reports = [];
+assert.equal(workstationCameraProgress(1, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT, "Maximum zoom out caps the displayed camera path");
+assert.equal(workstationCameraProgress(0.5, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT / 2, "Zoom-out control preserves the full scroll range");
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const camera = new THREE.PerspectiveCamera(CONFIG.scene.CAMERA_FOV, width / height, 0.1, 1000);
   const viewportHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * CONFIG.scene.CAMERA_REST_Z;
@@ -155,8 +157,6 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   }
   assert(position.distanceTo(new THREE.Vector3(0, 0, CONFIG.scene.CAMERA_REST_Z)) < 1e-10, "Initial portfolio camera preserved");
   route.sample(1, camera.position, target);
-  camera.fov = C.CAMERA_FINAL_FOV;
-  camera.updateProjectionMatrix();
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
   const project = p => p.clone().applyMatrix4(toScreen).multiplyScalar(scale).add(new THREE.Vector3(0, 0, C.PLANE_Z)).project(camera);

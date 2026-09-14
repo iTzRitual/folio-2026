@@ -42,7 +42,10 @@ import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
 import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { CRTMonitor } from "./CRTMonitor";
-import { createWorkstationCameraPath } from "@/lib/workstationFrame";
+import {
+  createWorkstationCameraPath,
+  workstationCameraProgress,
+} from "@/lib/workstationFrame";
 import { applyPointerCamera, bindPointerCameraInput, createPointerCameraRuntime } from "@/lib/pointerCamera";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
@@ -1086,17 +1089,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       );
       htmlOverlayHiddenRef.current = hideHtmlOverlays;
     }
-    const cameraProgress = THREE.MathUtils.clamp(
-      (reveal - CONFIG.workstation.CRT_MORPH_END) /
-        (1 - CONFIG.workstation.CRT_MORPH_END), 0, 1,
+    const cameraProgress = workstationCameraProgress(
+      reveal,
+      settings.sceneFraming.maxZoomOut,
     );
     if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
-      const fov = THREE.MathUtils.lerp(CONFIG.scene.CAMERA_FOV, settings.sceneFraming.finalFov,
-        THREE.MathUtils.smootherstep(cameraProgress, 0, 1));
-      if (camera.fov !== fov) {
-        camera.fov = fov;
-        camera.updateProjectionMatrix();
-      }
       cameraPath.sample(cameraProgress, camera.position, cameraTarget);
       camera.up.set(0, 1, 0);
       camera.lookAt(cameraTarget);

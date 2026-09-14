@@ -169,8 +169,8 @@ export function applyPointerCamera(
     Math.max(1, CONFIG.pointerCamera.REFERENCE_ASPECT / camera.aspect);
   const lensScale = Math.tan(MathUtils.degToRad(camera.fov) / 2) / referenceHalfHeight;
   const focusDistance = camera.position.distanceTo(focus) * settings.focusDepth;
-  const horizontal = -runtime.x * settings.horizontalStrength * focusDistance * lensScale * influence;
-  const vertical = -runtime.y * settings.verticalStrength * focusDistance * lensScale * influence;
+  const horizontal = -runtime.x * settings.horizontalStrength * settings.sensitivity * focusDistance * lensScale * influence;
+  const vertical = -runtime.y * settings.verticalStrength * settings.sensitivity * focusDistance * lensScale * influence;
   if (horizontal === 0 && vertical === 0) return;
 
   runtime.focus.copy(camera.position).lerp(focus, settings.focusDepth);
