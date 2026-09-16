@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "dimensions_m": [
+    0.06599999964237213,
+    0.06599999964237213,
+    0.1679999977350235
+  ],
+  "base_on_ground": true,
+  "meshes": 9,
+  "materials": 4,
+  "embedded_images": 1,
+  "image_size": [
+    1536,
+    1024
+  ],
+  "runtime_asset_matches": true
+}

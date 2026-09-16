@@ -1,7 +1,8 @@
 "use client";
 
-import { MathUtils, SRGBColorSpace } from "three";
-import { Text, useTexture } from "@react-three/drei";
+import { useMemo } from "react";
+import { MathUtils, Mesh, SRGBColorSpace } from "three";
+import { useGLTF, useTexture } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { Block, Cylinder } from "./WorkstationPrimitives";
@@ -10,6 +11,14 @@ const noRaycast = () => null;
 
 export function DeskCollectionProps({ supportY }: { supportY: number }) {
   const { workstation: w } = useDebugSettings();
+  const { scene: can } = useGLTF(CONFIG.workstation.ENERGY_CAN_MODEL_URL);
+  const canModel = useMemo(() => {
+    const model = can.clone(true);
+    model.traverse(object => {
+      if (object instanceof Mesh) object.raycast = noRaycast;
+    });
+    return model;
+  }, [can]);
   const artwork = useTexture(CONFIG.workstation.RECORD_COVER_URL, texture => { texture.colorSpace = SRGBColorSpace; });
   const position = (p: { x: number; y: number; z: number }): [number, number, number] => [p.x, supportY + p.y, p.z];
   const speaker = CONFIG.workstation.SPEAKER_SIZE;
@@ -38,16 +47,8 @@ export function DeskCollectionProps({ supportY }: { supportY: number }) {
       <Cylinder radius={0.016} height={0.008} position={[0, 0.177, speaker.z / 2 + 0.01]} rotation={[Math.PI / 2, 0, 0]} color="#767b70" />
       <Cylinder radius={0.009} height={0.011} position={[0, 0.177, speaker.z / 2 + 0.015]} rotation={[Math.PI / 2, 0, 0]} color="#242a27" />
     </group>)}
-    <group name="MonsterEnergyCan" position={position(w.energyCanPosition)} rotation={[0, -0.12, 0]}>
-      <Cylinder radius={0.033} height={0.164} position={[0, 0.084, 0]} color="#202722" />
-      {[0.003, 0.167].map(y => <Cylinder key={y} radius={0.032} height={0.006} position={[0, y, 0]} color="#a0aaa4" />)}
-      <Block size={[0.01, 0.002, 0.018]} position={[0, 0.172, -0.004]} color="#4d5751" />
-      {[-1, 0, 1].map(i => <group key={i} position={[i * 0.01, 0.107, 0.032]}>
-        <Block size={[0.004, 0.042, 0.002]} rotation={[0, 0, -0.14]} color="#85b944" />
-        <Block size={[0.004, 0.026, 0.002]} position={[-0.002, -0.03, 0]} rotation={[0, 0, 0.2]} color="#85b944" />
-      </group>)}
-      <Text position={[0, 0.054, 0.034]} fontSize={0.009} anchorX="center" color="#d3d7c8" raycast={noRaycast}>MONSTER</Text>
-      <Text position={[0, 0.041, 0.034]} fontSize={0.006} anchorX="center" color="#85b944" raycast={noRaycast}>ENERGY</Text>
+    <group name="MonsterEnergyCan" position={position(w.energyCanPosition)} rotation={[0, CONFIG.workstation.ENERGY_CAN_YAW, 0]}>
+      <primitive object={canModel} />
     </group>
   </group>;
 }

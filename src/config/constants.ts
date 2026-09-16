@@ -121,6 +121,8 @@ export const CONFIG = {
   workstation: {
     CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd-closed-badge",
     KEYBOARD_MODEL_URL: "/glbs/keyboard.glb",
+    ENERGY_CAN_MODEL_URL: "/glbs/monster-mango-loco.glb",
+    ENERGY_CAN_YAW: -0.12 - Math.PI / 9,
     TURNTABLE_MODEL_URL: "/glbs/turntable.glb",
     TURNTABLE_POSITION: { x: 0.17, y: 0, z: 0.025 },
     TURNTABLE_ROTATION: { x: 0, y: -3, z: 0 },
@@ -158,7 +160,7 @@ export const CONFIG = {
     CAMERA_TARGET: { x: -0.02, y: 0.27, z: -0.14 },
     SKATEBOARD_SIZE: { width: 0.2032, length: 0.805, thickness: 0.018 },
     POLAROIDS_POSITION: { x: -0.43, y: 0.63, z: -0.615 },
-    ENERGY_CAN_POSITION: { x: 0.46, y: 0, z: -0.15 },
+    ENERGY_CAN_POSITION: { x: 0.50, y: 0, z: -0.20 },
     LEFT_SPEAKER_POSITION: { x: -0.47, y: 0, z: -0.59 },
     RIGHT_SPEAKER_POSITION: { x: 0.51, y: 0, z: -0.56 },
     SPEAKER_SIZE: { x: 0.145, y: 0.23, z: 0.17 },
