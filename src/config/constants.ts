@@ -138,7 +138,7 @@ export const CONFIG = {
     CABINET_POSITION: { x: -1.101, y: 0.225, z: -0.35 },
     CABINET_SIZE: { x: 0.882, y: 0.945, z: 0.53 },
     CABINET_MODEL_URL: "/glbs/music-cabinet.glb",
-    RECORD_COVER_URL: "/textures/music-cabinet/invaders-must-die.jpg",
+    RECORD_COVER_URL: "/textures/music-cabinet/the-prodigy-one-love.webp",
     CABINET_PANEL: 0.024,
     CABINET_PLINTH: 0.063,
     MOUSE_POSITION: { x: 0.3, y: 0, z: 0.02 },
