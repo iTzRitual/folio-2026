@@ -25,6 +25,18 @@ export interface DebugSettings {
     scale: number;
   };
   skullRotation: { x: number; y: number; z: number };
+  scan: {
+    enabled: boolean;
+    idleStrength: number;
+    strength: number;
+    hoverSpread: number;
+    bands: number;
+    flow: number;
+    radius: number;
+    proximity: number;
+    response: number;
+    release: number;
+  };
   curl: {
     foldOffsetMult: number;
     bottomOffsetMult: number;
@@ -132,7 +144,19 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     backside: false,
     scale: 0.8,
   },
-  skullRotation: { x: -1.3, y: -3.13, z: 0.85 },
+  skullRotation: { x: 0, y: 0, z: 0 },
+  scan: {
+    enabled: true,
+    idleStrength: CONFIG.scan.IDLE_STRENGTH,
+    strength: CONFIG.scan.STRENGTH,
+    hoverSpread: CONFIG.scan.HOVER_SPREAD,
+    bands: CONFIG.scan.BANDS,
+    flow: CONFIG.scan.FLOW,
+    radius: CONFIG.scan.RADIUS,
+    proximity: CONFIG.scan.PROXIMITY,
+    response: CONFIG.scan.RESPONSE,
+    release: CONFIG.scan.RELEASE,
+  },
   curl: {
     foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
     bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,

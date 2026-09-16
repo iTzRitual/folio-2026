@@ -96,6 +96,19 @@ const MATERIAL_SCHEMA = {
     scale: { value: D.material.scale, min: 0, max: 3, step: 0.05 },
 };
 
+const SCAN_SCHEMA = {
+    enabled: { value: D.scan.enabled },
+    idleStrength: { label: "Idle strength", value: D.scan.idleStrength, min: 0, max: 0.5, step: 0.005 },
+    strength: { label: "Hover boost", value: D.scan.strength, min: 0, max: 1.5, step: 0.01 },
+    hoverSpread: { label: "Whole model spread", value: D.scan.hoverSpread, min: 0, max: 1, step: 0.01 },
+    bands: { value: D.scan.bands, min: 20, max: 220, step: 1 },
+    flow: { value: D.scan.flow, min: 0, max: 4, step: 0.05 },
+    radius: { value: D.scan.radius, min: 0.05, max: 1, step: 0.01 },
+    proximity: { value: D.scan.proximity, min: 0.05, max: 1, step: 0.01 },
+    response: { value: D.scan.response, min: 1, max: 30, step: 0.5 },
+    release: { value: D.scan.release, min: 1, max: 30, step: 0.5 },
+};
+
 const SKULL_ROTATION_SCHEMA = {
     x: { value: D.skullRotation.x, min: -Math.PI, max: Math.PI, step: 0.05 },
     y: { value: D.skullRotation.y, min: -Math.PI, max: Math.PI, step: 0.05 },
@@ -336,6 +349,7 @@ export default function DebugPanel({
     const projectPreview = useControls("Project preview", PREVIEW_SCHEMA);
     const material = useControls(MATERIAL_SCHEMA);
     const skullRotation = useControls("Skull Rotation", SKULL_ROTATION_SCHEMA);
+    const scan = useControls("Skull Scan", SCAN_SCHEMA);
     const curl = useControls("Details curl", CURL_SCHEMA);
     const modelAnchor = useControls("Model anchor", ANCHOR_SCHEMA);
     const header = useControls("Header", HEADER_SCHEMA);
@@ -354,6 +368,7 @@ export default function DebugPanel({
             projectPreview,
             material,
             skullRotation,
+            scan,
             curl,
             modelAnchor,
             header,
@@ -372,6 +387,7 @@ export default function DebugPanel({
         projectPreview,
         material,
         skullRotation,
+        scan,
         curl,
         modelAnchor,
         header,

@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import { EffectComposer } from "@react-three/postprocessing";
 import Model from "./Model";
+import { SCAN_LAYER } from "./HeroScene/ScanSurface";
 import { HeroText } from "./HeroText";
 import { Header } from "./Header";
 import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
@@ -63,7 +64,7 @@ function SceneContent({
 
               <Suspense fallback={null}>
                 <WorkstationScene>
-                  <directionalLight intensity={3} position={[0, 3, 2]} />
+                  <directionalLight intensity={3} position={[0, 3, 2]} layers-mask={1 | (1 << SCAN_LAYER)} />
                   <Model />
 
                   <Header />

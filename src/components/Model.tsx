@@ -1,242 +1,90 @@
-import {
-  Clone,
-  useGLTF,
-  MeshTransmissionMaterial,
-  Center,
-} from "@react-three/drei";
+import { useGLTF, MeshTransmissionMaterial, useFBO } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { curlScrimCoverY } from "@/lib/detailsCurl";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { CONFIG } from "../config/constants";
+import { CONFIG } from "@/config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { ScanSurface, SCAN_LAYER } from "./HeroScene/ScanSurface";
+import { createScanGeometry } from "@/lib/scanGeometry";
 
-// Nothing of the model may show above the details gradient. Cutting it there
-// rather than fading it keeps the model's own opacity out of it: the cut edge
-// lands where the gradient is already at full cover, so it never shows. Module
-// scope like the curl's own uniforms, for the one model in the scene.
 const CLIP_DISABLED = 1e6;
 const FOLD_CLIP = new THREE.Plane(new THREE.Vector3(0, -1, 0), CLIP_DISABLED);
 const FOLD_CLIP_PLANES = [FOLD_CLIP];
-
-type PointerCaptureHandle = {
-  hasPointerCapture?: (pointerId: number) => boolean;
-  releasePointerCapture: (pointerId: number) => void;
-  setPointerCapture: (pointerId: number) => void;
-};
-
-function isPointerCaptureHandle(value: unknown): value is PointerCaptureHandle {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointerCaptureHandle>;
-  return (
-    typeof candidate.setPointerCapture === "function" &&
-    typeof candidate.releasePointerCapture === "function"
-  );
-}
-
 useGLTF.setDecoderPath("/draco/");
-
-// Swapping this in for the refraction buffer is what stops
-// MeshTransmissionMaterial re-rendering the scene: it only does so while its
-// buffer is still the FBO it created.
-const BLANK_BUFFER = new THREE.DataTexture(
-  new Uint8Array([0, 0, 0, 255]),
-  1,
-  1,
-);
-BLANK_BUFFER.needsUpdate = true;
 
 export default function Model() {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
-  const interactiveGroupRef = useRef<THREE.Group>(null);
-  const mesh = useRef<THREE.Group>(null);
+  const rotationRef = useRef<THREE.Group>(null);
+  const skullMeshRef = useRef<THREE.Mesh>(null);
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
-
-  const {
-    grabAreaRadius: baseGrabAreaRadius,
-    stickyAreaRadius: baseStickyAreaRadius,
-    responsiveScale: baseResponsiveScale,
-  } = useHeroLayout();
+  const geometry = useMemo(() => createScanGeometry(nodes.Sphere as THREE.Mesh), [nodes]);
+  const scanEnabled = useRef(false);
+  const { viewport, gl, events } = useThree();
   const { startTrigger } = useAnimationContext();
   const { progressRef, revealProgressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { compactHeight, inputMode, layoutMode, qualityTier } =
-    useSceneCapabilities();
-  const directManipulation = inputMode === "fine";
+  const { compactHeight, inputMode, layoutMode, qualityTier } = useSceneCapabilities();
   const lowQuality = inputMode === "coarse" || qualityTier === "low";
-
-  const pos = useRef(new THREE.Vector3(0, 0, 0));
-  const vel = useRef(new THREE.Vector3(0, 0, 0));
-  const isDragging = useRef(false);
-  const isInteractionLockedRef = useRef(false);
-  const capturedPointerRef = useRef<{
-    id: number;
-    target: PointerCaptureHandle;
-  } | null>(null);
-  const previousUserSelectRef = useRef<string | null>(null);
-
-  const isHoveringCenter = useRef(false);
-  const isHoveringModel = useRef(false);
-
-  const lastInteractionTime = useRef(0);
+  const background = useFBO(lowQuality ? CONFIG.scan.BACKGROUND_LOW : CONFIG.scan.BACKGROUND_HIGH);
+  const debug = useDebugSettings();
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
   const previousStage = useRef(0);
+  const pointerPresent = useRef(false);
+  const pointerTarget = useRef(new THREE.Vector2());
 
-  const { viewport } = useThree();
-
-  const skullRotationGroupRef = useRef<THREE.Group>(null);
-  const skullMeshRef = useRef<THREE.Mesh | null>(null);
-  const transmissionRef =
-    useRef<React.ComponentRef<typeof MeshTransmissionMaterial>>(null);
-  const refractionBuffer = useRef<THREE.Texture | null>(null);
-
-  const debug = useDebugSettings();
-
-  const finishDrag = useCallback(
-    (cursor: "auto" | "grab" = "auto", releaseCapture = true) => {
-      const capturedPointer = capturedPointerRef.current;
-      capturedPointerRef.current = null;
-
-      if (
-        releaseCapture &&
-        capturedPointer &&
-        (capturedPointer.target.hasPointerCapture?.(capturedPointer.id) ?? true)
-      ) {
-        capturedPointer.target.releasePointerCapture(capturedPointer.id);
-      }
-
-      isDragging.current = false;
-      document.body.style.cursor = cursor;
-      if (previousUserSelectRef.current !== null) {
-        document.body.style.userSelect = previousUserSelectRef.current;
-        previousUserSelectRef.current = null;
-      }
-    },
-    [],
-  );
-
-  useLayoutEffect(() => {
-    const cancelDrag = () => finishDrag();
-    window.addEventListener("blur", cancelDrag);
-    return () => {
-      window.removeEventListener("blur", cancelDrag);
-      finishDrag();
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      const rect = canvas.getBoundingClientRect();
+      pointerTarget.current.set(
+        THREE.MathUtils.clamp((event.clientX - rect.left) / rect.width * 2 - 1, -1, 1),
+        THREE.MathUtils.clamp(1 - (event.clientY - rect.top) / rect.height * 2, -1, 1),
+      );
+      pointerPresent.current = true;
     };
-  }, [finishDrag]);
-
-  useLayoutEffect(() => {
-    if (!directManipulation) finishDrag();
-  }, [directManipulation, finishDrag]);
-
-  useLayoutEffect(() => {
-    mesh.current?.traverse((child) => {
-      if (skullMeshRef.current || !(child instanceof THREE.Mesh)) return;
-      skullMeshRef.current = child;
-    });
-  }, [nodes.Sphere]);
+    const leave = () => { pointerPresent.current = false; };
+    const surface = events.connected || canvas;
+    surface.addEventListener("pointermove", move);
+    surface.addEventListener("pointerleave", leave);
+    window.addEventListener("blur", leave);
+    return () => {
+      surface.removeEventListener("pointermove", move);
+      surface.removeEventListener("pointerleave", leave);
+      window.removeEventListener("blur", leave);
+    };
+  }, [gl, events.connected]);
+  useLayoutEffect(() => { skullMeshRef.current?.layers.set(SCAN_LAYER); }, []);
 
   useGSAP(() => {
-    if (!animGroupRef.current) return;
-
-    if (!startTrigger) {
-      animGroupRef.current.scale.set(0, 0, 0);
-      return;
-    }
-
-    if (prefersReducedMotion) {
-      animGroupRef.current.scale.set(0.95, 0.95, 0.95);
-      gsap.to(animGroupRef.current.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "power2.out",
-        delay: 0.5,
-      });
-      return;
-    }
-
-    gsap.to(animGroupRef.current.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-      duration: 1.5,
-      ease: "elastic.out(1, 0.5)",
-      delay: 1,
-    });
+    const group = animGroupRef.current;
+    if (!group) return;
+    if (!startTrigger) { group.scale.setScalar(0); return; }
+    if (prefersReducedMotion) { group.scale.setScalar(1); return; }
+    gsap.to(group.scale, { x: 1, y: 1, z: 1, duration: CONFIG.scan.ENTRANCE_DURATION,
+      ease: "power3.out", delay: CONFIG.scan.ENTRANCE_DELAY });
   }, [startTrigger, prefersReducedMotion]);
-
-  const materialProps = debug.material;
-
-  const responsiveScale = baseResponsiveScale * materialProps.scale;
-  const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
-  const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
-
-  const skullRotation = debug.skullRotation;
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const workstationRevealed = revealProgressRef.current > 0.001;
-    const shouldLockInteraction =
-      !directManipulation ||
-      scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
     const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
-
     const stage = layoutMode === "narrow" ? 0 : inDetails ? 1 : 0;
     const teleported = stage !== previousStage.current;
     previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
     const entryRamp = THREE.MathUtils.clamp(
-      (scrollProgress - CONFIG.model.DETAILS_POPUP_START) /
-        CONFIG.model.POPUP_RAMP_SPAN,
-      0,
-      1,
-    );
+      (scrollProgress - CONFIG.model.DETAILS_POPUP_START) / CONFIG.model.POPUP_RAMP_SPAN, 0, 1);
     const detailsScale = modelAnchorRef.current.scale * entryRamp;
-
-    if (isInteractionLockedRef.current !== shouldLockInteraction) {
-      isInteractionLockedRef.current = shouldLockInteraction;
-
-      if (shouldLockInteraction) {
-        finishDrag();
-        isHoveringCenter.current = false;
-        isHoveringModel.current = false;
-      }
-    }
-
-    if (shouldLockInteraction) {
-      pos.current.x = THREE.MathUtils.damp(
-        pos.current.x,
-        0,
-        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
-        dt,
-      );
-      pos.current.y = THREE.MathUtils.damp(
-        pos.current.y,
-        0,
-        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
-        dt,
-      );
-
-      const velocityDamping = Math.exp(
-        -CONFIG.model.RETURN_VELOCITY_DAMPING * dt,
-      );
-      vel.current.multiplyScalar(velocityDamping);
-
-      if (pos.current.lengthSq() < CONFIG.model.RETURN_SNAP_EPSILON) {
-        pos.current.set(0, 0, 0);
-        vel.current.set(0, 0, 0);
-      }
-    }
-
     const modelViewport = state.viewport.getCurrentViewport(
       state.camera,
       modelDepth.current,
@@ -344,201 +192,49 @@ export default function Model() {
       transitionScaleGroupRef.current.scale.setScalar(smoothScale);
     }
 
-    const outerGroupY =
-      animGroupRef.current?.position.y ?? CONFIG.model.BASE_MODEL_Y;
-
-    const currentViewport = state.viewport.getCurrentViewport(
-      state.camera,
-      animGroupRef.current?.position || new THREE.Vector3(0, 0.1, 2),
-    );
-
-    const cursorX = (state.pointer.x * currentViewport.width) / 2;
-    const cursorY =
-      (state.pointer.y * currentViewport.height) / 2 - outerGroupY;
-
-    if (!shouldLockInteraction) {
-      if (isDragging.current) {
-        lastInteractionTime.current = state.clock.getElapsedTime();
-
-        const dragStiffness = 8;
-        vel.current.x = (cursorX - pos.current.x) * dragStiffness;
-        vel.current.y = (cursorY - pos.current.y) * dragStiffness;
-
-        pos.current.x += vel.current.x * dt;
-        pos.current.y += vel.current.y * dt;
-      } else {
-        pos.current.x += vel.current.x * dt;
-        pos.current.y += vel.current.y * dt;
-
-        const collisionRadius = responsiveScale * 1.2;
-        const limitX = currentViewport.width / 2 - collisionRadius;
-        const limitTop =
-          currentViewport.height / 2 - outerGroupY - collisionRadius;
-        const limitBottom =
-          -currentViewport.height / 2 - outerGroupY + collisionRadius;
-
-        const edgeSpring = 50.0;
-
-        if (pos.current.x > limitX) {
-          vel.current.x -= (pos.current.x - limitX) * edgeSpring * dt;
-        } else if (pos.current.x < -limitX) {
-          vel.current.x -= (pos.current.x + limitX) * edgeSpring * dt;
-        }
-
-        if (pos.current.y > limitTop) {
-          vel.current.y -= (pos.current.y - limitTop) * edgeSpring * dt;
-        } else if (pos.current.y < limitBottom) {
-          vel.current.y -= (pos.current.y - limitBottom) * edgeSpring * dt;
-        }
-
-        const timeSinceRelease =
-          state.clock.getElapsedTime() - lastInteractionTime.current;
-        const inactivityDelay = 2.0;
-
-        if (timeSinceRelease > inactivityDelay) {
-          let targetX = 0;
-          let targetY = 0;
-
-          if (isHoveringCenter.current && !prefersReducedMotion) {
-            targetX = cursorX;
-            targetY = cursorY;
-          }
-
-          vel.current.x += (targetX - pos.current.x) * 4 * dt;
-          vel.current.y += (targetY - pos.current.y) * 4 * dt;
-
-          vel.current.x -= vel.current.x * 3.0 * dt;
-          vel.current.y -= vel.current.y * 3.0 * dt;
-        } else {
-          const friction = 1.0;
-          vel.current.x -= vel.current.x * friction * dt;
-          vel.current.y -= vel.current.y * friction * dt;
-        }
-      }
+    const follow = inputMode === "fine" && !prefersReducedMotion && pointerPresent.current &&
+      scrollProgress < CONFIG.model.INTERACTION_LOCK_EPSILON;
+    const yaw = debug.skullRotation.y + (follow ? pointerTarget.current.x * CONFIG.scan.YAW : 0);
+    const pitch = debug.skullRotation.x - (follow ? pointerTarget.current.y * CONFIG.scan.PITCH : 0);
+    if (rotationRef.current) {
+      rotationRef.current.rotation.set(
+        prefersReducedMotion ? pitch : THREE.MathUtils.damp(rotationRef.current.rotation.x, pitch, CONFIG.scan.RESPONSE, dt),
+        prefersReducedMotion ? yaw : THREE.MathUtils.damp(rotationRef.current.rotation.y, yaw, CONFIG.scan.RESPONSE, dt),
+        debug.skullRotation.z,
+      );
     }
-
-    if (interactiveGroupRef.current) {
-      interactiveGroupRef.current.position.copy(pos.current);
+    scanEnabled.current = follow && debug.scan.enabled;
+    if (skullMeshRef.current) {
+      const height = Math.min(modelViewport.height * (layoutMode === "narrow" ? CONFIG.scan.NARROW_HEIGHT : CONFIG.scan.HEIGHT),
+        modelViewport.width * CONFIG.scan.WIDTH_LIMIT);
+      skullMeshRef.current.scale.setScalar(height * debug.material.scale / CONFIG.scan.MATERIAL_SCALE);
     }
-
-    if (mesh.current && !prefersReducedMotion) {
-      const t = state.clock.getElapsedTime();
-      mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
-      mesh.current.rotation.x =
-        Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
-      mesh.current.rotation.y =
-        Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
-    }
-
-    const skullMesh = skullMeshRef.current;
-
-    // The refraction buffer costs a full second render of the scene. Once the
-    // skull has scaled away into the details stage there is nothing left to
-    // refract.
-    if (transmissionRef.current) {
-      const current = transmissionRef.current.buffer;
-      if (current && current !== BLANK_BUFFER)
-        refractionBuffer.current = current;
-
-      const worthRefracting =
-        skullMesh?.visible !== false &&
-        (transitionScaleGroupRef.current?.scale.x ?? 1) >
-          CONFIG.model.TRANSMISSION_MIN_SCALE;
-
-      transmissionRef.current.buffer = worthRefracting
-        ? (refractionBuffer.current ?? undefined)
-        : BLANK_BUFFER;
-    }
-  });
+  }, -1);
 
   return (
-    <group>
-      <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
-        <mesh
-          position={[0, 0, 0]}
-          onPointerEnter={() => {
-            if (!directManipulation || isInteractionLockedRef.current) return;
-            isHoveringCenter.current = true;
-          }}
-          onPointerLeave={() => {
-            if (!directManipulation || isInteractionLockedRef.current) return;
-            isHoveringCenter.current = false;
-          }}
-        >
-          <circleGeometry args={[stickyAreaRadius, 32]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-
+    <>
+      <group position={[0, CONFIG.model.BASE_MODEL_Y, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <group ref={transitionScaleGroupRef}>
-          <group ref={interactiveGroupRef}>
-            <mesh
-              position={[0, 0, 0.01]}
-              onPointerEnter={() => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isHoveringModel.current = true;
-                document.body.style.cursor = "grab";
-              }}
-              onPointerLeave={() => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isHoveringModel.current = false;
-                document.body.style.cursor = "auto";
-              }}
-              onPointerDown={(e) => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                finishDrag();
-                isDragging.current = true;
-                document.body.style.cursor = "grabbing";
-                previousUserSelectRef.current = document.body.style.userSelect;
-                document.body.style.userSelect = "none";
-                if (isPointerCaptureHandle(e.target)) {
-                  e.target.setPointerCapture(e.pointerId);
-                  capturedPointerRef.current = {
-                    id: e.pointerId,
-                    target: e.target,
-                  };
-                }
-                e.stopPropagation();
-              }}
-              onPointerUp={() => {
-                if (!isDragging.current) return;
-                finishDrag(isHoveringModel.current ? "grab" : "auto");
-              }}
-              onPointerCancel={() => finishDrag()}
-              onLostPointerCapture={() => finishDrag("auto", false)}
-            >
-              <circleGeometry args={[grabAreaRadius, 32]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          <group ref={rotationRef}>
+            <mesh ref={skullMeshRef} geometry={geometry} frustumCulled={false} raycast={() => null}>
+              <MeshTransmissionMaterial
+                {...debug.material}
+                buffer={background.texture}
+                clippingPlanes={FOLD_CLIP_PLANES}
+                resolution={lowQuality ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE : CONFIG.model.TRANSMISSION_RESOLUTION}
+                samples={lowQuality ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE : CONFIG.model.TRANSMISSION_SAMPLES}
+              />
             </mesh>
-
-            <group
-              ref={skullRotationGroupRef}
-              rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
-            >
-              <Center>
-                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                  <MeshTransmissionMaterial
-                    ref={transmissionRef}
-                    clippingPlanes={FOLD_CLIP_PLANES}
-                    {...materialProps}
-                    resolution={
-                      lowQuality
-                        ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
-                        : CONFIG.model.TRANSMISSION_RESOLUTION
-                    }
-                    samples={
-                      lowQuality
-                        ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
-                        : CONFIG.model.TRANSMISSION_SAMPLES
-                    }
-                  />
-                </Clone>
-              </Center>
-            </group>
           </group>
         </group>
       </group>
-    </group>
+      <ScanSurface
+        skull={skullMeshRef}
+        background={background}
+        enabled={scanEnabled}
+        pointer={pointerTarget}
+        clip={FOLD_CLIP}
+      />
+    </>
   );
 }

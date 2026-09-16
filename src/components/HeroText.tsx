@@ -1,10 +1,10 @@
 import { Title } from "./HeroScene/Title";
 import { NarrowTitle } from "./HeroScene/NarrowTitle";
 import { NarrowSubtitle } from "./HeroScene/NarrowSubtitle";
-import { NarrowProfessionStack } from "./HeroScene/NarrowProfessionStack";
+import { ScanRoles } from "./HeroScene/ScanRoles";
 import { Subtitle } from "./HeroScene/Subtitle";
 import { ProfessionLabel } from "./HeroScene/ProfessionLabel";
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Group } from "three";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -15,7 +15,6 @@ import { caseStudyStage } from "@/lib/caseStudyStage";
 import { CONFIG } from "../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useFontsReady } from "@/hooks/useFontsReady";
-import { wrapText } from "@/lib/textMetrics";
 
 const LABEL_EXIT_START = CONFIG.heroText.LABEL_EXIT_START;
 const LABEL_EXIT_END = CONFIG.heroText.LABEL_EXIT_END;
@@ -107,33 +106,8 @@ export function HeroText() {
       ? subtitlePixelTarget * pxTo3DWidth
       : subtitleAvailableWidth * CONFIG.heroLayout.SUBTITLE_FONT_SIZE;
   const subtitlePixelFontSize = subtitleFontSize / pxTo3DWidth;
-  const subtitleText = useMemo(
-    () =>
-      layoutMode === "narrow"
-        ? wrapText(
-            heroContent.subtitle,
-            subtitleAvailableWidth / pxTo3DWidth,
-            subtitlePixelFontSize,
-            CONFIG.subtitle.LETTER_SPACING,
-            fontsReady,
-          ).join("\n")
-        : heroContent.subtitle,
-    [
-      layoutMode,
-      subtitleAvailableWidth,
-      pxTo3DWidth,
-      subtitlePixelFontSize,
-      fontsReady,
-    ],
-  );
 
-  const narrowTitleGapPx = compactHeight
-    ? CONFIG.heroLayout.NARROW_TITLE_COMPACT_GAP_PX
-    : CONFIG.heroLayout.NARROW_TITLE_GAP_PX;
-  const narrowTitleInitialY =
-    subtitleY -
-    subtitleFontSize * CONFIG.heroLayout.NARROW_SUBTITLE_LINE_HEIGHT * 2 -
-    narrowTitleGapPx * pxTo3DHeight;
+  const narrowTitleInitialY = viewport.height * CONFIG.scan.NARROW_TITLE_Y;
   const narrowStickyTitleTopPx = compactHeight
     ? CONFIG.heroLayout.NARROW_STICKY_TITLE_COMPACT_TOP_PX
     : CONFIG.heroLayout.NARROW_STICKY_TITLE_TOP_PX;
@@ -157,25 +131,6 @@ export function HeroText() {
   const professionLineThickness = CONFIG.heroLayout.PROFESSION_LINE_THICKNESS * pxTo3DHeight;
   const professionLineWidth = viewport.width * CONFIG.heroLayout.PROFESSION_LINE_WIDTH;
   const professionExitDistance = viewport.width * CONFIG.heroLayout.PROFESSION_EXIT_DISTANCE;
-  const narrowRolePixelTarget = Math.min(
-    Math.max(
-      size.width * CONFIG.heroLayout.NARROW_ROLE_FONT_SIZE,
-      CONFIG.heroLayout.NARROW_ROLE_FONT_MIN_PX,
-    ),
-    CONFIG.heroLayout.NARROW_ROLE_FONT_MAX_PX,
-  );
-  const narrowRoleFontSize = narrowRolePixelTarget * pxTo3DWidth;
-  const narrowRoleBottomPx = compactHeight
-    ? CONFIG.heroLayout.NARROW_ROLE_COMPACT_BOTTOM_PX
-    : CONFIG.heroLayout.NARROW_ROLE_BOTTOM_PX;
-  const narrowRoleInitialY =
-    -viewport.height / 2 +
-    (narrowRoleBottomPx +
-      CONFIG.heroLayout.NARROW_ROLE_ROW_PITCH_PX * 2) *
-      pxTo3DHeight;
-  const narrowRoleInset = compactHeight
-    ? CONFIG.heroLayout.NARROW_ROLE_COMPACT_INSET_PX * pxTo3DWidth
-    : 0;
   const narrowRoleSettledY =
     narrowTitleSettledY -
     titleSettledFontSize -
@@ -237,31 +192,13 @@ export function HeroText() {
             calculatedFontSize={subtitleFontSize}
             pixelFontSize={subtitlePixelFontSize}
           >
-            {subtitleText}
+            {heroContent.subtitle}
           </Subtitle>
         )}
       </group>
       <group position={[0, 0, 0]} ref={heroGroupRef}>
         {layoutMode === "narrow" ? (
-          <NarrowProfessionStack
-            roles={heroContent.professions}
-            startTrigger={startTrigger}
-            x={leftX + narrowRoleInset}
-            initialY={narrowRoleInitialY}
-            settledY={narrowRoleSettledY}
-            width={professionAvailableWidth - narrowRoleInset}
-            pixelWidth={
-              (professionAvailableWidth - narrowRoleInset) / pxTo3DWidth
-            }
-            fontSize={narrowRoleFontSize}
-            pixelFontSize={narrowRolePixelTarget}
-            settledPixelFontSize={CONFIG.heroLayout.NARROW_ROLE_SETTLED_PX}
-            pxTo3DWidth={pxTo3DWidth}
-            pxTo3DHeight={pxTo3DHeight}
-            scrollProgressRef={progressRef}
-            transitionStart={CONFIG.heroLayout.NARROW_TITLE_TRANSITION_START}
-            transitionEnd={CONFIG.heroLayout.NARROW_TITLE_TRANSITION_END}
-          />
+          <ScanRoles settledY={narrowRoleSettledY} />
         ) : (
           <>
           <ProfessionLabel
