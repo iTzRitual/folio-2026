@@ -1,7 +1,9 @@
 "use client";
 
-import { MathUtils, SRGBColorSpace, type Texture } from "three";
-import { useTexture } from "@react-three/drei";
+import { useMemo } from "react";
+import { MathUtils, Mesh, MeshStandardMaterial, SRGBColorSpace, type Texture } from "three";
+import { useThree } from "@react-three/fiber";
+import { useGLTF, useTexture } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
@@ -76,25 +78,23 @@ export function DesktopProxies({ supportY }: { supportY: number }) {
 
 export function MusicCabinet({ supportY, children }: { supportY: number; children: React.ReactNode }) {
   const { workstation: w } = useDebugSettings();
-  const s = CONFIG.workstation.CABINET_SIZE;
-  const panel = CONFIG.workstation.CABINET_PANEL;
-  const plinth = CONFIG.workstation.CABINET_PLINTH;
-  const cubby = (s.x - panel * 3) / 2;
+  const { scene } = useGLTF(CONFIG.workstation.CABINET_MODEL_URL);
+  const anisotropy = useThree(state => Math.min(8, state.gl.capabilities.getMaxAnisotropy()));
+  const model = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse(object => {
+      object.raycast = noRaycast;
+      if (!(object instanceof Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (!(material instanceof MeshStandardMaterial) || !material.map) continue;
+        material.map.anisotropy = anisotropy;
+        material.map.needsUpdate = true;
+      }
+    });
+    return clone;
+  }, [scene, anisotropy]);
   return <group name="MusicCabinet" position={xyz(w.cabinetPosition, supportY)}>
-    <Block name="CabinetTop" size={[s.x, panel, s.z]} position={[0, -panel / 2, 0]} />
-    <Block name="CabinetPlinth" size={[s.x - 0.06, plinth, s.z - 0.06]} position={[0, -s.y + plinth / 2, 0]} color="#413a33" />
-    {[-1, 1].map(side => <Block key={side} size={[panel, s.y - plinth, s.z]} position={[side * (s.x - panel) / 2, -(s.y - plinth) / 2, 0]} />)}
-    <Block size={[s.x - panel * 2, s.y - plinth, 0.016]} position={[0, -(s.y - plinth) / 2, -s.z / 2 + 0.008]} color="#413a33" />
-    {[0, 1].map(row => {
-      const shelfTop = -panel - cubby - row * (cubby + panel);
-      return <group name={`RecordRow${row}`} key={row}>
-        <Block name="CubbyShelf" size={[s.x - panel * 2, panel, s.z]} position={[0, shelfTop - panel / 2, 0]} />
-        <Block name="CubbyDivider" size={[panel, cubby, s.z - 0.02]} position={[0, shelfTop + cubby / 2, -0.01]} />
-        {[-1, 1].map(side => <group name={`RecordCompartment${side}`} key={side} position={[side * (cubby + panel) / 2, shelfTop, 0.035]}>
-          {Array.from({ length: 12 }, (_, i) => <Block key={i} name="VinylSleeve" size={[0.008, CONFIG.workstation.RECORD_SIZE, CONFIG.workstation.RECORD_SIZE]} position={[-0.15 + i * 0.026, CONFIG.workstation.RECORD_SIZE / 2 + 0.001, 0.005 * (i % 3)]} rotation={[0, 0, i > 8 ? -0.04 : 0.008 * (i % 3)]} color={["#9b8b71", "#41494c", "#74786a", "#afa28d"][i % 4]} />)}
-        </group>)}
-      </group>;
-    })}
+    <primitive object={model} />
     {children}
   </group>;
 }

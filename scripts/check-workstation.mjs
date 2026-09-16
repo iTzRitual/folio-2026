@@ -61,6 +61,17 @@ const desk = boundsModel("public/glbs/workstation-desk.glb");
 const turntable = boundsModel("public/glbs/turntable.glb");
 const frame = getCRTReferenceFrame(crt);
 const C = CONFIG.workstation;
+const musicCabinet = boundsModel(`public${C.CABINET_MODEL_URL}`);
+const cabinetWood = musicCabinet.getObjectByName("Reference walnut veneer");
+assert(cabinetWood, "Cabinet contains the walnut shell");
+const cabinetBounds = new THREE.Box3().setFromObject(cabinetWood);
+const cabinetSize = cabinetBounds.getSize(new THREE.Vector3());
+for (const axis of ["x", "y", "z"]) {
+  assert(Math.abs(cabinetSize[axis] - C.CABINET_SIZE[axis]) < 1e-6, `Cabinet preserves ${axis} size`);
+}
+assert(Math.abs(cabinetBounds.max.y) < 1e-6, "Cabinet top preserves turntable support height");
+assert(musicCabinet.getObjectByName("The Prodigy - Invaders Must Die"), "Cabinet includes the featured sleeve artwork");
+assert(musicCabinet.getObjectByName("Photographic collection spines"), "Cabinet includes photographic spines");
 const point = p => new THREE.Vector3(p.x, p.y, p.z);
 const workstation = { monitorPosition: C.MONITOR_POSITION, monitorYaw: C.MONITOR_YAW, deskPosition: C.DESK_POSITION };
 const settings = { workstation, sceneFraming: { cameraEnd: C.CAMERA_END, cameraTarget: C.CAMERA_TARGET, cameraCurve: C.CAMERA_CURVE, arcStart: C.CAMERA_ARC_START, maxZoomOut: C.CAMERA_MAX_ZOOM_OUT } };

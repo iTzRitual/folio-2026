@@ -1,7 +1,7 @@
 "use client";
 
-import { MathUtils } from "three";
-import { Text } from "@react-three/drei";
+import { MathUtils, SRGBColorSpace } from "three";
+import { Text, useTexture } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { Block, Cylinder } from "./WorkstationPrimitives";
@@ -10,6 +10,7 @@ const noRaycast = () => null;
 
 export function DeskCollectionProps({ supportY }: { supportY: number }) {
   const { workstation: w } = useDebugSettings();
+  const artwork = useTexture(CONFIG.workstation.RECORD_COVER_URL, texture => { texture.colorSpace = SRGBColorSpace; });
   const position = (p: { x: number; y: number; z: number }): [number, number, number] => [p.x, supportY + p.y, p.z];
   const speaker = CONFIG.workstation.SPEAKER_SIZE;
   const recordSize = CONFIG.workstation.RECORD_SIZE;
@@ -21,8 +22,10 @@ export function DeskCollectionProps({ supportY }: { supportY: number }) {
         <group position={[0, thickness / 2 * Math.sin(lean), 0]} rotation={[-lean, 0, 0]}>
           <group position={[0, recordSize / 2, 0]}>
             <Block size={[recordSize, recordSize, thickness]} color="#232b2b" />
-            <Text position={[-0.14, 0.12, 0.007]} fontSize={0.035} anchorX="left" anchorY="top" color="#c4bba5" raycast={noRaycast}>{"MASSIVE\nATTACK"}</Text>
-            <Block size={[0.16, 0.16, 0.003]} position={[0.025, -0.045, 0.007]} rotation={[0, 0, 0.45]} color="#596765" />
+            <mesh position={[0, 0, thickness / 2 + 0.0001]} raycast={noRaycast}>
+              <planeGeometry args={[recordSize, recordSize]} />
+              <meshStandardMaterial map={artwork} roughness={0.66} />
+            </mesh>
           </group>
         </group>
       </group>
