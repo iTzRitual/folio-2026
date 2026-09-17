@@ -15,13 +15,13 @@ export interface DebugSettings {
     pinGlitch: boolean;
     pinnedGlitch: number;
   };
-  material: {
-    thickness: number;
-    roughness: number;
-    transmission: number;
-    ior: number;
-    chromaticAberration: number;
-    backside: boolean;
+  particles: {
+    count: number;
+    radius: number;
+    cursorRadius: number;
+    cursorStrength: number;
+    returnStrength: number;
+    damping: number;
     scale: number;
   };
   skullRotation: { x: number; y: number; z: number };
@@ -123,13 +123,13 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     pinGlitch: false,
     pinnedGlitch: 0,
   },
-  material: {
-    thickness: 0.65,
-    roughness: 0.2,
-    transmission: 0.97,
-    ior: 0.9,
-    chromaticAberration: 1,
-    backside: false,
+  particles: {
+    count: CONFIG.model.PARTICLE_COUNT,
+    radius: CONFIG.model.PARTICLE_RADIUS,
+    cursorRadius: CONFIG.model.PARTICLE_CURSOR_RADIUS,
+    cursorStrength: CONFIG.model.PARTICLE_CURSOR_STRENGTH,
+    returnStrength: CONFIG.model.PARTICLE_RETURN_STRENGTH,
+    damping: CONFIG.model.PARTICLE_DAMPING,
     scale: 0.8,
   },
   skullRotation: { x: -1.3, y: -3.13, z: 0.85 },

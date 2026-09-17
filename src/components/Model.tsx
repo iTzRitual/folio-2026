@@ -1,9 +1,4 @@
-import {
-  Clone,
-  useGLTF,
-  MeshTransmissionMaterial,
-  Center,
-} from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
@@ -17,6 +12,7 @@ import { curlScrimCoverY } from "@/lib/detailsCurl";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { SkullParticles } from "@/components/SkullParticles";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -43,17 +39,7 @@ function isPointerCaptureHandle(value: unknown): value is PointerCaptureHandle {
 
 useGLTF.setDecoderPath("/draco/");
 
-// Swapping this in for the refraction buffer is what stops
-// MeshTransmissionMaterial re-rendering the scene: it only does so while its
-// buffer is still the FBO it created.
-const BLANK_BUFFER = new THREE.DataTexture(
-  new Uint8Array([0, 0, 0, 255]),
-  1,
-  1,
-);
-BLANK_BUFFER.needsUpdate = true;
-
-export default function Model() {
+export default function Model({ isDebug }: { isDebug: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const interactiveGroupRef = useRef<THREE.Group>(null);
@@ -71,7 +57,7 @@ export default function Model() {
   const { compactHeight, inputMode, layoutMode, qualityTier } =
     useSceneCapabilities();
   const directManipulation = inputMode === "fine";
-  const lowQuality = inputMode === "coarse" || qualityTier === "low";
+  const lowQuality = !isDebug && (inputMode === "coarse" || qualityTier === "low");
 
   const pos = useRef(new THREE.Vector3(0, 0, 0));
   const vel = useRef(new THREE.Vector3(0, 0, 0));
@@ -93,10 +79,6 @@ export default function Model() {
   const { viewport } = useThree();
 
   const skullRotationGroupRef = useRef<THREE.Group>(null);
-  const skullMeshRef = useRef<THREE.Mesh | null>(null);
-  const transmissionRef =
-    useRef<React.ComponentRef<typeof MeshTransmissionMaterial>>(null);
-  const refractionBuffer = useRef<THREE.Texture | null>(null);
 
   const debug = useDebugSettings();
 
@@ -136,13 +118,6 @@ export default function Model() {
     if (!directManipulation) finishDrag();
   }, [directManipulation, finishDrag]);
 
-  useLayoutEffect(() => {
-    mesh.current?.traverse((child) => {
-      if (skullMeshRef.current || !(child instanceof THREE.Mesh)) return;
-      skullMeshRef.current = child;
-    });
-  }, [nodes.Sphere]);
-
   useGSAP(() => {
     if (!animGroupRef.current) return;
 
@@ -174,11 +149,9 @@ export default function Model() {
     });
   }, [startTrigger, prefersReducedMotion]);
 
-  const materialProps = debug.material;
-
-  const responsiveScale = baseResponsiveScale * materialProps.scale;
-  const grabAreaRadius = baseGrabAreaRadius * materialProps.scale;
-  const stickyAreaRadius = baseStickyAreaRadius * materialProps.scale;
+  const responsiveScale = baseResponsiveScale * debug.particles.scale;
+  const grabAreaRadius = baseGrabAreaRadius * debug.particles.scale;
+  const stickyAreaRadius = baseStickyAreaRadius * debug.particles.scale;
 
   const skullRotation = debug.skullRotation;
 
@@ -431,26 +404,6 @@ export default function Model() {
         Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
         CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
     }
-
-    const skullMesh = skullMeshRef.current;
-
-    // The refraction buffer costs a full second render of the scene. Once the
-    // skull has scaled away into the details stage there is nothing left to
-    // refract.
-    if (transmissionRef.current) {
-      const current = transmissionRef.current.buffer;
-      if (current && current !== BLANK_BUFFER)
-        refractionBuffer.current = current;
-
-      const worthRefracting =
-        skullMesh?.visible !== false &&
-        (transitionScaleGroupRef.current?.scale.x ?? 1) >
-          CONFIG.model.TRANSMISSION_MIN_SCALE;
-
-      transmissionRef.current.buffer = worthRefracting
-        ? (refractionBuffer.current ?? undefined)
-        : BLANK_BUFFER;
-    }
   });
 
   return (
@@ -516,25 +469,13 @@ export default function Model() {
               ref={skullRotationGroupRef}
               rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
             >
-              <Center>
-                <Clone ref={mesh} object={nodes.Sphere} scale={responsiveScale}>
-                  <MeshTransmissionMaterial
-                    ref={transmissionRef}
-                    clippingPlanes={FOLD_CLIP_PLANES}
-                    {...materialProps}
-                    resolution={
-                      lowQuality
-                        ? CONFIG.model.TRANSMISSION_RESOLUTION_MOBILE
-                        : CONFIG.model.TRANSMISSION_RESOLUTION
-                    }
-                    samples={
-                      lowQuality
-                        ? CONFIG.model.TRANSMISSION_SAMPLES_MOBILE
-                        : CONFIG.model.TRANSMISSION_SAMPLES
-                    }
-                  />
-                </Clone>
-              </Center>
+              <group ref={mesh} scale={responsiveScale}>
+                <SkullParticles
+                  source={nodes.Sphere}
+                  lowQuality={lowQuality}
+                  clippingPlanes={FOLD_CLIP_PLANES}
+                />
+              </group>
             </group>
           </group>
         </group>

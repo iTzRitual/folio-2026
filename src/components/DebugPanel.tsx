@@ -76,24 +76,26 @@ const PREVIEW_SCHEMA = {
     },
 };
 
-const MATERIAL_SCHEMA = {
-    thickness: { value: D.material.thickness, min: 0, max: 5, step: 0.05 },
-    roughness: { value: D.material.roughness, min: 0, max: 1, step: 0.1 },
-    transmission: {
-        value: D.material.transmission,
-        min: 0,
-        max: 1,
-        step: 0.01,
+const PARTICLES_SCHEMA = {
+    count: {
+        label: "Particle count",
+        value: D.particles.count,
+        min: CONFIG.model.PARTICLE_COUNT_MIN,
+        max: CONFIG.model.PARTICLE_COUNT_MAX,
+        step: 256,
     },
-    ior: { value: D.material.ior, min: 0, max: 3, step: 0.1 },
-    chromaticAberration: {
-        value: D.material.chromaticAberration,
-        min: 0,
-        max: 1,
-        step: 0.01,
+    size: {
+        label: "Particle size (×)",
+        value: D.particles.radius / CONFIG.model.PARTICLE_RADIUS,
+        min: CONFIG.model.PARTICLE_SIZE_MIN,
+        max: CONFIG.model.PARTICLE_SIZE_MAX,
+        step: 0.1,
     },
-    backside: { value: D.material.backside },
-    scale: { value: D.material.scale, min: 0, max: 3, step: 0.05 },
+    cursorRadius: { value: D.particles.cursorRadius, min: 0.1, max: 1.5, step: 0.05 },
+    cursorStrength: { value: D.particles.cursorStrength, min: 0, max: 60, step: 1 },
+    returnStrength: { value: D.particles.returnStrength, min: 5, max: 80, step: 1 },
+    damping: { value: D.particles.damping, min: 2, max: 20, step: 0.5 },
+    scale: { value: D.particles.scale, min: 0, max: 3, step: 0.05 },
 };
 
 const SKULL_ROTATION_SCHEMA = {
@@ -334,7 +336,7 @@ export default function DebugPanel({
 }) {
     const bio = useControls("Bio", BIO_SCHEMA);
     const projectPreview = useControls("Project preview", PREVIEW_SCHEMA);
-    const material = useControls(MATERIAL_SCHEMA);
+    const particles = useControls("Skull Particles", PARTICLES_SCHEMA);
     const skullRotation = useControls("Skull Rotation", SKULL_ROTATION_SCHEMA);
     const curl = useControls("Details curl", CURL_SCHEMA);
     const modelAnchor = useControls("Model anchor", ANCHOR_SCHEMA);
@@ -349,10 +351,14 @@ export default function DebugPanel({
     const headerExclusion = useControls("Header exclusion", EXCLUSION_SCHEMA);
 
     useEffect(() => {
+        const { size, ...particleSettings } = particles;
         onChange({
             bio,
             projectPreview,
-            material,
+            particles: {
+                ...particleSettings,
+                radius: size * CONFIG.model.PARTICLE_RADIUS,
+            },
             skullRotation,
             curl,
             modelAnchor,
@@ -370,7 +376,7 @@ export default function DebugPanel({
         onChange,
         bio,
         projectPreview,
-        material,
+        particles,
         skullRotation,
         curl,
         modelAnchor,

@@ -38,10 +38,12 @@ import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
 
 function SceneContent({
+  isDebug,
   startAnimation,
   bioVariant,
   detailsOverflowViewports,
 }: {
+  isDebug: boolean;
   startAnimation: boolean;
   bioVariant: BioVariant;
   detailsOverflowViewports: number;
@@ -64,7 +66,7 @@ function SceneContent({
               <Suspense fallback={null}>
                 <WorkstationScene>
                   <directionalLight intensity={3} position={[0, 3, 2]} />
-                  <Model />
+                  <Model isDebug={isDebug} />
 
                   <Header />
                   <HeroText />
@@ -198,6 +200,7 @@ export default function Scene({
           <ThemeBridge value={themeContext}>
             <DebugSettingsBridge value={debugSettings}>
               <SceneContent
+                isDebug={isDebug}
                 startAnimation={startAnimation}
                 bioVariant={bioVariant}
                 detailsOverflowViewports={detailsOverflowViewports}
