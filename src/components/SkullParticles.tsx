@@ -17,7 +17,9 @@ export function SkullParticles({
   clippingPlanes,
   fragments = false,
   orbitCollider,
+  entranceRef,
 }: {
+  entranceRef: RefObject<THREE.Group | null>;
   orbitCollider: RefObject<ProjectOrbitCollider>;
   fragments?: boolean;
   source: THREE.Object3D;
@@ -110,6 +112,9 @@ export function SkullParticles({
     const object = group.current;
     if (!particles || !object) return;
     if (fragments) {
+      particles.setEntranceScale(entranceRef.current?.scale.x ?? 0, delta,
+        !reducedMotion && !document.hidden && settings.scale > 0
+        && progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON && revealProgressRef.current === 0);
       const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
         && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
       particles.setOrbit(orbitTransform, active);

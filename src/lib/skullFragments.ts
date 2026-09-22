@@ -68,6 +68,8 @@ export function createSkullFragments(source: THREE.BufferGeometry, cells: number
     uvs: new Float32Array(textureSize ** 2 * 2),
   };
   const vertices: number[] = [];
+  const restVertices: number[] = [];
+  const interiors: number[] = [];
   const shading: number[] = [];
   const particleUvs: number[] = [];
   const point = new THREE.Vector3();
@@ -94,6 +96,10 @@ export function createSkullFragments(source: THREE.BufferGeometry, cells: number
       getPoint(index, inside, point);
       samples.positions[fragment * 4 + 3] = Math.max(samples.positions[fragment * 4 + 3], point.distanceTo(group.center));
       vertices.push(point.x, point.y, point.z);
+      point.fromBufferAttribute(positions, index);
+      restVertices.push(point.x, point.y, point.z);
+      interiors.push(inside || sideNormal ? 1 : 0);
+      samples.positions[fragment * 4 + 3] = Math.max(samples.positions[fragment * 4 + 3], point.distanceTo(group.center));
       if (sideNormal) normal.copy(sideNormal);
       else normal.fromBufferAttribute(normals, index).multiplyScalar(inside ? -1 : 1);
       shading.push(normal.x, normal.y, normal.z);
@@ -128,6 +134,8 @@ export function createSkullFragments(source: THREE.BufferGeometry, cells: number
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute("fragmentRestPosition", new THREE.Float32BufferAttribute(restVertices, 3));
+  geometry.setAttribute("fragmentInterior", new THREE.Float32BufferAttribute(interiors, 1));
   geometry.setAttribute("normal", new THREE.Float32BufferAttribute(shading, 3));
   geometry.setAttribute("particleUv", new THREE.Float32BufferAttribute(particleUvs, 2));
   geometry.computeBoundingSphere();
@@ -148,6 +156,10 @@ export function applySkullFragmentShader(material: THREE.Material, uniforms: Sku
       uniform sampler2D fragmentRest;
       uniform float fragmentSpin;
       attribute vec2 particleUv;
+      attribute vec3 fragmentRestPosition;
+      attribute float fragmentInterior;
+      varying float vFragmentInterior;
+      varying float vFragmentOpening;
       mat3 fragmentRotation(vec3 axis, float angle) {
         float s = sin(angle);
         float c = cos(angle);
@@ -161,16 +173,28 @@ export function applySkullFragmentShader(material: THREE.Material, uniforms: Sku
     ` + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace("#include <beginnormal_vertex>", `
       vec3 fragmentCenter = texture2D(fragmentPositions, particleUv).xyz;
-      vec3 fragmentOrigin = texture2D(fragmentRest, particleUv).xyz;
+      vec4 fragmentRestSample = texture2D(fragmentRest, particleUv);
+      vec3 fragmentOrigin = fragmentRestSample.xyz;
+      float fragmentDistance = length(fragmentCenter - fragmentOrigin);
+      float fragmentOpening = smoothstep(${CONFIG.model.FRAGMENTS.SEAM_CLOSED_DISTANCE}, ${CONFIG.model.FRAGMENTS.SEAM_OPEN_DISTANCE}, fragmentDistance / max(fragmentRestSample.w, 0.0001));
+      vFragmentInterior = fragmentInterior;
+      vFragmentOpening = fragmentOpening;
       vec3 axis = normalize(vec3(sin(particleUv.x * 71.0), cos(particleUv.y * 53.0), 0.6));
-      mat3 rotation = fragmentRotation(axis, length(fragmentCenter - fragmentOrigin) * fragmentSpin);
+      mat3 rotation = fragmentRotation(axis, fragmentDistance * fragmentSpin * fragmentOpening);
       #include <beginnormal_vertex>
       objectNormal = rotation * objectNormal;
     `).replace("#include <begin_vertex>", `
-      vec3 transformed = rotation * (position - fragmentOrigin) + fragmentCenter;
+      vec3 transformed = mix(fragmentRestPosition, rotation * (position - fragmentOrigin) + fragmentCenter, fragmentOpening);
+    `);
+    shader.fragmentShader = `
+      varying float vFragmentInterior;
+      varying float vFragmentOpening;
+    ` + shader.fragmentShader.replace("void main() {", `
+      void main() {
+        if (vFragmentInterior > 0.5 && vFragmentOpening < ${CONFIG.model.FRAGMENTS.INTERIOR_REVEAL}) discard;
     `);
   };
-  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-fragments-v1`;
+  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-fragments-v2`;
   material.needsUpdate = true;
   return () => {
     material.onBeforeCompile = compile;

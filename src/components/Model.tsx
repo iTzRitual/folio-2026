@@ -81,11 +81,11 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       x: 1,
       y: 1,
       z: 1,
-      duration: 1.5,
-      ease: "elastic.out(1, 0.5)",
+      duration: debug.skullAppearance.mode === "fragments" ? CONFIG.model.FRAGMENTS.ENTRANCE_DURATION : 1.5,
+      ease: debug.skullAppearance.mode === "fragments" ? CONFIG.model.FRAGMENTS.ENTRANCE_EASE : "elastic.out(1, 0.5)",
       delay: 1,
     });
-  }, [startTrigger, prefersReducedMotion]);
+  }, { dependencies: [startTrigger, prefersReducedMotion], revertOnUpdate: true });
 
   const responsiveScale = baseResponsiveScale * debug.particles.scale;
 
@@ -251,6 +251,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
                 )}
                 {debug.skullAppearance.mode !== "glass" && (
                   <SkullParticles
+                    entranceRef={animGroupRef}
                     orbitCollider={orbitCollider}
                     fragments={debug.skullAppearance.mode === "fragments"}
                     source={nodes.Sphere}

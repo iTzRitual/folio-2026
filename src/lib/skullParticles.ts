@@ -3,6 +3,7 @@ import { MeshSurfaceSampler } from "three/addons/math/MeshSurfaceSampler.js";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
 import { CONFIG } from "@/config/constants";
 import { projectOrbitCollisionShader } from "@/lib/projectOrbitCollision";
+import { createSkullEntranceMotion } from "@/lib/skullEntrance";
 
 export interface SkullSimulationUniforms {
   positions: THREE.Uniform<THREE.Texture | null>;
@@ -53,7 +54,11 @@ void main() {
 }`;
 
 function fragmentSimulationShader(output: "position" | "velocity") {
-  return velocityShader.replace("void main() {", `${projectOrbitCollisionShader}\nvoid main() {`)
+  return velocityShader.replace("void main() {", `uniform float entranceVelocity;\n${projectOrbitCollisionShader}\nvoid main() {`)
+    .replace("velocity *= exp(-damping * delta);", `
+      velocity += rest * entranceVelocity * ${CONFIG.model.FRAGMENTS.ENTRANCE_MOMENTUM.toFixed(4)} * delta;
+      velocity *= exp(-damping * delta);
+    `)
     .replace("gl_FragColor = vec4(velocity, heat);", `
       vec3 nextPosition = position + velocity * delta;
       collideOrbit(position, rest, texture2D(restPosition, uv).w, delta, nextPosition, velocity);
@@ -170,6 +175,7 @@ export function createSkullParticles(
   compute.setVariableDependencies(position, [position, velocity]);
   compute.setVariableDependencies(velocity, [position, velocity]);
   const uniforms = {
+    entranceVelocity: { value: 0 },
     orbitActive: { value: 0 },
     orbitStart: { value: new THREE.Matrix4() },
     orbitEnd: { value: new THREE.Matrix4() },
@@ -230,6 +236,7 @@ export function createSkullParticles(
   points.frustumCulled = false;
   points.raycast = () => {};
   let wasReducedMotion = false;
+  const entrance = createSkullEntranceMotion();
   let orbitInitialized = false;
   const previousOrbit = new THREE.Matrix4();
   const currentOrbit = new THREE.Matrix4();
@@ -242,6 +249,9 @@ export function createSkullParticles(
   return {
     points,
     uniforms,
+    setEntranceScale(scale: number, delta: number, active: boolean) {
+      uniforms.entranceVelocity.value = entrance.sample(scale, delta, active);
+    },
     setOrbit(matrix: THREE.Matrix4, active: boolean) {
       currentOrbit.copy(matrix);
       if (!orbitInitialized || !active) previousOrbit.copy(matrix);
