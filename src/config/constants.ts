@@ -31,6 +31,19 @@ export const FONTS = {
 const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 
 export const CONFIG = {
+  projectOrbit: {
+    COUNT: 12,
+    RADIUS_MULT: 1.4,
+    TILT_X: Math.PI / 15,
+    TILT_Z: Math.PI / 10,
+    GAP: 0.08,
+    SEGMENTS: 48,
+    SPEED: -0.045,
+    CORNER_RADIUS: 0.045,
+    BORDER_WIDTH: 0.008,
+    EXIT_END: 0.55,
+    RESPONSE: 4,
+  },
   monitor: {
     PRESS_DEPTH: 0.0015,
     ACTIVE_EMISSION: 0.18,
@@ -287,6 +300,19 @@ export const CONFIG = {
     ODOMETER_DURATION_REPEAT: 0.5,
   },
   model: {
+    TRANSMISSION_MIN_SCALE: 0.02,
+    TRANSMISSION_RESOLUTION: 256,
+    TRANSMISSION_RESOLUTION_MOBILE: 128,
+    TRANSMISSION_SAMPLES: 4,
+    TRANSMISSION_SAMPLES_MOBILE: 2,
+    GLASS: {
+      thickness: 0.65,
+      roughness: 0.2,
+      transmission: 0.97,
+      ior: 0.9,
+      chromaticAberration: 1,
+      backside: false,
+    },
     PARTICLE_COUNT: 16384,
     PARTICLE_COUNT_LOW: 4096,
     PARTICLE_COUNT_MIN: 256,
@@ -324,10 +350,10 @@ export const CONFIG = {
     FOLD_FADE_CLEARANCE_MULT: 0.03,
     FOLD_FADE_SPAN_MULT: 0.14,
     POPUP_RAMP_SPAN: 0.1,
-    IDLE_ROTATION_SPEED_Z: 1.2,
-    IDLE_ROTATION_SPEED_X_MAG: 0.2,
-    IDLE_ROTATION_SPEED_Y_MAG: 0.1,
-    IDLE_ROTATION_SPEED: 2,
+    IDLE_MAX_ANGLE: Math.PI / 36,
+    CURSOR_MAX_ANGLE: Math.PI / 18,
+    TILT_RESPONSE: 4,
+    IDLE_ROTATION_SPEED: 0.45,
     DEPTH_Z: 2,
   },
   detailsLayout: {

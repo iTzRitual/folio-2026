@@ -11,6 +11,14 @@ import {
 
 const D = DEBUG_DEFAULTS;
 
+const SKULL_APPEARANCE_SCHEMA = {
+    mode: {
+        label: "Appearance",
+        value: D.skullAppearance.mode,
+        options: { Particles: "particles", Glass: "glass" },
+    },
+};
+
 const BIO_SCHEMA = {
     variant: {
         value: D.bio.variant,
@@ -337,6 +345,7 @@ export default function DebugPanel({
     const bio = useControls("Bio", BIO_SCHEMA);
     const projectPreview = useControls("Project preview", PREVIEW_SCHEMA);
     const particles = useControls("Skull Particles", PARTICLES_SCHEMA);
+    const skullAppearance = useControls("Skull", SKULL_APPEARANCE_SCHEMA);
     const skullRotation = useControls("Skull Rotation", SKULL_ROTATION_SCHEMA);
     const curl = useControls("Details curl", CURL_SCHEMA);
     const modelAnchor = useControls("Model anchor", ANCHOR_SCHEMA);
@@ -353,6 +362,7 @@ export default function DebugPanel({
     useEffect(() => {
         const { size, ...particleSettings } = particles;
         onChange({
+            skullAppearance: { mode: skullAppearance.mode as DebugSettings["skullAppearance"]["mode"] },
             bio,
             projectPreview,
             particles: {
@@ -377,6 +387,7 @@ export default function DebugPanel({
         bio,
         projectPreview,
         particles,
+        skullAppearance,
         skullRotation,
         curl,
         modelAnchor,

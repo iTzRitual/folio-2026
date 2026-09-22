@@ -2,6 +2,7 @@ import { CONFIG } from "@/config/constants";
 import { DEFAULT_BIO_VARIANT, type BioVariant } from "@/data/content";
 
 export interface DebugSettings {
+  skullAppearance: { mode: "particles" | "glass" };
   bio: { variant: BioVariant };
   projectPreview: {
     sizeMult: number;
@@ -110,6 +111,7 @@ export interface DebugSettings {
 }
 
 export const DEBUG_DEFAULTS: DebugSettings = {
+  skullAppearance: { mode: "glass" },
   bio: { variant: DEFAULT_BIO_VARIANT },
   projectPreview: {
     sizeMult: 1,
@@ -132,7 +134,7 @@ export const DEBUG_DEFAULTS: DebugSettings = {
     damping: CONFIG.model.PARTICLE_DAMPING,
     scale: 0.8,
   },
-  skullRotation: { x: -1.3, y: -3.13, z: 0.85 },
+  skullRotation: { x: -1.3, y: -3.13, z: -1.57 },
   curl: {
     foldOffsetMult: CONFIG.detailsCurl.FOLD_OFFSET_MULT,
     bottomOffsetMult: CONFIG.detailsCurl.BOTTOM_OFFSET_MULT,

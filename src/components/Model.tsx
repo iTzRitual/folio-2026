@@ -1,6 +1,6 @@
 import { useGLTF } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -12,7 +12,9 @@ import { curlScrimCoverY } from "@/lib/detailsCurl";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { CONFIG } from "../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { ProjectOrbit } from "@/components/ProjectOrbit";
 import { SkullParticles } from "@/components/SkullParticles";
+import { SkullGlass } from "@/components/SkullGlass";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -22,57 +24,27 @@ const CLIP_DISABLED = 1e6;
 const FOLD_CLIP = new THREE.Plane(new THREE.Vector3(0, -1, 0), CLIP_DISABLED);
 const FOLD_CLIP_PLANES = [FOLD_CLIP];
 
-type PointerCaptureHandle = {
-  hasPointerCapture?: (pointerId: number) => boolean;
-  releasePointerCapture: (pointerId: number) => void;
-  setPointerCapture: (pointerId: number) => void;
-};
-
-function isPointerCaptureHandle(value: unknown): value is PointerCaptureHandle {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PointerCaptureHandle>;
-  return (
-    typeof candidate.setPointerCapture === "function" &&
-    typeof candidate.releasePointerCapture === "function"
-  );
-}
-
 useGLTF.setDecoderPath("/draco/");
 
 export default function Model({ isDebug }: { isDebug: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
-  const interactiveGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
+  const surface = useMemo(() => {
+    const source = nodes.Sphere;
+    return source instanceof THREE.Mesh ? source.geometry.clone().center() : null;
+  }, [nodes]);
+  useEffect(() => () => surface?.dispose(), [surface]);
 
-  const {
-    grabAreaRadius: baseGrabAreaRadius,
-    stickyAreaRadius: baseStickyAreaRadius,
-    responsiveScale: baseResponsiveScale,
-  } = useHeroLayout();
+  const { responsiveScale: baseResponsiveScale } = useHeroLayout();
   const { startTrigger } = useAnimationContext();
   const { progressRef, revealProgressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { compactHeight, inputMode, layoutMode, qualityTier } =
     useSceneCapabilities();
-  const directManipulation = inputMode === "fine";
   const lowQuality = !isDebug && (inputMode === "coarse" || qualityTier === "low");
 
-  const pos = useRef(new THREE.Vector3(0, 0, 0));
-  const vel = useRef(new THREE.Vector3(0, 0, 0));
-  const isDragging = useRef(false);
-  const isInteractionLockedRef = useRef(false);
-  const capturedPointerRef = useRef<{
-    id: number;
-    target: PointerCaptureHandle;
-  } | null>(null);
-  const previousUserSelectRef = useRef<string | null>(null);
-
-  const isHoveringCenter = useRef(false);
-  const isHoveringModel = useRef(false);
-
-  const lastInteractionTime = useRef(0);
   const modelDepth = useRef(new THREE.Vector3(0, 0, CONFIG.model.DEPTH_Z));
   const previousStage = useRef(0);
 
@@ -81,42 +53,6 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const skullRotationGroupRef = useRef<THREE.Group>(null);
 
   const debug = useDebugSettings();
-
-  const finishDrag = useCallback(
-    (cursor: "auto" | "grab" = "auto", releaseCapture = true) => {
-      const capturedPointer = capturedPointerRef.current;
-      capturedPointerRef.current = null;
-
-      if (
-        releaseCapture &&
-        capturedPointer &&
-        (capturedPointer.target.hasPointerCapture?.(capturedPointer.id) ?? true)
-      ) {
-        capturedPointer.target.releasePointerCapture(capturedPointer.id);
-      }
-
-      isDragging.current = false;
-      document.body.style.cursor = cursor;
-      if (previousUserSelectRef.current !== null) {
-        document.body.style.userSelect = previousUserSelectRef.current;
-        previousUserSelectRef.current = null;
-      }
-    },
-    [],
-  );
-
-  useLayoutEffect(() => {
-    const cancelDrag = () => finishDrag();
-    window.addEventListener("blur", cancelDrag);
-    return () => {
-      window.removeEventListener("blur", cancelDrag);
-      finishDrag();
-    };
-  }, [finishDrag]);
-
-  useLayoutEffect(() => {
-    if (!directManipulation) finishDrag();
-  }, [directManipulation, finishDrag]);
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
@@ -150,17 +86,12 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   }, [startTrigger, prefersReducedMotion]);
 
   const responsiveScale = baseResponsiveScale * debug.particles.scale;
-  const grabAreaRadius = baseGrabAreaRadius * debug.particles.scale;
-  const stickyAreaRadius = baseStickyAreaRadius * debug.particles.scale;
 
   const skullRotation = debug.skullRotation;
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const workstationRevealed = revealProgressRef.current > 0.001;
-    const shouldLockInteraction =
-      !directManipulation ||
-      scrollProgress > CONFIG.model.INTERACTION_LOCK_EPSILON;
     const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
 
     const stage = layoutMode === "narrow" ? 0 : inDetails ? 1 : 0;
@@ -174,41 +105,6 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       1,
     );
     const detailsScale = modelAnchorRef.current.scale * entryRamp;
-
-    if (isInteractionLockedRef.current !== shouldLockInteraction) {
-      isInteractionLockedRef.current = shouldLockInteraction;
-
-      if (shouldLockInteraction) {
-        finishDrag();
-        isHoveringCenter.current = false;
-        isHoveringModel.current = false;
-      }
-    }
-
-    if (shouldLockInteraction) {
-      pos.current.x = THREE.MathUtils.damp(
-        pos.current.x,
-        0,
-        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
-        dt,
-      );
-      pos.current.y = THREE.MathUtils.damp(
-        pos.current.y,
-        0,
-        CONFIG.model.RETURN_TO_CENTER_SMOOTHNESS,
-        dt,
-      );
-
-      const velocityDamping = Math.exp(
-        -CONFIG.model.RETURN_VELOCITY_DAMPING * dt,
-      );
-      vel.current.multiplyScalar(velocityDamping);
-
-      if (pos.current.lengthSq() < CONFIG.model.RETURN_SNAP_EPSILON) {
-        pos.current.set(0, 0, 0);
-        vel.current.set(0, 0, 0);
-      }
-    }
 
     const modelViewport = state.viewport.getCurrentViewport(
       state.camera,
@@ -317,164 +213,46 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       transitionScaleGroupRef.current.scale.setScalar(smoothScale);
     }
 
-    const outerGroupY =
-      animGroupRef.current?.position.y ?? CONFIG.model.BASE_MODEL_Y;
-
-    const currentViewport = state.viewport.getCurrentViewport(
-      state.camera,
-      animGroupRef.current?.position || new THREE.Vector3(0, 0.1, 2),
-    );
-
-    const cursorX = (state.pointer.x * currentViewport.width) / 2;
-    const cursorY =
-      (state.pointer.y * currentViewport.height) / 2 - outerGroupY;
-
-    if (!shouldLockInteraction) {
-      if (isDragging.current) {
-        lastInteractionTime.current = state.clock.getElapsedTime();
-
-        const dragStiffness = 8;
-        vel.current.x = (cursorX - pos.current.x) * dragStiffness;
-        vel.current.y = (cursorY - pos.current.y) * dragStiffness;
-
-        pos.current.x += vel.current.x * dt;
-        pos.current.y += vel.current.y * dt;
-      } else {
-        pos.current.x += vel.current.x * dt;
-        pos.current.y += vel.current.y * dt;
-
-        const collisionRadius = responsiveScale * 1.2;
-        const limitX = currentViewport.width / 2 - collisionRadius;
-        const limitTop =
-          currentViewport.height / 2 - outerGroupY - collisionRadius;
-        const limitBottom =
-          -currentViewport.height / 2 - outerGroupY + collisionRadius;
-
-        const edgeSpring = 50.0;
-
-        if (pos.current.x > limitX) {
-          vel.current.x -= (pos.current.x - limitX) * edgeSpring * dt;
-        } else if (pos.current.x < -limitX) {
-          vel.current.x -= (pos.current.x + limitX) * edgeSpring * dt;
-        }
-
-        if (pos.current.y > limitTop) {
-          vel.current.y -= (pos.current.y - limitTop) * edgeSpring * dt;
-        } else if (pos.current.y < limitBottom) {
-          vel.current.y -= (pos.current.y - limitBottom) * edgeSpring * dt;
-        }
-
-        const timeSinceRelease =
-          state.clock.getElapsedTime() - lastInteractionTime.current;
-        const inactivityDelay = 2.0;
-
-        if (timeSinceRelease > inactivityDelay) {
-          let targetX = 0;
-          let targetY = 0;
-
-          if (isHoveringCenter.current && !prefersReducedMotion) {
-            targetX = cursorX;
-            targetY = cursorY;
-          }
-
-          vel.current.x += (targetX - pos.current.x) * 4 * dt;
-          vel.current.y += (targetY - pos.current.y) * 4 * dt;
-
-          vel.current.x -= vel.current.x * 3.0 * dt;
-          vel.current.y -= vel.current.y * 3.0 * dt;
-        } else {
-          const friction = 1.0;
-          vel.current.x -= vel.current.x * friction * dt;
-          vel.current.y -= vel.current.y * friction * dt;
-        }
-      }
-    }
-
-    if (interactiveGroupRef.current) {
-      interactiveGroupRef.current.position.copy(pos.current);
-    }
-
-    if (mesh.current && !prefersReducedMotion) {
-      const t = state.clock.getElapsedTime();
-      mesh.current.rotation.z += dt * CONFIG.model.IDLE_ROTATION_SPEED_Z;
-      mesh.current.rotation.x =
-        Math.sin(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_X_MAG;
-      mesh.current.rotation.y =
-        Math.cos(t * CONFIG.model.IDLE_ROTATION_SPEED) *
-        CONFIG.model.IDLE_ROTATION_SPEED_Y_MAG;
+    if (mesh.current) {
+      const t = state.clock.getElapsedTime() * CONFIG.model.IDLE_ROTATION_SPEED;
+      const idle = prefersReducedMotion ? 0 : CONFIG.model.IDLE_MAX_ANGLE;
+      const pointer = !prefersReducedMotion && inputMode === "fine" && !inDetails
+        ? CONFIG.model.CURSOR_MAX_ANGLE
+        : 0;
+      const x = -THREE.MathUtils.clamp(state.pointer.y, -1, 1) * pointer;
+      const y = THREE.MathUtils.clamp(state.pointer.x, -1, 1) * pointer;
+      const length = Math.hypot(x, y);
+      const limit = length > pointer && length > 0 ? pointer / length : 1;
+      mesh.current.rotation.x = THREE.MathUtils.damp(mesh.current.rotation.x, x * limit, CONFIG.model.TILT_RESPONSE, dt);
+      mesh.current.rotation.y = THREE.MathUtils.damp(mesh.current.rotation.y, y * limit, CONFIG.model.TILT_RESPONSE, dt);
+      mesh.current.rotation.z = Math.sin(t) * idle;
     }
   });
 
   return (
     <group>
       <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
-        <mesh
-          position={[0, 0, 0]}
-          onPointerEnter={() => {
-            if (!directManipulation || isInteractionLockedRef.current) return;
-            isHoveringCenter.current = true;
-          }}
-          onPointerLeave={() => {
-            if (!directManipulation || isInteractionLockedRef.current) return;
-            isHoveringCenter.current = false;
-          }}
-        >
-          <circleGeometry args={[stickyAreaRadius, 32]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-
         <group ref={transitionScaleGroupRef}>
-          <group ref={interactiveGroupRef}>
-            <mesh
-              position={[0, 0, 0.01]}
-              onPointerEnter={() => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isHoveringModel.current = true;
-                document.body.style.cursor = "grab";
-              }}
-              onPointerLeave={() => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                isHoveringModel.current = false;
-                document.body.style.cursor = "auto";
-              }}
-              onPointerDown={(e) => {
-                if (!directManipulation || isInteractionLockedRef.current) return;
-                finishDrag();
-                isDragging.current = true;
-                document.body.style.cursor = "grabbing";
-                previousUserSelectRef.current = document.body.style.userSelect;
-                document.body.style.userSelect = "none";
-                if (isPointerCaptureHandle(e.target)) {
-                  e.target.setPointerCapture(e.pointerId);
-                  capturedPointerRef.current = {
-                    id: e.pointerId,
-                    target: e.target,
-                  };
-                }
-                e.stopPropagation();
-              }}
-              onPointerUp={() => {
-                if (!isDragging.current) return;
-                finishDrag(isHoveringModel.current ? "grab" : "auto");
-              }}
-              onPointerCancel={() => finishDrag()}
-              onLostPointerCapture={() => finishDrag("auto", false)}
-            >
-              <circleGeometry args={[grabAreaRadius, 32]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
-
+          <ProjectOrbit />
+          <group ref={mesh}>
             <group
               ref={skullRotationGroupRef}
               rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
             >
-              <group ref={mesh} scale={responsiveScale}>
-                <SkullParticles
-                  source={nodes.Sphere}
-                  lowQuality={lowQuality}
-                  clippingPlanes={FOLD_CLIP_PLANES}
-                />
+              <group scale={responsiveScale}>
+                {debug.skullAppearance.mode === "glass" && surface ? (
+                  <SkullGlass
+                    geometry={surface}
+                    lowQuality={lowQuality}
+                    clippingPlanes={FOLD_CLIP_PLANES}
+                  />
+                ) : (
+                  <SkullParticles
+                    source={nodes.Sphere}
+                    lowQuality={lowQuality}
+                    clippingPlanes={FOLD_CLIP_PLANES}
+                  />
+                )}
               </group>
             </group>
           </group>
