@@ -2,7 +2,7 @@ import { CONFIG } from "@/config/constants";
 import { DEFAULT_BIO_VARIANT, type BioVariant } from "@/data/content";
 
 export interface DebugSettings {
-  skullAppearance: { mode: "particles" | "glass" };
+  skullAppearance: { mode: "particles" | "glass" | "fragments" };
   bio: { variant: BioVariant };
   projectPreview: {
     sizeMult: number;
@@ -111,7 +111,7 @@ export interface DebugSettings {
 }
 
 export const DEBUG_DEFAULTS: DebugSettings = {
-  skullAppearance: { mode: "glass" },
+  skullAppearance: { mode: "fragments" },
   bio: { variant: DEFAULT_BIO_VARIANT },
   projectPreview: {
     sizeMult: 1,

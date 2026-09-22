@@ -15,7 +15,7 @@ const SKULL_APPEARANCE_SCHEMA = {
     mode: {
         label: "Appearance",
         value: D.skullAppearance.mode,
-        options: { Particles: "particles", Glass: "glass" },
+        options: { Particles: "particles", Glass: "glass", "Glass fragments": "fragments" },
     },
 };
 

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
@@ -7,26 +7,43 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { createSkullParticles } from "@/lib/skullParticles";
+import { createSkullFragments } from "@/lib/skullFragments";
+import { SkullGlass } from "@/components/SkullGlass";
+import { orbitCollisionTransform, type ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 
 export function SkullParticles({
   source,
   lowQuality,
   clippingPlanes,
+  fragments = false,
+  orbitCollider,
 }: {
+  orbitCollider: RefObject<ProjectOrbitCollider>;
+  fragments?: boolean;
   source: THREE.Object3D;
   lowQuality: boolean;
   clippingPlanes: THREE.Plane[];
 }) {
   const group = useRef<THREE.Group>(null);
   const simulation = useRef<ReturnType<typeof createSkullParticles> | null>(null);
+  const orbitTransform = useMemo(() => new THREE.Matrix4(), []);
   const { gl } = useThree();
   const { inputMode } = useSceneCapabilities();
   const { progressRef, revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
   const { particles: settings } = useDebugSettings();
-  const count = lowQuality
+  const fragmentGeometry = useMemo(() => {
+    if (!fragments || !(source instanceof THREE.Mesh)) return null;
+    return createSkullFragments(source.geometry, lowQuality ? CONFIG.model.FRAGMENTS.CELLS_LOW : CONFIG.model.FRAGMENTS.CELLS);
+  }, [fragments, source, lowQuality]);
+  const fragmentUniforms = useMemo(() => ({
+    positions: new THREE.Uniform<THREE.Texture | null>(null),
+    restPosition: new THREE.Uniform<THREE.Texture | null>(null),
+  }), []);
+  useEffect(() => () => fragmentGeometry?.geometry.dispose(), [fragmentGeometry]);
+  const count = fragmentGeometry?.count ?? (lowQuality
     ? Math.min(settings.count, CONFIG.model.PARTICLE_COUNT_LOW)
-    : settings.count;
+    : settings.count);
   const pointer = useRef({
     position: new THREE.Vector2(),
     previous: new THREE.Vector2(),
@@ -51,15 +68,16 @@ export function SkullParticles({
       source.geometry,
       count,
       clippingPlanes,
+      fragmentGeometry ? { samples: fragmentGeometry.samples, uniforms: fragmentUniforms } : undefined,
     );
     simulation.current = particles;
-    parent.add(particles.points);
+    if (!fragmentGeometry) parent.add(particles.points);
     return () => {
       parent.remove(particles.points);
       particles.dispose();
       simulation.current = null;
     };
-  }, [gl, source, count, clippingPlanes]);
+  }, [gl, source, count, clippingPlanes, fragmentGeometry, fragmentUniforms]);
 
   useLayoutEffect(() => {
     const state = pointer.current;
@@ -91,6 +109,11 @@ export function SkullParticles({
     const particles = simulation.current;
     const object = group.current;
     if (!particles || !object) return;
+    if (fragments) {
+      const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
+        && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
+      particles.setOrbit(orbitTransform, active);
+    }
     particles.uniforms.cursorRadius.value = settings.cursorRadius;
     particles.uniforms.cursorStrength.value = settings.cursorStrength;
     particles.uniforms.spring.value = settings.returnStrength;
@@ -148,7 +171,18 @@ export function SkullParticles({
     state.initialized = active;
     if (revealProgressRef.current > 0.001) return;
     particles.update(delta, reducedMotion);
-  });
+  }, -1);
 
-  return <group ref={group} />;
+  return (
+    <group ref={group}>
+      {fragmentGeometry && (
+        <SkullGlass
+          geometry={fragmentGeometry.geometry}
+          fragments={fragmentUniforms}
+          lowQuality={lowQuality}
+          clippingPlanes={clippingPlanes}
+        />
+      )}
+    </group>
+  );
 }

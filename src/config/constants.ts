@@ -31,6 +31,21 @@ export const FONTS = {
 const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 
 export const CONFIG = {
+  projectOrbitCollision: {
+    SIDE_INSET: 0.035,
+    HALF_THICKNESS: 0.006,
+    SKIN: 0.001,
+    NORMAL_EPSILON: 0.0002,
+    RESTITUTION: 0.24,
+    BOUNCE_START: 0.25,
+    BOUNCE_FULL: 2.5,
+    FRICTION: 5,
+    STEER_RANGE: 0.06,
+    STEER_ACCELERATION: 9,
+    CONTACTS: 3,
+    SWEEP_STEPS: 24,
+    SWEEP_SAFETY: 0.8,
+  },
   projectOrbit: {
     COUNT: 12,
     RADIUS_MULT: 1.4,
@@ -41,6 +56,7 @@ export const CONFIG = {
     SPEED: -0.045,
     CORNER_RADIUS: 0.045,
     BORDER_WIDTH: 0.008,
+    FAR_BRIGHTNESS: 0.18,
     EXIT_END: 0.55,
     RESPONSE: 4,
   },
@@ -312,6 +328,13 @@ export const CONFIG = {
       ior: 0.9,
       chromaticAberration: 1,
       backside: false,
+    },
+    FRAGMENTS: {
+      CELLS: 18,
+      CELLS_LOW: 13,
+      GAP: 0.025,
+      DEPTH_RATIO: 0.28,
+      SPIN: 1.2,
     },
     PARTICLE_COUNT: 16384,
     PARTICLE_COUNT_LOW: 4096,

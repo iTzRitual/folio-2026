@@ -16,10 +16,16 @@ export function createProjectOrbitGeometry(radius: number) {
 }
 
 export const projectOrbitVertexShader = `
+  uniform vec3 uOrbitCenter;
+  uniform float uOrbitRadius;
   varying vec2 vUv;
+  varying float vOrbitDepth;
   void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+    float centerDepth = (viewMatrix * vec4(uOrbitCenter, 1.0)).z;
+    vOrbitDepth = 0.5 + (centerDepth - viewPosition.z) / max(2.0 * uOrbitRadius, 0.0001);
+    gl_Position = projectionMatrix * viewPosition;
   }
 `;
 
@@ -30,7 +36,9 @@ export const projectOrbitFragmentShader = `
   uniform float uRadius;
   uniform float uBorder;
   uniform float uOpacity;
+  uniform float uFarBrightness;
   varying vec2 vUv;
+  varying float vOrbitDepth;
   void main() {
     vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
     vec2 q = abs(p) - vec2(uAspect, 1.0) * 0.5 + uRadius;
@@ -38,12 +46,10 @@ export const projectOrbitFragmentShader = `
     float aa = fwidth(edge);
     float alpha = 1.0 - smoothstep(-aa, aa, edge);
     if (alpha < 0.01) discard;
-    vec2 uv = vUv;
-    if (!gl_FrontFacing) uv.x = 1.0 - uv.x;
-    vec3 color = texture2D(uMap, (uv - 0.5) * uCover + 0.5).rgb;
-    color *= gl_FrontFacing ? 1.0 : 0.65;
+    vec3 color = texture2D(uMap, (vUv - 0.5) * uCover + 0.5).rgb;
     float border = smoothstep(-uBorder - aa, -uBorder + aa, edge);
-    gl_FragColor = vec4(mix(color, vec3(0.65), border * 0.7), alpha * uOpacity);
+    float brightness = mix(1.0, uFarBrightness, smoothstep(0.0, 1.0, vOrbitDepth));
+    gl_FragColor = vec4(mix(color, vec3(0.65), border * 0.7) * brightness, alpha * uOpacity);
     #include <colorspace_fragment>
   }
 `;

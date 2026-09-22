@@ -2,6 +2,12 @@ import * as THREE from "three";
 import { MeshSurfaceSampler } from "three/addons/math/MeshSurfaceSampler.js";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
 import { CONFIG } from "@/config/constants";
+import { projectOrbitCollisionShader } from "@/lib/projectOrbitCollision";
+
+export interface SkullSimulationUniforms {
+  positions: THREE.Uniform<THREE.Texture | null>;
+  restPosition: THREE.Uniform<THREE.Texture | null>;
+}
 
 const velocityShader = `
 uniform sampler2D restPosition;
@@ -45,6 +51,15 @@ void main() {
   vec3 velocity = texture2D(textureVelocity, uv).xyz;
   gl_FragColor = vec4(position + velocity * delta, 1.0);
 }`;
+
+function fragmentSimulationShader(output: "position" | "velocity") {
+  return velocityShader.replace("void main() {", `${projectOrbitCollisionShader}\nvoid main() {`)
+    .replace("gl_FragColor = vec4(velocity, heat);", `
+      vec3 nextPosition = position + velocity * delta;
+      collideOrbit(position, rest, texture2D(restPosition, uv).w, delta, nextPosition, velocity);
+      gl_FragColor = ${output === "position" ? "vec4(nextPosition, 1.0)" : "vec4(velocity, heat)"};
+    `);
+}
 
 const vertexShader = `
 uniform sampler2D positions;
@@ -131,23 +146,35 @@ export function createSkullParticles(
   source: THREE.BufferGeometry,
   requestedCount: number,
   clippingPlanes: THREE.Plane[],
+  fragments?: {
+    samples: ReturnType<typeof sampleSkullSurface>;
+    uniforms: SkullSimulationUniforms;
+  },
 ) {
   const config = CONFIG.model;
   const { count, textureSize: size } = skullParticleLayout(requestedCount);
-  const samples = sampleSkullSurface(source, size);
+  const samples = fragments?.samples ?? sampleSkullSurface(source, size);
   const compute = new GPUComputationRenderer(size, size, renderer);
   const rest = compute.createTexture();
   (rest.image.data as Float32Array).set(samples.positions);
   const initialVelocity = compute.createTexture();
-  const position = compute.addVariable("texturePosition", positionShader, rest);
+  const positionsUniform = fragments?.uniforms.positions ?? new THREE.Uniform<THREE.Texture | null>(rest);
+  positionsUniform.value = rest;
+  if (fragments) fragments.uniforms.restPosition.value = rest;
+  const position = compute.addVariable("texturePosition", fragments ? fragmentSimulationShader("position") : positionShader, rest);
   const velocity = compute.addVariable(
     "textureVelocity",
-    velocityShader,
+    fragments ? fragmentSimulationShader("velocity") : velocityShader,
     initialVelocity,
   );
   compute.setVariableDependencies(position, [position, velocity]);
   compute.setVariableDependencies(velocity, [position, velocity]);
   const uniforms = {
+    orbitActive: { value: 0 },
+    orbitStart: { value: new THREE.Matrix4() },
+    orbitEnd: { value: new THREE.Matrix4() },
+    simulationFromOrbit: { value: new THREE.Matrix4() },
+    orbitScale: { value: 1 },
     restPosition: { value: rest },
     delta: { value: config.PARTICLE_TIME_STEP },
     spring: new THREE.Uniform<number>(config.PARTICLE_RETURN_STRENGTH),
@@ -163,6 +190,7 @@ export function createSkullParticles(
     heatDecay: { value: config.PARTICLE_HEAT_DECAY },
   };
   Object.assign(velocity.material.uniforms, uniforms);
+  if (fragments) Object.assign(position.material.uniforms, uniforms);
   position.material.uniforms.delta = uniforms.delta;
   const error = compute.init();
   if (error) {
@@ -188,7 +216,7 @@ export function createSkullParticles(
     clipping: true,
     clippingPlanes,
     uniforms: {
-      positions: { value: rest as THREE.Texture },
+      positions: positionsUniform,
       velocities: { value: initialVelocity as THREE.Texture },
       pointRadius: {
         value: config.PARTICLE_RADIUS,
@@ -202,11 +230,29 @@ export function createSkullParticles(
   points.frustumCulled = false;
   points.raycast = () => {};
   let wasReducedMotion = false;
+  let orbitInitialized = false;
+  const previousOrbit = new THREE.Matrix4();
+  const currentOrbit = new THREE.Matrix4();
+  const orbitScale = new THREE.Vector3();
+  const interpolateOrbit = (target: THREE.Matrix4, t: number) => {
+    for (let i = 0; i < 16; i++) {
+      target.elements[i] = THREE.MathUtils.lerp(previousOrbit.elements[i], currentOrbit.elements[i], t);
+    }
+  };
   return {
     points,
     uniforms,
+    setOrbit(matrix: THREE.Matrix4, active: boolean) {
+      currentOrbit.copy(matrix);
+      if (!orbitInitialized || !active) previousOrbit.copy(matrix);
+      orbitInitialized = active;
+      uniforms.orbitActive.value = active ? 1 : 0;
+      uniforms.orbitScale.value = orbitScale.setFromMatrixScale(matrix).x;
+    },
     update(delta: number, reducedMotion: boolean) {
+      if (delta <= 0) return;
       if (reducedMotion) {
+        previousOrbit.copy(currentOrbit);
         wasReducedMotion = true;
         material.uniforms.positions.value = rest;
         material.uniforms.velocities.value = initialVelocity;
@@ -224,7 +270,15 @@ export function createSkullParticles(
       const elapsed = Math.min(delta, config.PARTICLE_MAX_DELTA);
       const steps = Math.max(1, Math.ceil(elapsed / config.PARTICLE_TIME_STEP));
       uniforms.delta.value = elapsed / steps;
-      for (let i = 0; i < steps; i++) compute.compute();
+      for (let i = 0; i < steps; i++) {
+        if (fragments && orbitInitialized) {
+          interpolateOrbit(uniforms.orbitStart.value, i / steps);
+          interpolateOrbit(uniforms.orbitEnd.value, (i + 1) / steps);
+          uniforms.simulationFromOrbit.value.copy(uniforms.orbitEnd.value).invert();
+        }
+        compute.compute();
+      }
+      previousOrbit.copy(currentOrbit);
       material.uniforms.positions.value = compute.getCurrentRenderTarget(position).texture;
       material.uniforms.velocities.value = compute.getCurrentRenderTarget(velocity).texture;
     },

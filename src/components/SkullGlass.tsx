@@ -1,17 +1,21 @@
 import { MeshTransmissionMaterial } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type ComponentRef } from "react";
-import { DataTexture, Vector3, type BufferGeometry, type Mesh, type Plane, type Texture } from "three";
+import { useEffect, useLayoutEffect, useMemo, useRef, type ComponentRef } from "react";
+import { DataTexture, Material, Vector3, type BufferGeometry, type Mesh, type Plane, type Texture } from "three";
 import { CONFIG } from "@/config/constants";
+import { applySkullFragmentShader } from "@/lib/skullFragments";
+import type { SkullSimulationUniforms } from "@/lib/skullParticles";
 
 export function SkullGlass({
   geometry,
   lowQuality,
   clippingPlanes,
+  fragments,
 }: {
   geometry: BufferGeometry;
   lowQuality: boolean;
   clippingPlanes: Plane[];
+  fragments?: SkullSimulationUniforms;
 }) {
   const mesh = useRef<Mesh>(null);
   const material = useRef<ComponentRef<typeof MeshTransmissionMaterial>>(null);
@@ -24,6 +28,11 @@ export function SkullGlass({
   }, []);
 
   useEffect(() => () => blankBuffer.dispose(), [blankBuffer]);
+
+  useLayoutEffect(() => {
+    if (!(material.current instanceof Material) || !fragments) return;
+    return applySkullFragmentShader(material.current, fragments);
+  }, [fragments, lowQuality]);
 
   useFrame(() => {
     if (!mesh.current || !material.current) return;
@@ -38,7 +47,7 @@ export function SkullGlass({
   });
 
   return (
-    <mesh ref={mesh} geometry={geometry} raycast={() => null}>
+    <mesh ref={mesh} geometry={geometry} frustumCulled={!fragments} raycast={() => null}>
       <MeshTransmissionMaterial
         ref={material}
         {...CONFIG.model.GLASS}

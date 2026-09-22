@@ -15,6 +15,7 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { ProjectOrbit } from "@/components/ProjectOrbit";
 import { SkullParticles } from "@/components/SkullParticles";
 import { SkullGlass } from "@/components/SkullGlass";
+import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -30,6 +31,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
+  const orbitCollider = useRef<ProjectOrbitCollider>({ object: null, radius: 1, active: false });
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
   const surface = useMemo(() => {
     const source = nodes.Sphere;
@@ -227,27 +229,30 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       mesh.current.rotation.y = THREE.MathUtils.damp(mesh.current.rotation.y, y * limit, CONFIG.model.TILT_RESPONSE, dt);
       mesh.current.rotation.z = Math.sin(t) * idle;
     }
-  });
+  }, -3);
 
   return (
     <group>
       <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <group ref={transitionScaleGroupRef}>
-          <ProjectOrbit />
+          <ProjectOrbit colliderRef={orbitCollider} />
           <group ref={mesh}>
             <group
               ref={skullRotationGroupRef}
               rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
             >
               <group scale={responsiveScale}>
-                {debug.skullAppearance.mode === "glass" && surface ? (
+                {debug.skullAppearance.mode === "glass" && surface && (
                   <SkullGlass
                     geometry={surface}
                     lowQuality={lowQuality}
                     clippingPlanes={FOLD_CLIP_PLANES}
                   />
-                ) : (
+                )}
+                {debug.skullAppearance.mode !== "glass" && (
                   <SkullParticles
+                    orbitCollider={orbitCollider}
+                    fragments={debug.skullAppearance.mode === "fragments"}
                     source={nodes.Sphere}
                     lowQuality={lowQuality}
                     clippingPlanes={FOLD_CLIP_PLANES}
