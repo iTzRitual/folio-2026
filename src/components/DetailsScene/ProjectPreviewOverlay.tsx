@@ -20,6 +20,7 @@ import {
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { applyCurlShader } from "@/lib/detailsCurl";
 import { drawCaptionTexture } from "@/lib/projectCaption";
+import { projectGlitchShader } from "@/lib/projectGlitch";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { getFontFamily } from "@/lib/textMetrics";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
@@ -139,20 +140,14 @@ varying vec2 vPreviewWin;
 vec3 previewMask = vec3(0.0);
 float previewCover = 0.0;
 
-float previewHash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
+${projectGlitchShader}
 
 float previewBand() {
   return floor(clamp(vPreviewWin.y, 0.0, 0.999) * uPreviewGlitchParams.x);
 }
 
 float previewSlice() {
-  float band = previewBand();
-  float tick = floor(uPreviewTime * uPreviewGlitchParams.w);
-  float gate = step(0.55, previewHash(vec2(band + 13.0, tick)));
-  float jitter = previewHash(vec2(band, tick)) * 2.0 - 1.0;
-  return jitter * gate * uPreviewGlitch * uPreviewGlitchParams.y;
+  return projectGlitchSlice(previewBand(), uPreviewTime, uPreviewGlitch, uPreviewGlitchParams);
 }
 
 // Antialiased off the unsliced coordinate: fwidth of the sliced one would pick

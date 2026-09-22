@@ -8,6 +8,7 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { createSkullParticles } from "@/lib/skullParticles";
 import { createSkullFragments } from "@/lib/skullFragments";
+import { skullInteractionTransform } from "@/lib/skullInteraction";
 import { SkullGlass } from "@/components/SkullGlass";
 import { orbitCollisionTransform, type ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 
@@ -117,7 +118,7 @@ export function SkullParticles({
         && progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON && revealProgressRef.current === 0);
       const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
         && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
-      particles.setOrbit(orbitTransform, active);
+      particles.setOrbit(orbitTransform, active, orbitCollider.current.reveal, orbitCollider.current.phase);
     }
     particles.uniforms.cursorRadius.value = settings.cursorRadius;
     particles.uniforms.cursorStrength.value = settings.cursorStrength;
@@ -137,15 +138,14 @@ export function SkullParticles({
       !reducedMotion &&
       settings.scale > 0 &&
       progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON &&
-      revealProgressRef.current === 0;
+      revealProgressRef.current === 0 &&
+      skullInteractionTransform(object, state.inverse);
     particles.uniforms.cursorActive.value = active ? 1 : 0;
     particles.uniforms.cursorVelocity.value.set(0, 0, 0);
     if (active) {
-      object.updateWorldMatrix(true, false);
       object.getWorldPosition(state.center);
       camera.getWorldDirection(state.normal);
       state.plane.setFromNormalAndCoplanarPoint(state.normal, state.center);
-      state.inverse.copy(object.matrixWorld).invert();
       state.raycaster.setFromCamera(state.position, camera);
       state.previousRaycaster.setFromCamera(
         state.initialized ? state.previous : state.position,
@@ -171,6 +171,9 @@ export function SkullParticles({
           .divideScalar(delta)
           .clampLength(0, CONFIG.model.PARTICLE_MAX_CURSOR_SPEED);
       }
+    } else {
+      particles.uniforms.cursorOrigin.value.set(0, 0, 0);
+      particles.uniforms.cursorDirection.value.set(0, 0, -1);
     }
     state.previous.copy(state.position);
     state.initialized = active;

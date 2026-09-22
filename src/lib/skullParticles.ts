@@ -29,14 +29,16 @@ void main() {
   vec3 position = texture2D(texturePosition, uv).xyz;
   vec4 previous = texture2D(textureVelocity, uv);
   vec3 rest = texture2D(restPosition, uv).xyz;
-  vec3 toParticle = position - cursorOrigin;
-  vec3 radial = toParticle - cursorDirection * dot(toParticle, cursorDirection);
-  float distanceToCursor = length(radial);
-  float influence = 1.0 - smoothstep(0.0, cursorRadius, distanceToCursor);
-  influence *= cursorActive;
-  vec3 cursorForce = cursorVelocity * cursorStrength;
-  cursorForce += radial / max(distanceToCursor, 0.001) * repulsion;
-  cursorForce *= influence;
+  vec3 cursorForce = vec3(0.0);
+  if (cursorActive > 0.5) {
+    vec3 toParticle = position - cursorOrigin;
+    vec3 radial = toParticle - cursorDirection * dot(toParticle, cursorDirection);
+    float distanceToCursor = length(radial);
+    float influence = 1.0 - smoothstep(0.0, cursorRadius, distanceToCursor);
+    cursorForce = cursorVelocity * cursorStrength;
+    cursorForce += radial / max(distanceToCursor, 0.001) * repulsion;
+    cursorForce *= influence;
+  }
   vec3 velocity = previous.xyz + ((rest - position) * spring + cursorForce) * delta;
   velocity *= exp(-damping * delta);
   float heat = previous.w * exp(-heatDecay * delta);
@@ -177,6 +179,8 @@ export function createSkullParticles(
   const uniforms = {
     entranceVelocity: { value: 0 },
     orbitActive: { value: 0 },
+    orbitReveal: { value: 1 },
+    orbitPhase: { value: 0 },
     orbitStart: { value: new THREE.Matrix4() },
     orbitEnd: { value: new THREE.Matrix4() },
     simulationFromOrbit: { value: new THREE.Matrix4() },
@@ -241,6 +245,10 @@ export function createSkullParticles(
   const previousOrbit = new THREE.Matrix4();
   const currentOrbit = new THREE.Matrix4();
   const orbitScale = new THREE.Vector3();
+  let previousReveal = 1;
+  let currentReveal = 1;
+  let previousPhase = 0;
+  let currentPhase = 0;
   const interpolateOrbit = (target: THREE.Matrix4, t: number) => {
     for (let i = 0; i < 16; i++) {
       target.elements[i] = THREE.MathUtils.lerp(previousOrbit.elements[i], currentOrbit.elements[i], t);
@@ -252,9 +260,15 @@ export function createSkullParticles(
     setEntranceScale(scale: number, delta: number, active: boolean) {
       uniforms.entranceVelocity.value = entrance.sample(scale, delta, active);
     },
-    setOrbit(matrix: THREE.Matrix4, active: boolean) {
+    setOrbit(matrix: THREE.Matrix4, active: boolean, reveal = 1, phase = 0) {
       currentOrbit.copy(matrix);
-      if (!orbitInitialized || !active) previousOrbit.copy(matrix);
+      currentReveal = reveal;
+      currentPhase = phase;
+      if (!orbitInitialized || !active) {
+        previousOrbit.copy(matrix);
+        previousReveal = reveal;
+        previousPhase = phase;
+      }
       orbitInitialized = active;
       uniforms.orbitActive.value = active ? 1 : 0;
       uniforms.orbitScale.value = orbitScale.setFromMatrixScale(matrix).x;
@@ -263,6 +277,8 @@ export function createSkullParticles(
       if (delta <= 0) return;
       if (reducedMotion) {
         previousOrbit.copy(currentOrbit);
+        previousReveal = currentReveal;
+        previousPhase = currentPhase;
         wasReducedMotion = true;
         material.uniforms.positions.value = rest;
         material.uniforms.velocities.value = initialVelocity;
@@ -282,6 +298,8 @@ export function createSkullParticles(
       uniforms.delta.value = elapsed / steps;
       for (let i = 0; i < steps; i++) {
         if (fragments && orbitInitialized) {
+          uniforms.orbitReveal.value = THREE.MathUtils.lerp(previousReveal, currentReveal, (i + 1) / steps);
+          uniforms.orbitPhase.value = THREE.MathUtils.lerp(previousPhase, currentPhase, (i + 1) / steps);
           interpolateOrbit(uniforms.orbitStart.value, i / steps);
           interpolateOrbit(uniforms.orbitEnd.value, (i + 1) / steps);
           uniforms.simulationFromOrbit.value.copy(uniforms.orbitEnd.value).invert();
@@ -289,6 +307,8 @@ export function createSkullParticles(
         compute.compute();
       }
       previousOrbit.copy(currentOrbit);
+      previousReveal = currentReveal;
+      previousPhase = currentPhase;
       material.uniforms.positions.value = compute.getCurrentRenderTarget(position).texture;
       material.uniforms.velocities.value = compute.getCurrentRenderTarget(velocity).texture;
     },

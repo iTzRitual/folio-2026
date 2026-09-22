@@ -5,6 +5,8 @@ export interface ProjectOrbitCollider {
   object: Object3D | null;
   radius: number;
   active: boolean;
+  reveal?: number;
+  phase?: number;
 }
 
 export function orbitCollisionTransform(object: Object3D, collider: ProjectOrbitCollider, target: Matrix4) {
@@ -19,7 +21,8 @@ export function orbitCollisionTransform(object: Object3D, collider: ProjectOrbit
   return target;
 }
 
-export function projectCardDistance(point: Vector3) {
+export function projectCardDistance(point: Vector3, reveal = 1, phase = 0) {
+  if (reveal <= 0) return Infinity;
   const orbit = CONFIG.projectOrbit;
   const pitch = Math.PI * 2 / orbit.COUNT;
   const arc = pitch * (1 - orbit.GAP);
@@ -29,7 +32,14 @@ export function projectCardDistance(point: Vector3) {
   const wrapped = angle - pitch * Math.floor(angle / pitch + 0.5);
   const x = Math.abs(wrapped) - arc / 2 + CONFIG.projectOrbitCollision.SIDE_INSET + corner;
   const y = Math.abs(point.y) - height / 2 + corner;
-  const face = Math.hypot(Math.max(x, 0), Math.max(y, 0)) + Math.min(Math.max(x, y), 0) - corner;
+  let face = Math.hypot(Math.max(x, 0), Math.max(y, 0)) + Math.min(Math.max(x, y), 0) - corner;
+  if (reveal < 1) {
+    const halfSweep = Math.PI * reveal;
+    const middle = orbit.ENTRANCE_ORIGIN + (Math.sign(orbit.SPEED) || -1) * halfSweep;
+    const relative = angle + phase - middle;
+    const wrappedSweep = Math.atan2(Math.sin(relative), Math.cos(relative));
+    face = Math.max(face, Math.abs(wrappedSweep) - halfSweep);
+  }
   const radius = Math.hypot(point.x, point.z);
   const depth = Math.abs(radius - 1) - CONFIG.projectOrbitCollision.HALF_THICKNESS;
   const distance = Math.hypot(Math.max(face, 0), Math.max(depth, 0)) + Math.min(Math.max(face, depth), 0);
@@ -48,6 +58,8 @@ uniform mat4 orbitStart;
 uniform mat4 orbitEnd;
 uniform mat4 simulationFromOrbit;
 uniform float orbitScale;
+uniform float orbitReveal;
+uniform float orbitPhase;
 const float orbitPitch = ${pitch};
 const float cardHalfWidth = ${arc / 2 - C.SIDE_INSET};
 const float cardHalfHeight = ${height / 2};
@@ -63,6 +75,13 @@ float cardAngle(vec3 p) {
 float cardDistance(vec3 p) {
   vec2 q = abs(vec2(cardAngle(p), p.y)) - vec2(cardHalfWidth, cardHalfHeight) + cardCorner;
   float face = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - cardCorner;
+  if (orbitReveal < 1.0) {
+    float halfSweep = ${Math.PI} * orbitReveal;
+    float middle = ${O.ENTRANCE_ORIGIN} + ${(Math.sign(O.SPEED) || -1).toFixed(1)} * halfSweep;
+    float relative = atan(p.x, p.z) + orbitPhase - middle;
+    float wrappedSweep = atan(sin(relative), cos(relative));
+    face = max(face, abs(wrappedSweep) - halfSweep);
+  }
   float radius = length(p.xz);
   vec2 d = vec2(face, abs(radius - 1.0) - cardThickness);
   return max(d.y, (length(max(d, 0.0)) + min(max(d.x, d.y), 0.0)) * min(1.0, radius));
@@ -91,7 +110,7 @@ vec3 cardEscape(vec3 p, float radius) {
 }
 
 void collideOrbit(vec3 previousPosition, vec3 rest, float localRadius, float dt, inout vec3 position, inout vec3 velocity) {
-  if (orbitActive < 0.5 || localRadius <= 0.0) return;
+  if (orbitActive < 0.5 || orbitReveal <= 0.0 || localRadius <= 0.0) return;
   float radius = localRadius * orbitScale;
   vec3 start = (orbitStart * vec4(previousPosition, 1.0)).xyz;
   vec3 end = (orbitEnd * vec4(position, 1.0)).xyz;

@@ -1,7 +1,23 @@
 import assert from "node:assert/strict";
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from "three";
+import { BufferGeometry, Float32BufferAttribute, Group, Matrix4, Ray, Vector3 } from "three";
 import { sampleSkullSurface, skullParticleLayout } from "@/lib/skullParticles";
 import { CONFIG } from "@/config/constants";
+import { skullInteractionTransform } from "@/lib/skullInteraction";
+
+const parent = new Group();
+const model = new Group();
+parent.add(model);
+const inverse = new Matrix4();
+for (const scale of [0, 1e-8, Number.NaN]) {
+  parent.scale.setScalar(scale);
+  assert.equal(skullInteractionTransform(model, inverse), false, "Cursor input is rejected while the skull transform is singular or too small");
+}
+for (const scale of [0.01, 0.4, 1]) {
+  parent.scale.setScalar(scale);
+  assert.equal(skullInteractionTransform(model, inverse), true, "Cursor input resumes as the skull grows");
+  const ray = new Ray(new Vector3(0, 0, 5), new Vector3(0, 0, -1)).applyMatrix4(inverse);
+  assert(ray.origin.toArray().every(Number.isFinite) && ray.direction.toArray().every(Number.isFinite));
+}
 
 for (const requestedCount of [256, 1000, 4096, 5500, 16384, 65536]) {
   const layout = skullParticleLayout(requestedCount);

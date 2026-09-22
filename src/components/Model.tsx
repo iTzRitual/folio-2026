@@ -32,6 +32,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const orbitCollider = useRef<ProjectOrbitCollider>({ object: null, radius: 1, active: false });
+  const entranceProgressRef = useRef({ progress: 0, orbitElapsed: 0 });
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
   const surface = useMemo(() => {
     const source = nodes.Sphere;
@@ -58,6 +59,8 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
 
   useGSAP(() => {
     if (!animGroupRef.current) return;
+    entranceProgressRef.current.progress = 0;
+    entranceProgressRef.current.orbitElapsed = 0;
 
     if (!startTrigger) {
       animGroupRef.current.scale.set(0, 0, 0);
@@ -66,25 +69,33 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
 
     if (prefersReducedMotion) {
       animGroupRef.current.scale.set(0.95, 0.95, 0.95);
-      gsap.to(animGroupRef.current.scale, {
+      const timeline = gsap.timeline({ delay: 0.5 });
+      timeline.to(animGroupRef.current.scale, {
         x: 1,
         y: 1,
         z: 1,
         duration: 0.4,
         ease: "power2.out",
-        delay: 0.5,
-      });
+      }, 0);
+      timeline.to(entranceProgressRef.current, { progress: 1, duration: 0.4, ease: "none" }, 0);
       return;
     }
 
-    gsap.to(animGroupRef.current.scale, {
+    const duration = debug.skullAppearance.mode === "fragments" ? CONFIG.model.FRAGMENTS.ENTRANCE_DURATION : 1.5;
+    const timeline = gsap.timeline({ delay: 1 });
+    timeline.to(animGroupRef.current.scale, {
       x: 1,
       y: 1,
       z: 1,
-      duration: debug.skullAppearance.mode === "fragments" ? CONFIG.model.FRAGMENTS.ENTRANCE_DURATION : 1.5,
+      duration,
       ease: debug.skullAppearance.mode === "fragments" ? CONFIG.model.FRAGMENTS.ENTRANCE_EASE : "elastic.out(1, 0.5)",
-      delay: 1,
-    });
+    }, 0);
+    timeline.to(entranceProgressRef.current, { progress: 1, duration, ease: "none" }, 0);
+    timeline.to(entranceProgressRef.current, {
+      orbitElapsed: CONFIG.projectOrbit.ENTRANCE_DURATION,
+      duration: CONFIG.projectOrbit.ENTRANCE_DURATION,
+      ease: "none",
+    }, duration * CONFIG.projectOrbit.ENTRANCE_START);
   }, { dependencies: [startTrigger, prefersReducedMotion], revertOnUpdate: true });
 
   const responsiveScale = baseResponsiveScale * debug.particles.scale;
@@ -235,7 +246,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
     <group>
       <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <group ref={transitionScaleGroupRef}>
-          <ProjectOrbit colliderRef={orbitCollider} />
+          <ProjectOrbit colliderRef={orbitCollider} entranceProgressRef={entranceProgressRef} />
           <group ref={mesh}>
             <group
               ref={skullRotationGroupRef}

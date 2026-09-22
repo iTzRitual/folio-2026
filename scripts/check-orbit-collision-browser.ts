@@ -6,7 +6,7 @@ import { CONFIG } from "@/config/constants";
 export function checkOrbitCollision(renderer: WebGLRenderer) {
   const results: string[] = [];
   const pitch = Math.PI * 2 / CONFIG.projectOrbit.COUNT;
-  function run(name: string, start: Vector3, speed: Vector3, radius: number, frames = 1, home = start, spring = 0, moving = false, dt = 1 / 120, active = true) {
+  function run(name: string, start: Vector3, speed: Vector3, radius: number, frames = 1, home = start, spring = 0, moving = false, dt = 1 / 120, active = true, reveal = 1) {
     const compute = new GPUComputationRenderer(1, 1, renderer);
     const initialPosition = compute.createTexture();
     const initialVelocity = compute.createTexture();
@@ -34,6 +34,7 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
     const uniforms = {
       dt: { value: dt }, radius: { value: radius }, home: { value: home }, spring: { value: spring },
       orbitActive: { value: active ? 1 : 0 }, orbitScale: { value: 1 },
+      orbitReveal: { value: reveal }, orbitPhase: { value: 0 },
       orbitStart: { value: new Matrix4() }, orbitEnd: { value: new Matrix4() },
       simulationFromOrbit: { value: new Matrix4() },
     };
@@ -54,7 +55,7 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
       compute.compute();
       renderer.readRenderTargetPixels(compute.getCurrentRenderTarget(position), 0, 0, 1, 1, pixels);
       p.fromArray(pixels);
-      minimum = Math.min(minimum, projectCardDistance(p.clone().applyMatrix4(uniforms.orbitEnd.value)) - radius);
+      minimum = Math.min(minimum, projectCardDistance(p.clone().applyMatrix4(uniforms.orbitEnd.value), reveal) - radius);
     }
     renderer.readRenderTargetPixels(compute.getCurrentRenderTarget(velocity), 0, 0, 1, 1, pixels);
     v.fromArray(pixels);
@@ -91,5 +92,9 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
   assert(moving.minimum > -0.002, "Rotating card must push fragment out instead of crossing it");
   const disabled = run("hidden orbit", new Vector3(0, 0, 0.6), new Vector3(0, 0, 150), 0.03, 1, undefined, 0, false, 1 / 120, false);
   assert(disabled.p.z > 1.8, "Hidden orbit must stop colliding");
+  const unrevealed = run("unrevealed front card", new Vector3(0, 0, 0.6), new Vector3(0, 0, 150), 0.03, 1, undefined, 0, false, 1 / 120, true, 0.25);
+  assert(unrevealed.p.z > 1.8, "A card that has not emerged must not block fragments");
+  const revealed = run("revealed rear card", radial(pitch * 5, 0.6), radial(pitch * 5, 150), 0.03, 1, undefined, 0, false, 1 / 120, true, 0.25);
+  assert(revealed.p.length() < 0.965 && revealed.v.dot(radial(pitch * 5, 1)) < 0, "An emerged card must already deflect fragments");
   return `PASS\n${results.join("\n")}`;
 }
