@@ -153,13 +153,13 @@ export default function Scene({
     <div
       ref={eventWrapperRef}
       className="absolute inset-0 w-full h-full overflow-hidden"
+      style={{ touchAction: inputMode === "coarse" ? "pan-y" : "auto" }}
     >
       <Canvas
         className="bg-transparent"
         key="main-canvas"
         eventSource={eventWrapperRef}
         eventPrefix="client"
-        style={{ touchAction: inputMode === "coarse" ? "pan-y" : "auto" }}
         dpr={dpr}
         camera={{
           fov: CONFIG.scene.CAMERA_FOV,

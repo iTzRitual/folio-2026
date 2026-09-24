@@ -8,10 +8,6 @@ const cruiseDuration = C.ENTRANCE_CRUISE_DURATION;
 const brakeDuration = C.ENTRANCE_DURATION - cruiseDuration;
 const cruiseSpeed = circumference * C.ENTRANCE_TURNS / (cruiseDuration + brakeDuration / 2);
 
-export function projectOrbitIdleStep(delta: number) {
-  return delta > 0 && delta <= C.IDLE_MAX_FRAME_DELTA ? delta * C.SPEED : 0;
-}
-
 export function projectOrbitEntranceAt(elapsed: number, cardArc = halfCard * 2) {
   const time = Math.max(0, elapsed);
   const brake = Math.min(1, Math.max(0, (time - cruiseDuration) / brakeDuration));

@@ -3,7 +3,8 @@ import { CONFIG } from "@/config/constants";
 import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT } from "@/lib/projectOrbit";
 import { Group, Matrix4, Vector3 } from "three";
 import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
-import { projectOrbitEntranceAt, projectOrbitIdleStep } from "@/lib/projectOrbitEntrance";
+import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
+import { orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
 
 const intro = CONFIG.projectOrbit;
 const direction = Math.sign(intro.SPEED);
@@ -122,10 +123,10 @@ console.log("PASS: lab layout extremes preserve complete media proportions and m
 
 for (const fps of [20, 30, 60, 120]) {
   let phase = 0;
-  for (let frame = 0; frame < fps * 10; frame++) phase += projectOrbitIdleStep(1 / fps);
+  for (let frame = 0; frame < fps * 10; frame++) phase += orbitMomentumStep(intro.SPEED, 1 / fps, intro.DRAG.FRICTION).angle;
   assert(Math.abs(phase - intro.SPEED * 10) < 1e-10, "Idle covers the same angle at 20, 30, 60 and 120 FPS");
 }
-assert.equal(projectOrbitIdleStep(2), 0, "Resuming after a background pause does not jump around the ring");
+assert.equal(orbitMomentumStep(intro.SPEED, 2, intro.DRAG.FRICTION).angle, 0, "Resuming after a background pause does not jump around the ring");
 for (const cardCount of [6, 10, 24]) {
   const arc = projectOrbitLayout({ count: cardCount }).arc;
   const endpoint = projectOrbitEntranceAt(duration, arc).phase;
@@ -145,3 +146,30 @@ let reveal90 = 0;
 while (projectOrbitEntranceAt(reveal90).reveal < 0.9) reveal90 += 0.001;
 assert(1 - Math.exp(-intro.ENTRANCE_RESPONSE * reveal90) > 0.99, "Cards are fully readable before the entrance settles");
 console.log("PASS: orbit timing preserves velocity at handoff, frame-rate-independent idle and prompt entrance opacity.");
+
+for (const initial of [-8, -2, 0, 2, 8]) {
+  const reference = { angle: 0, velocity: initial };
+  for (let frame = 0; frame < 120 * 4; frame++) {
+    const next = orbitMomentumStep(reference.velocity, 1 / 120, intro.DRAG.FRICTION);
+    reference.angle += next.angle;
+    reference.velocity = next.velocity;
+  }
+  for (const fps of [20, 30, 60]) {
+    let angle = 0;
+    let velocity = initial;
+    for (let frame = 0; frame < fps * 4; frame++) {
+      const next = orbitMomentumStep(velocity, 1 / fps, intro.DRAG.FRICTION);
+      assert(Math.abs(next.velocity - intro.SPEED) <= Math.abs(velocity - intro.SPEED), "Fling energy decays toward idle without overshoot");
+      angle += next.angle;
+      velocity = next.velocity;
+    }
+    assert(Math.abs(angle - reference.angle) < 1e-10, "Fling distance is independent of frame rate in both directions");
+    assert(Math.abs(velocity - intro.SPEED) < 0.015, "A fast fling returns close to idle after four seconds");
+  }
+}
+assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 80, phase: 0.32 }], 85), 4, "Fast gestures transfer their measured angular velocity");
+assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 80, phase: -0.32 }], 85), -4, "Reverse gestures transfer reverse momentum");
+assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 80, phase: 0.32 }], 250), 0, "Holding before release cancels stale momentum");
+assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 10, phase: 3 }], 12), intro.DRAG.MAX_SPEED, "Extreme gestures respect the speed limit");
+assert.equal(orbitMomentumStep(4, 2, intro.DRAG.FRICTION).angle, 0, "Returning to a hidden tab does not jump the orbit");
+console.log("PASS: orbit gestures preserve release direction, discard stale velocity and decay consistently across frame rates.");

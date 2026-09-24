@@ -11,7 +11,8 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT, projectOrbitFragmentShader, projectOrbitVertexShader } from "@/lib/projectOrbit";
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import { projectOrbitCollisionShape, type ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
-import { projectOrbitEntranceAt, projectOrbitIdleStep } from "@/lib/projectOrbitEntrance";
+import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
+import { useProjectOrbitDrag } from "@/hooks/useProjectOrbitDrag";
 import { createProjectOrbitHud } from "@/lib/projectOrbitHud";
 import { useOrbitSignal } from "@/context/OrbitSignalContext";
 
@@ -49,6 +50,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   }, [skullGeometry]);
   const group = useRef<Group>(null);
   const rotation = useRef<Group>(null);
+  const advanceOrbit = useProjectOrbitDrag(rotation, group);
   const materialRef = useRef<ShaderMaterial>(null);
   const entrance = useRef({ elapsed: 0, started: false, complete: false });
   const playback = useRef<{ video: HTMLVideoElement; active: boolean } | null>(null);
@@ -190,13 +192,13 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     if (startTrigger && entranceProgressRef.current.progress >= C.ENTRANCE_START) intro.started = true;
     if (intro.started && reducedMotion) intro.complete = true;
     if (rotation.current && present && exit < 1 && intro.started && !reducedMotion && !document.hidden) {
-      if (intro.complete) rotation.current.rotation.y += projectOrbitIdleStep(delta);
-      else {
+      if (!intro.complete) {
         intro.elapsed = entranceProgressRef.current.orbitElapsed;
         rotation.current.rotation.y = projectOrbitEntranceAt(intro.elapsed, layout.arc).phase;
         intro.complete = intro.elapsed >= C.ENTRANCE_DURATION;
       }
     }
+    advanceOrbit(delta, present && exit === 0 && intro.complete && !document.hidden, reducedMotion);
     const reveal = intro.complete ? 1 : projectOrbitEntranceAt(intro.elapsed, layout.arc).reveal;
     currentMaterial.uniforms.uReveal.value = reveal;
     const targetOpacity = present && intro.started ? 1 - exit : 0;
@@ -247,7 +249,6 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
               geometry={geometries[index]}
               position={[Math.sin(angle) * radius, 0, Math.cos(angle) * radius]}
               rotation={[0, angle, 0]}
-              raycast={() => null}
             >
               <primitive object={material} attach="material" ref={index === 0 ? materialRef : undefined} />
             </mesh>
