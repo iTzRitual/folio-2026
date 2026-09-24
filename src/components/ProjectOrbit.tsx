@@ -1,7 +1,7 @@
 import { useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { DoubleSide, Group, MathUtils, Matrix4, ShaderMaterial, SRGBColorSpace, Vector2, Vector3, Vector4, VideoTexture } from "three";
+import { BufferGeometry, DoubleSide, Group, MathUtils, Matrix4, ShaderMaterial, SRGBColorSpace, Vector2, Vector3, Vector4, VideoTexture } from "three";
 import { CONFIG } from "@/config/constants";
 import { projectsData } from "@/data/content";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -12,13 +12,18 @@ import { createProjectOrbitGeometry, projectOrbitFragmentShader, projectOrbitVer
 import { caseStudyStage } from "@/lib/caseStudyStage";
 import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
+import { createSkullSignalMask } from "@/lib/skullSignalMask";
+import { useOrbitSignal } from "@/context/OrbitSignalContext";
+import { SIGNAL_MODES } from "@/config/orbitSignal";
 
 const C = CONFIG.projectOrbit;
 const project = projectsData.find((project) => project.slug === "controller-configurator")!;
 
-export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
+export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, skullRef }: {
   colliderRef: RefObject<ProjectOrbitCollider>;
   entranceProgressRef: RefObject<{ progress: number; orbitElapsed: number }>;
+  skullGeometry: BufferGeometry;
+  skullRef: RefObject<Group | null>;
 }) {
   const texture = useTexture(project.preview, (loaded) => {
     loaded.colorSpace = SRGBColorSpace;
@@ -28,6 +33,9 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
   const { progressRef, revealProgressRef } = useHeroTransition();
   const { startTrigger } = useAnimationContext();
   const reducedMotion = usePrefersReducedMotion();
+  const signal = useOrbitSignal();
+  const signalClock = useRef({ seed: signal.config.seed, time: 0 });
+  const skullMask = useMemo(() => createSkullSignalMask(skullGeometry), [skullGeometry]);
   const group = useRef<Group>(null);
   const rotation = useRef<Group>(null);
   const materialRef = useRef<ShaderMaterial>(null);
@@ -58,6 +66,13 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
         uTime: { value: 0 },
         uGlitch: { value: CONFIG.projectPreview.REST_GLITCH },
         uGlitchParams: { value: new Vector4(CONFIG.projectPreview.GLITCH_BANDS, CONFIG.projectPreview.GLITCH_SLICE, CONFIG.projectPreview.GLITCH_SPLIT, CONFIG.projectPreview.GLITCH_HZ) },
+        uSkullMask: { value: skullMask.texture },
+        uSignalSurface: { value: new Vector2() },
+        uSignalPattern: { value: new Vector4() },
+        uSignalDamage: { value: new Vector4() },
+        uSignalTime: { value: 0 },
+        uSignalMode: { value: 0 },
+        uSignalAnimated: { value: 1 },
         uHologramOpacity: { value: C.HOLOGRAM_OPACITY },
         uHologramTint: { value: C.HOLOGRAM_TINT },
         uScan: { value: new Vector3(C.HOLOGRAM_SCAN_LINES, C.HOLOGRAM_SCAN_STRENGTH, C.HOLOGRAM_SCAN_SPEED) },
@@ -68,7 +83,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
       forceSinglePass: true,
       toneMapped: false,
     });
-  }, [texture]);
+  }, [texture, skullMask]);
 
   useEffect(() => {
     if (reducedMotion || !project.loop) return;
@@ -121,6 +136,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
 
   useEffect(() => () => geometries.forEach((geometry) => geometry.dispose()), [geometries]);
   useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => skullMask.dispose(), [skullMask]);
   useEffect(() => () => { colliderRef.current.object = null; colliderRef.current.active = false; }, [colliderRef]);
 
   useFrame((state, delta) => {
@@ -129,6 +145,19 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
     const dt = Math.min(delta, 1 / 30);
     const exit = MathUtils.smoothstep(progressRef.current, 0, C.EXIT_END);
     const present = startTrigger && revealProgressRef.current === 0 && !caseStudyStage.open;
+    const settings = signal.config;
+    const clock = signalClock.current;
+    if (clock.seed !== settings.seed || !startTrigger) {
+      clock.seed = settings.seed;
+      clock.time = 0;
+    }
+    if (present && !document.hidden && !reducedMotion && signal.previewTime === null) clock.time += dt;
+    currentMaterial.uniforms.uSignalTime.value = (signal.previewTime ?? clock.time) * settings.pace;
+    currentMaterial.uniforms.uSignalPattern.value.set(settings.seed / 997, settings.drift, settings.density, settings.size);
+    currentMaterial.uniforms.uSignalDamage.value.set(settings.clearance, settings.displacement, settings.bursts, settings.separation);
+    currentMaterial.uniforms.uSignalMode.value = SIGNAL_MODES.indexOf(settings.mode);
+    currentMaterial.uniforms.uSignalAnimated.value = reducedMotion ? 0 : 1;
+    currentMaterial.uniforms.uSignalSurface.value.set(radius, radius * Math.PI * 2 / C.COUNT * (1 - C.GAP) / CONFIG.projectPreview.ASPECT);
     currentMaterial.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
     currentMaterial.uniforms.uGlitch.value = reducedMotion ? 0 : CONFIG.projectPreview.REST_GLITCH;
     const videoActive = present && exit < 1 && !reducedMotion && !document.hidden;
@@ -163,6 +192,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef }: {
       group.current.getWorldScale(worldScale);
       currentMaterial.uniforms.uOrbitRadius.value = radius * worldScale.x;
       currentMaterial.uniforms.uOrbitFrame.value.copy(group.current.matrixWorld).invert();
+      if (group.current.visible && skullRef.current && !document.hidden) skullMask.render(state.gl, state.camera, skullRef.current);
     }
     colliderRef.current.object = rotation.current;
     colliderRef.current.radius = radius;

@@ -1,6 +1,7 @@
 import { Float32BufferAttribute, PlaneGeometry } from "three";
 import { CONFIG } from "@/config/constants";
 import { projectGlitchShader } from "@/lib/projectGlitch";
+import { orbitSignalShader } from "@/lib/orbitSignal";
 
 export function createProjectOrbitGeometry(radius: number, cardIndex = 0) {
   const arc = (Math.PI * 2 / CONFIG.projectOrbit.COUNT) * (1 - CONFIG.projectOrbit.GAP);
@@ -29,6 +30,8 @@ export const projectOrbitVertexShader = `
   varying vec2 vUv;
   varying float vOrbitDepth;
   varying vec3 vOrbitPosition;
+  varying vec4 vClipPosition;
+  varying float vViewDepth;
   void main() {
     vUv = uv;
     vGlitchTimeOffset = glitchTimeOffset;
@@ -37,6 +40,8 @@ export const projectOrbitVertexShader = `
     float centerDepth = (viewMatrix * vec4(uOrbitCenter, 1.0)).z;
     vOrbitDepth = 0.5 + (centerDepth - viewPosition.z) / max(2.0 * uOrbitRadius, 0.0001);
     gl_Position = projectionMatrix * viewPosition;
+    vClipPosition = gl_Position;
+    vViewDepth = -viewPosition.z;
   }
 `;
 
@@ -61,6 +66,7 @@ export const projectOrbitFragmentShader = `
   varying float vOrbitDepth;
   varying vec3 vOrbitPosition;
   ${projectGlitchShader}
+  ${orbitSignalShader}
   float orbitEdge(vec2 uv) {
     vec2 p = (uv - 0.5) * vec2(uAspect, 1.0);
     vec2 q = abs(p) - vec2(uAspect, 1.0) * 0.5 + uRadius;
@@ -76,16 +82,17 @@ export const projectOrbitFragmentShader = `
     vec2 derivatives = fwidth(vUv) * vec2(uAspect, 1.0);
     float aa = max(derivatives.x, derivatives.y);
     float band = floor(clamp(vUv.y, 0.0, 0.999) * uGlitchParams.x);
-    float slice = projectGlitchSlice(band, uTime + vGlitchTimeOffset, uGlitch, uGlitchParams);
+    vec3 signal = orbitSignal();
+    float glitchTime = uTime + vGlitchTimeOffset;
+    float slice = projectGlitchSlice(band, glitchTime, uGlitch, uGlitchParams) + signal.x;
     vec2 uv = vUv - vec2(slice, 0.0);
-    vec2 offset = vec2(uGlitch * uGlitchParams.z, 0.0);
+    vec2 offset = vec2(uGlitch * uGlitchParams.z + signal.z, 0.0);
     vec2 redUv = uv + offset;
     vec2 blueUv = uv - offset;
     vec3 edges = vec3(orbitEdge(redUv), orbitEdge(uv), orbitEdge(blueUv));
     vec3 mask = 1.0 - smoothstep(vec3(-aa), vec3(aa), edges);
     float cover = max(mask.r, max(mask.g, mask.b));
     if (cover < 0.01) discard;
-    float alpha = dot(mask, vec3(1.0 / 3.0));
     vec3 color = vec3(
       texture2D(uMap, (redUv - 0.5) * uCover + 0.5).r,
       texture2D(uMap, (uv - 0.5) * uCover + 0.5).g,
@@ -101,6 +108,7 @@ export const projectOrbitFragmentShader = `
     float scan = 1.0 - uScan.y * scanVisibility * (0.5 + 0.5 * sin(scanPosition * 6.283185));
     vec3 borders = smoothstep(vec3(-uBorder - aa), vec3(-uBorder + aa), edges);
     float border = max(borders.r * mask.r, max(borders.g * mask.g, borders.b * mask.b));
+    float alpha = dot(mask, vec3(1.0 / 3.0)) * (1.0 - signal.y * (1.0 - border));
     float brightness = mix(1.0, uFarBrightness, smoothstep(0.0, 1.0, vOrbitDepth));
     float transmission = mix(0.65, 1.0, luminance) * uHologramOpacity * scan;
     transmission = mix(transmission, uHologramOpacity, border);

@@ -31,6 +31,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
+  const skullSurfaceRef = useRef<THREE.Group>(null);
   const orbitCollider = useRef<ProjectOrbitCollider>({ object: null, radius: 1, active: false });
   const entranceProgressRef = useRef({ progress: 0, orbitElapsed: 0 });
   const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
@@ -246,13 +247,13 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
     <group>
       <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <group ref={transitionScaleGroupRef}>
-          <ProjectOrbit colliderRef={orbitCollider} entranceProgressRef={entranceProgressRef} />
+          {surface && <ProjectOrbit colliderRef={orbitCollider} entranceProgressRef={entranceProgressRef} skullGeometry={surface} skullRef={skullSurfaceRef} />}
           <group ref={mesh}>
             <group
               ref={skullRotationGroupRef}
               rotation={[skullRotation.x, skullRotation.y, skullRotation.z]}
             >
-              <group scale={responsiveScale}>
+              <group ref={skullSurfaceRef} scale={responsiveScale}>
                 {debug.skullAppearance.mode === "glass" && surface && (
                   <SkullGlass
                     geometry={surface}

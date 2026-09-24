@@ -1,0 +1,12 @@
+{
+  "seed": 731,
+  "mode": "interference",
+  "density": 0.58,
+  "size": 1,
+  "drift": 0.42,
+  "bursts": 0.65,
+  "displacement": 0.55,
+  "separation": 0.3,
+  "clearance": 0.55,
+  "pace": 0.8
+}

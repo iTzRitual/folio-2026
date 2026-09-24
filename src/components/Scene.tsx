@@ -36,6 +36,7 @@ import { WorkstationScene } from "./WorkstationScene";
 import { CONFIG } from "@/config/constants";
 import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
+import { OrbitSignalContext, useOrbitSignal } from "@/context/OrbitSignalContext";
 
 function SceneContent({
   isDebug,
@@ -110,6 +111,7 @@ export default function Scene({
   debugSettings: DebugSettings;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
+  const orbitSignal = useOrbitSignal();
 
   const [dpr, setDpr] = useState(1);
   const [qualityTier, setQualityTier] = useState<SceneQualityTier>("balanced");
@@ -199,12 +201,14 @@ export default function Scene({
         >
           <ThemeBridge value={themeContext}>
             <DebugSettingsBridge value={debugSettings}>
-              <SceneContent
-                isDebug={isDebug}
-                startAnimation={startAnimation}
-                bioVariant={bioVariant}
-                detailsOverflowViewports={detailsOverflowViewports}
-              />
+              <OrbitSignalContext.Provider value={orbitSignal}>
+                <SceneContent
+                  isDebug={isDebug}
+                  startAnimation={startAnimation}
+                  bioVariant={bioVariant}
+                  detailsOverflowViewports={detailsOverflowViewports}
+                />
+              </OrbitSignalContext.Provider>
             </DebugSettingsBridge>
           </ThemeBridge>
         </SceneCapabilitiesProvider>

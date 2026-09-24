@@ -1,0 +1,37 @@
+.panel {
+  position: fixed;
+  z-index: 100;
+  right: 16px;
+  top: 56px;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+  padding: 18px;
+  color: #eee;
+  background: #202124f5;
+  border: 1px solid #555;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 12px 40px #0005;
+}
+.panel summary { cursor: pointer; font-size: 16px; }
+.panel summary span { font-size: 11px; margin-left: 10px; color: #aaa; }
+.panel p { margin: 12px 0; color: #bbb; overflow-wrap: anywhere; }
+.row, .control span { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.row { min-height: 44px; }
+.control { display: block; margin-top: 8px; }
+.control input { width: 100%; height: 26px; accent-color: #bdf6ed; cursor: pointer; }
+.control output { font-variant-numeric: tabular-nums; color: #bbb; }
+.panel select, .panel button { color: inherit; background: #303236; border: 1px solid #666; border-radius: 6px; padding: 8px; }
+.buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.panel button { min-height: 44px; cursor: pointer; }
+.panel button:hover { background: #45484d; }
+.panel :disabled { opacity: 0.45; cursor: default; }
+.panel :focus-visible { outline: 2px solid #bdf6ed; outline-offset: 3px; }
+.saved { display: flex; gap: 6px; overflow-x: auto; margin-top: 12px; }
+.saved button { white-space: nowrap; font-size: 11px; }
+.panel a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 700px) {
+  .panel { top: auto; bottom: 12px; max-height: 42dvh; }
+}
