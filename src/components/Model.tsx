@@ -17,7 +17,7 @@ import { SkullParticles } from "@/components/SkullParticles";
 import { SkullGlass } from "@/components/SkullGlass";
 import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 import { heroAssemblyAt } from "@/lib/heroAssembly";
-import { followHeroModelSlot, heroModelSlot } from "@/lib/heroModelPlacement";
+import { fitHeroModelSlot, heroModelSlot } from "@/lib/heroModelPlacement";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -148,14 +148,10 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       modelDepth.current,
     );
     const scatterExtent = debug.skullAppearance.mode === "glass" ? 0 : assembly.scatter * modelExtent.scatter;
-    const heroPlacement = layoutMode === "narrow" || inDetails ? null : followHeroModelSlot(
+    const heroPlacement = layoutMode === "narrow" || inDetails ? null : fitHeroModelSlot(
       heroModelSlot(heroLayout, scrollProgress),
       (modelExtent.height + scatterExtent) * responsiveScale / modelViewport.height,
-      (animGroupRef.current?.position.y ?? 0) / modelViewport.height,
-      transitionScaleGroupRef.current?.scale.y ?? 1,
       assembly.scale,
-      dt,
-      teleported || prefersReducedMotion,
     );
     // The scrim is authored against the details sheet at z≈0; the model hangs a
     // depth closer, so the cut's world Y has to travel through this to land on

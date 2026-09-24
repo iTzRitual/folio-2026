@@ -21,15 +21,8 @@ export function heroModelSlot(layout: { viewport: { height: number }; marginY: n
   };
 }
 
-export function followHeroModelSlot(slot: ReturnType<typeof heroModelSlot>, extent: number, currentY: number, currentScale: number, targetScale: number, delta: number, instant = false) {
+export function fitHeroModelSlot(slot: ReturnType<typeof heroModelSlot>, extent: number, targetScale: number) {
   const height = Math.max(0, slot.top - slot.bottom - slot.padding * 2);
   const fit = height * CONFIG.heroAssembly.MODEL_GAP_FILL / Math.max(extent, 0.0001);
-  const target = Math.min(targetScale, fit);
-  const scale = Math.min(fit, instant ? target : MathUtils.damp(currentScale, target, CONFIG.heroAssembly.MODEL_FOLLOW_RESPONSE, delta));
-  const center = (slot.top + slot.bottom) / 2;
-  const halfExtent = extent * scale / 2;
-  const min = slot.bottom + slot.padding + halfExtent;
-  const max = slot.top - slot.padding - halfExtent;
-  const y = instant ? center : MathUtils.damp(currentY, center, CONFIG.heroAssembly.MODEL_FOLLOW_RESPONSE, delta);
-  return { y: min <= max ? MathUtils.clamp(y, min, max) : center, scale };
+  return { y: (slot.top + slot.bottom) / 2, scale: Math.min(targetScale, fit) };
 }
