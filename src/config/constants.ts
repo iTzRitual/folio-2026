@@ -31,6 +31,22 @@ export const FONTS = {
 const SCROLL_TIMELINE_VIEWPORTS = 1.5;
 
 export const CONFIG = {
+  heroAssembly: {
+    UNFOLD_START: 0.025,
+    UNFOLD_END: 0.65,
+    SCATTER_START: 0.035,
+    SCATTER_END: 0.72,
+    FADE_START: 0.68,
+    FADE_END: 0.88,
+    SPIN_TURNS: 1.8,
+    EXIT_SCALE: 0.88,
+    UP_TRAVEL: 0.08,
+    EXIT_RISE_START: 0.55,
+    EXIT_RISE: 0.14,
+    SCATTER_DISTANCE: 0.85,
+    SCATTER_SWIRL: 0.35,
+    EDGE_FADE_START: 0.82,
+  },
   projectOrbitCollision: {
     SIDE_INSET: 0.035,
     HALF_THICKNESS: 0.006,

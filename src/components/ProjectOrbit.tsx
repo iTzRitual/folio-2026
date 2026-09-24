@@ -15,6 +15,7 @@ import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
 import { useProjectOrbitDrag } from "@/hooks/useProjectOrbitDrag";
 import { createProjectOrbitHud } from "@/lib/projectOrbitHud";
 import { useOrbitSignal } from "@/context/OrbitSignalContext";
+import { heroAssemblyAt } from "@/lib/heroAssembly";
 
 const C = CONFIG.projectOrbit;
 const project = projectsData.find((project) => project.slug === "controller-configurator")!;
@@ -53,6 +54,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   const advanceOrbit = useProjectOrbitDrag(rotation, group);
   const materialRef = useRef<ShaderMaterial>(null);
   const entrance = useRef({ elapsed: 0, started: false, complete: false });
+  const scrollSpin = useRef(0);
   const playback = useRef<{ video: HTMLVideoElement; active: boolean } | null>(null);
   const worldScale = useMemo(() => new Vector3(), []);
   const settings = signal.config;
@@ -79,10 +81,13 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
         uRadius: { value: C.CORNER_RADIUS },
         uBorder: { value: C.BORDER_WIDTH },
         uOpacity: { value: 0 },
+        uExitOpacity: { value: 1 },
         uOrbitCenter: { value: new Vector3() },
         uOrbitRadius: { value: 1 },
         uFarBrightness: { value: C.FAR_BRIGHTNESS },
-        uOrbitFrame: { value: new Matrix4() },
+        uOrbitWorld: { value: new Matrix4() },
+        uRibbon: { value: new Vector4(radius, layout.pitch, layout.arc, 0) },
+        uPhase: { value: 0 },
         uReveal: { value: 0 },
         uTime: { value: 0 },
         uGlitch: { value: 0 },
@@ -90,7 +95,6 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
         uGlitchParams: { value: new Vector4(CONFIG.projectPreview.GLITCH_BANDS, CONFIG.projectPreview.GLITCH_SLICE, CONFIG.projectPreview.GLITCH_SPLIT, CONFIG.projectPreview.GLITCH_HZ) },
         uSkullBounds: { value: new Vector4() },
         uSkullDepth: { value: 0 },
-        uCardSize: { value: new Vector2() },
         uFadeReach: { value: 1 },
         uContentOpacity: { value: 0 },
         uFrontOpacity: { value: 0 },
@@ -104,7 +108,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       forceSinglePass: true,
       toneMapped: false,
     });
-  }, [texture, hudTexture]);
+  }, [texture, hudTexture, radius, layout]);
 
   useEffect(() => {
     if (reducedMotion || !project.loop) return;
@@ -163,7 +167,8 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     const currentMaterial = materialRef.current;
     if (!currentMaterial) return;
     const dt = Math.min(delta, 1 / 30);
-    const exit = MathUtils.smoothstep(progressRef.current, 0, C.EXIT_END);
+    const assembly = heroAssemblyAt(progressRef.current, reducedMotion);
+    const exit = 1 - assembly.opacity;
     const present = startTrigger && revealProgressRef.current === 0 && !caseStudyStage.open;
     currentMaterial.uniforms.uContentOpacity.value = settings.contentOpacity;
     currentMaterial.uniforms.uFrontOpacity.value = settings.frontOpacity;
@@ -171,8 +176,6 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     currentMaterial.uniforms.uGlow.value = settings.glow;
     currentMaterial.uniforms.uHudStyle.value = settings.style === "cyberpunk" ? 1 : 0;
     currentMaterial.uniforms.uHudDetail.value = settings.hudDetail;
-    const width = radius * layout.arc;
-    currentMaterial.uniforms.uCardSize.value.set(width, width / PROJECT_ORBIT_ASPECT);
     currentMaterial.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
     currentMaterial.uniforms.uGlitch.value = reducedMotion ? 0 : settings.glitch;
     currentMaterial.uniforms.uGlitchMediaOnly.value = settings.glitchScope === "media" ? 1 : 0;
@@ -198,18 +201,28 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
         intro.complete = intro.elapsed >= C.ENTRANCE_DURATION;
       }
     }
-    advanceOrbit(delta, present && exit === 0 && intro.complete && !document.hidden, reducedMotion);
+    const moving = present && exit < 1 && intro.complete && !document.hidden;
+    advanceOrbit(delta, moving && progressRef.current <= CONFIG.heroAssembly.UNFOLD_START, reducedMotion, moving);
+    if (rotation.current) {
+      if (intro.complete) rotation.current.rotation.y += assembly.spin - scrollSpin.current;
+      scrollSpin.current = intro.complete ? assembly.spin : 0;
+      currentMaterial.uniforms.uPhase.value = rotation.current.rotation.y;
+    }
+    currentMaterial.uniforms.uRibbon.value.set(radius, layout.pitch, layout.arc, assembly.unfold);
     const reveal = intro.complete ? 1 : projectOrbitEntranceAt(intro.elapsed, layout.arc).reveal;
     currentMaterial.uniforms.uReveal.value = reveal;
-    const targetOpacity = present && intro.started ? 1 - exit : 0;
+    const targetOpacity = present && intro.started ? 1 : 0;
     const opacityResponse = targetOpacity > currentMaterial.uniforms.uOpacity.value ? C.ENTRANCE_RESPONSE : C.RESPONSE;
     currentMaterial.uniforms.uOpacity.value = MathUtils.damp(currentMaterial.uniforms.uOpacity.value, targetOpacity, opacityResponse, dt);
+    currentMaterial.uniforms.uExitOpacity.value = assembly.opacity;
     if (group.current) {
+      group.current.rotation.x = MathUtils.degToRad(settings.tiltX) * (1 - assembly.unfold);
+      group.current.rotation.z = MathUtils.degToRad(settings.tiltZ) * (1 - assembly.unfold);
       group.current.visible = currentMaterial.uniforms.uOpacity.value > 0.001 && exit < 1;
       group.current.getWorldPosition(currentMaterial.uniforms.uOrbitCenter.value);
       group.current.getWorldScale(worldScale);
       currentMaterial.uniforms.uOrbitRadius.value = radius * worldScale.x;
-      currentMaterial.uniforms.uOrbitFrame.value.copy(group.current.matrixWorld).invert();
+      currentMaterial.uniforms.uOrbitWorld.value.copy(group.current.matrixWorld);
       if (group.current.visible && skullRef.current) {
         const skull = skullRef.current;
         skull.updateWorldMatrix(true, false);
@@ -233,9 +246,10 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     colliderRef.current.radius = radius;
     colliderRef.current.shape = collisionShape;
     colliderRef.current.active = present && exit < 1 && reveal > 0 && currentMaterial.uniforms.uOpacity.value > 0.01;
-    colliderRef.current.opacity = currentMaterial.uniforms.uOpacity.value;
+    colliderRef.current.opacity = currentMaterial.uniforms.uOpacity.value * assembly.opacity;
     colliderRef.current.reveal = reveal;
     colliderRef.current.phase = rotation.current?.rotation.y ?? 0;
+    colliderRef.current.curvature = 1 - assembly.unfold;
   }, -2);
 
   return (
@@ -246,6 +260,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
           return (
             <mesh
               key={index}
+              frustumCulled={false}
               geometry={geometries[index]}
               position={[Math.sin(angle) * radius, 0, Math.cos(angle) * radius]}
               rotation={[0, angle, 0]}

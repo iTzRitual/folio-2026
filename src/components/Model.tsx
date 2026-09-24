@@ -16,6 +16,7 @@ import { ProjectOrbit } from "@/components/ProjectOrbit";
 import { SkullParticles } from "@/components/SkullParticles";
 import { SkullGlass } from "@/components/SkullGlass";
 import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
+import { heroAssemblyAt } from "@/lib/heroAssembly";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -107,8 +108,9 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
     const workstationRevealed = revealProgressRef.current > 0.001;
     const inDetails = scrollProgress >= CONFIG.model.DETAILS_POPUP_START;
+    const assembly = heroAssemblyAt(scrollProgress, prefersReducedMotion);
 
-    const stage = layoutMode === "narrow" ? 0 : inDetails ? 1 : 0;
+    const stage = inDetails ? 1 : 0;
     const teleported = stage !== previousStage.current;
     previousStage.current = stage;
     const dt = Math.min(delta, 1 / 30);
@@ -135,12 +137,10 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
         : CLIP_DISABLED;
 
     if (animGroupRef.current) {
-      animGroupRef.current.visible = !workstationRevealed;
+      animGroupRef.current.visible = !workstationRevealed && (inDetails || assembly.opacity > 0);
       const heroYCurrent =
         CONFIG.model.BASE_MODEL_Y +
-        scrollProgress *
-          viewport.height *
-          CONFIG.model.MODEL_UP_TRAVEL_FACTOR;
+        assembly.rise * modelViewport.height;
       const detailsTargetY =
         modelAnchorRef.current.yFraction * modelViewport.height;
       const detailsTargetX =
@@ -149,27 +149,10 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
         ? modelViewport.width * CONFIG.model.NARROW_COMPACT_X_FRACTION
         : 0;
 
-      const narrowTransition = THREE.MathUtils.smoothstep(
-        scrollProgress,
-        CONFIG.model.NARROW_TRANSITION_START,
-        1,
-      );
       const targetX =
-        layoutMode === "narrow"
-          ? THREE.MathUtils.lerp(
-              narrowHeroX,
-              detailsTargetX,
-              narrowTransition,
-            )
-          : inDetails
-            ? detailsTargetX
-            : 0;
+        inDetails ? detailsTargetX : layoutMode === "narrow" ? narrowHeroX : 0;
       const targetY =
-        layoutMode === "narrow"
-          ? THREE.MathUtils.lerp(heroYCurrent, detailsTargetY, narrowTransition)
-          : inDetails
-            ? detailsTargetY
-            : heroYCurrent;
+        inDetails ? detailsTargetY : heroYCurrent;
 
       animGroupRef.current.position.x = teleported
         ? targetX
@@ -190,30 +173,11 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
     }
 
     if (transitionScaleGroupRef.current) {
-      const scaleOutProgress = THREE.MathUtils.clamp(
-        (scrollProgress - CONFIG.model.SCALE_OUT_START) /
-          (CONFIG.model.SCALE_OUT_END - CONFIG.model.SCALE_OUT_START),
-        0,
-        1,
-      );
-      const narrowTransition = THREE.MathUtils.smoothstep(
-        scrollProgress,
-        CONFIG.model.NARROW_TRANSITION_START,
-        1,
-      );
       const narrowHeroScale = compactHeight
         ? CONFIG.model.NARROW_COMPACT_HERO_SCALE
         : CONFIG.model.NARROW_HERO_SCALE;
       const targetScale =
-        layoutMode === "narrow"
-          ? THREE.MathUtils.lerp(
-              narrowHeroScale,
-              modelAnchorRef.current.scale,
-              narrowTransition,
-            )
-          : inDetails
-            ? detailsScale
-            : 1 - scaleOutProgress;
+        inDetails ? detailsScale : assembly.scale * (layoutMode === "narrow" ? narrowHeroScale : 1);
 
       const currentScale = teleported
         ? 0

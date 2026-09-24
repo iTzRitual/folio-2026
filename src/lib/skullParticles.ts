@@ -24,6 +24,7 @@ uniform float repulsion;
 uniform float cursorActive;
 uniform float heatGain;
 uniform float heatDecay;
+uniform float scrollScatter;
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
   vec3 position = texture2D(texturePosition, uv).xyz;
@@ -39,7 +40,11 @@ void main() {
     cursorForce += radial / max(distanceToCursor, 0.001) * repulsion;
     cursorForce *= influence;
   }
-  vec3 velocity = previous.xyz + ((rest - position) * spring + cursorForce) * delta;
+  vec3 noise = vec3(sin(uv.x * 173.0 + uv.y * 71.0), cos(uv.x * 89.0 - uv.y * 137.0), sin(uv.y * 113.0));
+  vec3 outward = normalize(rest + noise * 0.15 + vec3(0.0001));
+  vec3 scatter = outward * ${CONFIG.heroAssembly.SCATTER_DISTANCE} + vec3(-rest.y, rest.x, noise.z * 0.2) * ${CONFIG.heroAssembly.SCATTER_SWIRL};
+  vec3 target = rest + scatter * scrollScatter * (0.7 + 0.3 * abs(noise.x));
+  vec3 velocity = previous.xyz + ((target - position) * spring + cursorForce) * delta;
   velocity *= exp(-damping * delta);
   float heat = previous.w * exp(-heatDecay * delta);
   heat = min(1.0, heat + length(cursorForce) * heatGain * delta);
@@ -178,9 +183,11 @@ export function createSkullParticles(
   compute.setVariableDependencies(velocity, [position, velocity]);
   const uniforms = {
     entranceVelocity: { value: 0 },
+    scrollScatter: { value: 0 },
     orbitActive: { value: 0 },
     orbitReveal: { value: 1 },
     orbitPhase: { value: 0 },
+    orbitCurvature: { value: 1 },
     orbitShape: { value: projectOrbitCollisionShape() },
     orbitStart: { value: new THREE.Matrix4() },
     orbitEnd: { value: new THREE.Matrix4() },
@@ -258,10 +265,18 @@ export function createSkullParticles(
   return {
     points,
     uniforms,
+    reset() {
+      for (const target of position.renderTargets) compute.renderTexture(rest, target);
+      for (const target of velocity.renderTargets) compute.renderTexture(initialVelocity, target);
+      orbitInitialized = false;
+      material.uniforms.positions.value = rest;
+      material.uniforms.velocities.value = initialVelocity;
+    },
     setEntranceScale(scale: number, delta: number, active: boolean) {
       uniforms.entranceVelocity.value = entrance.sample(scale, delta, active);
     },
-    setOrbit(matrix: THREE.Matrix4, active: boolean, reveal = 1, phase = 0, shape?: THREE.Vector4) {
+    setOrbit(matrix: THREE.Matrix4, active: boolean, reveal = 1, phase = 0, shape?: THREE.Vector4, curvature = 1) {
+      uniforms.orbitCurvature.value = curvature;
       if (shape && !uniforms.orbitShape.value.equals(shape)) {
         uniforms.orbitShape.value.copy(shape);
         orbitInitialized = false;

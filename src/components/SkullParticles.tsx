@@ -11,6 +11,7 @@ import { createSkullFragments } from "@/lib/skullFragments";
 import { skullInteractionTransform } from "@/lib/skullInteraction";
 import { SkullGlass } from "@/components/SkullGlass";
 import { orbitCollisionTransform, type ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
+import { heroAssemblyAt } from "@/lib/heroAssembly";
 
 export function SkullParticles({
   source,
@@ -29,6 +30,7 @@ export function SkullParticles({
 }) {
   const group = useRef<THREE.Group>(null);
   const simulation = useRef<ReturnType<typeof createSkullParticles> | null>(null);
+  const previousDetails = useRef(false);
   const orbitTransform = useMemo(() => new THREE.Matrix4(), []);
   const { gl } = useThree();
   const { inputMode } = useSceneCapabilities();
@@ -112,13 +114,18 @@ export function SkullParticles({
     const particles = simulation.current;
     const object = group.current;
     if (!particles || !object) return;
+    const inDetails = progressRef.current >= CONFIG.model.DETAILS_POPUP_START;
+    const assembly = heroAssemblyAt(progressRef.current, reducedMotion);
+    if (inDetails && !previousDetails.current) particles.reset();
+    previousDetails.current = inDetails;
+    particles.uniforms.scrollScatter.value = assembly.scatter;
     if (fragments) {
       particles.setEntranceScale(entranceRef.current?.scale.x ?? 0, delta,
         !reducedMotion && !document.hidden && settings.scale > 0
         && progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON && revealProgressRef.current === 0);
       const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
         && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
-      particles.setOrbit(orbitTransform, active, orbitCollider.current.reveal, orbitCollider.current.phase, orbitCollider.current.shape);
+      particles.setOrbit(orbitTransform, active, orbitCollider.current.reveal, orbitCollider.current.phase, orbitCollider.current.shape, orbitCollider.current.curvature);
     }
     particles.uniforms.cursorRadius.value = settings.cursorRadius;
     particles.uniforms.cursorStrength.value = settings.cursorStrength;

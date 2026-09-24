@@ -31,10 +31,12 @@ export function createProjectOrbitGeometry(radius: number, layout = projectOrbit
 export const projectOrbitVertexShader = `
   uniform vec3 uOrbitCenter;
   uniform float uOrbitRadius;
-  uniform mat4 uOrbitFrame;
+  uniform mat4 uOrbitWorld;
+  uniform vec4 uRibbon;
+  uniform float uPhase;
+  uniform float uAspect;
   uniform vec4 uSkullBounds;
   uniform float uSkullDepth;
-  uniform vec2 uCardSize;
   uniform float uFadeReach;
   attribute float cardIndex;
   varying float vCardIndex;
@@ -43,17 +45,28 @@ export const projectOrbitVertexShader = `
   varying vec3 vOrbitPosition;
   varying float vSkullOverlap;
   varying float vSurfaceFacing;
+  varying float vRibbonEdge;
+  vec3 ribbonPoint(float angle, float height) {
+    float curvature = 1.0 - uRibbon.w;
+    if (curvature < 0.0001) return vec3(angle, height, 1.0) * uRibbon.x;
+    return vec3(sin(angle * curvature) / curvature, height, 1.0 - 2.0 * pow(sin(angle * curvature * 0.5), 2.0) / curvature) * uRibbon.x;
+  }
   void main() {
     vUv = uv;
     vCardIndex = cardIndex;
-    vOrbitPosition = (uOrbitFrame * modelMatrix * vec4(position, 1.0)).xyz;
-    vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+    float centerAngle = mod(cardIndex * uRibbon.y + uPhase + ${Math.PI}, ${Math.PI * 2}) - ${Math.PI};
+    float angle = centerAngle + (uv.x - 0.5) * uRibbon.z;
+    float cardHeight = uRibbon.z / uAspect;
+    vOrbitPosition = ribbonPoint(angle, (uv.y - 0.5) * cardHeight);
+    vRibbonEdge = 1.0 - uRibbon.w * smoothstep(${CONFIG.heroAssembly.EDGE_FADE_START * Math.PI}, ${Math.PI}, abs(centerAngle));
+    mat4 orbitView = viewMatrix * uOrbitWorld;
+    vec4 viewPosition = orbitView * vec4(vOrbitPosition, 1.0);
     float centerDepth = (viewMatrix * vec4(uOrbitCenter, 1.0)).z;
     vOrbitDepth = 0.5 + (centerDepth - viewPosition.z) / max(2.0 * uOrbitRadius, 0.0001);
-    vec4 cardView = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 cardView = orbitView * vec4(ribbonPoint(centerAngle, 0.0), 1.0);
     vec4 cardClip = projectionMatrix * cardView;
-    vec4 edgeX = projectionMatrix * modelViewMatrix * vec4(uCardSize.x * 0.5, 0.0, 0.0, 1.0);
-    vec4 edgeY = projectionMatrix * modelViewMatrix * vec4(0.0, uCardSize.y * 0.5, 0.0, 1.0);
+    vec4 edgeX = projectionMatrix * orbitView * vec4(ribbonPoint(centerAngle + uRibbon.z * 0.5, 0.0), 1.0);
+    vec4 edgeY = projectionMatrix * orbitView * vec4(ribbonPoint(centerAngle, cardHeight * 0.5), 1.0);
     vec2 center = cardClip.xy / cardClip.w;
     vec2 extent = abs(edgeX.xy / edgeX.w - center) + abs(edgeY.xy / edgeY.w - center);
     vec2 reach = max(uSkullBounds.zw + extent * 0.5, vec2(0.0001));
@@ -61,7 +74,8 @@ export const projectOrbitVertexShader = `
     float overlap = 1.0 - smoothstep(${CONFIG.projectOrbit.HOLOGRAM_FADE_START}, uFadeReach, distance);
     float front = smoothstep(0.0, max(uOrbitRadius * ${CONFIG.projectOrbit.HOLOGRAM_DEPTH_FADE}, 0.0001), uSkullDepth + cardView.z);
     vSkullOverlap = overlap * front;
-    vSurfaceFacing = abs(dot(normalize(normalMatrix * normal), normalize(-viewPosition.xyz)));
+    vec3 ribbonNormal = vec3(sin(angle * (1.0 - uRibbon.w)), 0.0, cos(angle * (1.0 - uRibbon.w)));
+    vSurfaceFacing = abs(dot(normalize(mat3(orbitView) * ribbonNormal), normalize(-viewPosition.xyz)));
     gl_Position = projectionMatrix * viewPosition;
   }
 `;
@@ -78,6 +92,8 @@ export const projectOrbitFragmentShader = `
   uniform float uRadius;
   uniform float uBorder;
   uniform float uOpacity;
+  uniform float uExitOpacity;
+  varying float vRibbonEdge;
   uniform float uFarBrightness;
   uniform float uReveal;
   uniform float uTime;
@@ -166,7 +182,7 @@ export const projectOrbitFragmentShader = `
       card = vec4(red.r, card.g, blue.b, max(red.a, max(card.a, blue.a)));
     }
     if (card.a < 0.001) discard;
-    gl_FragColor = vec4(card.rgb / card.a, card.a * uOpacity);
+    gl_FragColor = vec4(card.rgb / card.a, card.a * uOpacity * uExitOpacity * vRibbonEdge);
     #include <colorspace_fragment>
   }
 `;

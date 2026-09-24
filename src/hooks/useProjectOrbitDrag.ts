@@ -124,11 +124,19 @@ export function useProjectOrbitDrag(rotation: RefObject<Group | null>, orbit: Re
     };
   }, [get, orbit, rotation, runtime]);
 
-  return (delta: number, enabled: boolean, reducedMotion: boolean) => {
-    if (runtime.enabled && !enabled) runtime.cancel();
+  return (delta: number, enabled: boolean, reducedMotion: boolean, moving = enabled) => {
+    if (runtime.enabled && !enabled) {
+      const velocity = runtime.velocity;
+      const friction = runtime.friction;
+      runtime.cancel();
+      if (moving) {
+        runtime.velocity = velocity;
+        runtime.friction = friction;
+      }
+    }
     runtime.enabled = enabled;
     runtime.reducedMotion = reducedMotion;
-    if (!enabled) {
+    if (!moving) {
       runtime.velocity = C.SPEED;
       return;
     }

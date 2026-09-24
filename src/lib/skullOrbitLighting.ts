@@ -11,6 +11,7 @@ export function createSkullOrbitLightingUniforms() {
     skullOrbitLight: new Uniform(new Vector4()),
     skullOrbitReveal: new Uniform(0),
     skullOrbitPhase: new Uniform(0),
+    skullOrbitCurvature: new Uniform(1),
     skullOrbitHud: new Uniform(0),
     skullOrbitShape: new Uniform(projectOrbitCollisionShape()),
   };
@@ -35,6 +36,7 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
       uniform vec4 skullOrbitShape;
       uniform float skullOrbitReveal;
       uniform float skullOrbitPhase;
+      uniform float skullOrbitCurvature;
       uniform float skullOrbitHud;
       varying vec3 vSkullOrbitPosition;
     ` + shader.fragmentShader.replace("#include <opaque_fragment>", `
@@ -45,7 +47,12 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
         vec3 orbitNormal = normalize(mat3(skullOrbitFromView) * normal);
         vec3 orbitEmission = vec3(0.0);
         float orbitOcclusion = 0.0;
-        float orbitAngle = atan(vSkullOrbitPosition.x, vSkullOrbitPosition.z);
+        float phaseSin = sin(skullOrbitPhase);
+        float phaseCos = cos(skullOrbitPhase);
+        vec2 ribbonPosition = vec2(phaseCos * vSkullOrbitPosition.x + phaseSin * vSkullOrbitPosition.z, -phaseSin * vSkullOrbitPosition.x + phaseCos * vSkullOrbitPosition.z);
+        vec2 curvedPosition = vec2(ribbonPosition.x * skullOrbitCurvature, 1.0 + (ribbonPosition.y - 1.0) * skullOrbitCurvature);
+        float worldAngle = skullOrbitCurvature < 0.0001 ? ribbonPosition.x : atan(curvedPosition.x, curvedPosition.y) / skullOrbitCurvature;
+        float orbitAngle = worldAngle - skullOrbitPhase;
         float orbitCard = floor(orbitAngle / orbitPitch + 0.5);
         for (int neighbor = -1; neighbor <= 1; neighbor++) {
           float cardCenter = (orbitCard + float(neighbor)) * orbitPitch;
@@ -53,7 +60,11 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
           float travel = mod(${(Math.sign(C.SPEED) || -1).toFixed(1)} * (angle + skullOrbitPhase - ${C.ENTRANCE_ORIGIN}) + ${Math.PI * 4}, ${Math.PI * 2});
           float neighborWeight = 1.0 - smoothstep(orbitPitch * 0.75, orbitPitch * 1.5, abs(orbitAngle - cardCenter));
           float emerged = step(travel, skullOrbitReveal * ${Math.PI * 2}) * neighborWeight;
-          vec3 cardPoint = vec3(sin(angle), clamp(vSkullOrbitPosition.y, -orbitHalfHeight, orbitHalfHeight), cos(angle));
+          float theta = angle + skullOrbitPhase;
+          float edgeVisibility = 1.0 - (1.0 - skullOrbitCurvature) * smoothstep(${CONFIG.heroAssembly.EDGE_FADE_START * Math.PI}, ${Math.PI}, abs(theta));
+          emerged *= edgeVisibility;
+          vec2 ribbonPoint = skullOrbitCurvature < 0.0001 ? vec2(theta, 1.0) : vec2(sin(theta * skullOrbitCurvature) / skullOrbitCurvature, 1.0 - 2.0 * pow(sin(theta * skullOrbitCurvature * 0.5), 2.0) / skullOrbitCurvature);
+          vec3 cardPoint = vec3(phaseCos * ribbonPoint.x - phaseSin * ribbonPoint.y, clamp(vSkullOrbitPosition.y, -orbitHalfHeight, orbitHalfHeight), phaseSin * ribbonPoint.x + phaseCos * ribbonPoint.y);
           vec3 toCard = cardPoint - vSkullOrbitPosition;
           float facing = max(dot(orbitNormal, normalize(toCard + vec3(0.00001))), 0.0);
           float proximity = exp(-length(toCard) / ${C.OCCLUSION_REACH});
@@ -74,7 +85,7 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
       #include <opaque_fragment>
     `);
   };
-  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-orbit-light-v3`;
+  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-orbit-light-v4`;
   material.needsUpdate = true;
   return () => {
     material.onBeforeCompile = compile;

@@ -143,7 +143,7 @@ export function createSkullFragments(source: THREE.BufferGeometry, cells: number
   return { geometry, samples, count };
 }
 
-export function applySkullFragmentShader(material: THREE.Material, uniforms: SkullSimulationUniforms) {
+export function applySkullFragmentShader(material: THREE.Material, uniforms: SkullSimulationUniforms, exitDissolve = { value: 0 }) {
   const compile = material.onBeforeCompile;
   const cacheKey = material.customProgramCacheKey;
   material.onBeforeCompile = (shader, renderer) => {
@@ -151,10 +151,12 @@ export function applySkullFragmentShader(material: THREE.Material, uniforms: Sku
     shader.uniforms.fragmentPositions = uniforms.positions;
     shader.uniforms.fragmentRest = uniforms.restPosition;
     shader.uniforms.fragmentSpin = { value: CONFIG.model.FRAGMENTS.SPIN };
+    shader.uniforms.fragmentExit = exitDissolve;
     shader.vertexShader = `
       uniform sampler2D fragmentPositions;
       uniform sampler2D fragmentRest;
       uniform float fragmentSpin;
+      uniform float fragmentExit;
       attribute vec2 particleUv;
       attribute vec3 fragmentRestPosition;
       attribute float fragmentInterior;
@@ -185,6 +187,9 @@ export function applySkullFragmentShader(material: THREE.Material, uniforms: Sku
       objectNormal = rotation * objectNormal;
     `).replace("#include <begin_vertex>", `
       vec3 transformed = mix(fragmentRestPosition, rotation * (position - fragmentOrigin) + fragmentCenter, fragmentOpening);
+      float exitSeed = fract(sin(dot(particleUv, vec2(127.1, 311.7))) * 43758.5453);
+      float exitScale = 1.0 - smoothstep(exitSeed * 0.25, 0.7 + exitSeed * 0.3, fragmentExit);
+      transformed = fragmentCenter + (transformed - fragmentCenter) * exitScale;
     `);
     shader.fragmentShader = `
       varying float vFragmentInterior;
@@ -194,7 +199,7 @@ export function applySkullFragmentShader(material: THREE.Material, uniforms: Sku
         if (vFragmentInterior > 0.5 && vFragmentOpening < ${CONFIG.model.FRAGMENTS.INTERIOR_REVEAL}) discard;
     `);
   };
-  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-fragments-v2`;
+  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-fragments-v3`;
   material.needsUpdate = true;
   return () => {
     material.onBeforeCompile = compile;

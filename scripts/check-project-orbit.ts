@@ -5,6 +5,7 @@ import { Group, Matrix4, Vector3 } from "three";
 import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
 import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
 import { orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
+import { heroAssemblyAt, orbitRibbonPoint, orbitRibbonCoordinates } from "@/lib/heroAssembly";
 
 const intro = CONFIG.projectOrbit;
 const direction = Math.sign(intro.SPEED);
@@ -173,3 +174,28 @@ assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 80, phase: 0.3
 assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 10, phase: 3 }], 12), intro.DRAG.MAX_SPEED, "Extreme gestures respect the speed limit");
 assert.equal(orbitMomentumStep(4, 2, intro.DRAG.FRICTION).angle, 0, "Returning to a hidden tab does not jump the orbit");
 console.log("PASS: orbit gestures preserve release direction, discard stale velocity and decay consistently across frame rates.");
+
+assert.equal(heroAssemblyAt(0).unfold, 0);
+assert.equal(heroAssemblyAt(0.65).unfold, 1);
+assert.equal(heroAssemblyAt(0.65).opacity, 1, "The unfolded cards remain visible before the shared exit");
+assert.equal(heroAssemblyAt(0.88).opacity, 0, "The hero exits before the details skull returns");
+assert.equal(heroAssemblyAt(0.9).scatter, 0, "The details skull has an intact rest shape");
+assert.deepEqual(heroAssemblyAt(0.5, true), { ...heroAssemblyAt(0.5), unfold: 0, scatter: 0, spin: 0, rise: 0 }, "Reduced motion removes unwrapping, scattering and scroll spin");
+const ribbonLayout = projectOrbitLayout({ count: 6, gap: 0.42 });
+for (const curvature of [1, 0.75, 0.25, 0.001, 0]) {
+  for (const phase of [-9.2, -0.4, 0.6, 13.1]) {
+    for (let card = 0; card < ribbonLayout.count; card++) {
+      const theta = Math.atan2(Math.sin(card * ribbonLayout.pitch + phase), Math.cos(card * ribbonLayout.pitch + phase));
+      if (Math.abs(theta) > Math.PI * CONFIG.heroAssembly.EDGE_FADE_START) continue;
+      const point = orbitRibbonPoint(theta, curvature);
+      const inverse = orbitRibbonCoordinates(point.x, point.z, curvature);
+      assert(Math.abs(inverse.angle - theta) < 1e-8 && Math.abs(inverse.depth) < 1e-8, "Collision coordinates follow the rendered ribbon across its full morph");
+      const local = new Vector3(Math.cos(phase) * point.x - Math.sin(phase) * point.z, 0, Math.sin(phase) * point.x + Math.cos(phase) * point.z);
+      assert(projectCardDistance(local, 1, phase, ribbonLayout, curvature) < 0, "Each unfolded card retains its collider");
+      local.y = ribbonLayout.height;
+      assert(projectCardDistance(local, 1, phase, ribbonLayout, curvature) > 0, "The ribbon does not create an invisible wall above the cards");
+    }
+  }
+}
+assert(Math.abs(heroAssemblyAt(0.5).spin) > Math.PI * 1.5, "Scrolling strongly accelerates the orbit");
+console.log("PASS: scroll exit keeps cards visible, flattens the orbit, and preserves collision geometry and reduced motion.");

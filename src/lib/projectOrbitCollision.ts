@@ -1,6 +1,7 @@
 import { Matrix4, Vector3, Vector4, type Object3D } from "three";
 import { CONFIG } from "@/config/constants";
 import { projectOrbitLayout } from "@/lib/projectOrbit";
+import { orbitRibbonCoordinates } from "@/lib/heroAssembly";
 
 export interface ProjectOrbitCollider {
   object: Object3D | null;
@@ -10,6 +11,7 @@ export interface ProjectOrbitCollider {
   opacity?: number;
   reveal?: number;
   phase?: number;
+  curvature?: number;
 }
 
 export function orbitCollisionTransform(object: Object3D, collider: ProjectOrbitCollider, target: Matrix4) {
@@ -24,16 +26,18 @@ export function orbitCollisionTransform(object: Object3D, collider: ProjectOrbit
   return target;
 }
 
-export function projectCardDistance(point: Vector3, reveal = 1, phase = 0, layout = projectOrbitLayout()) {
+export function projectCardDistance(point: Vector3, reveal = 1, phase = 0, layout = projectOrbitLayout(), curvature = 1) {
   if (reveal <= 0) return Infinity;
   const orbit = CONFIG.projectOrbit;
   const { pitch, arc, height } = layout;
   const corner = height * orbit.CORNER_RADIUS;
-  const angle = Math.atan2(point.x, point.z);
+  const ribbon = orbitRibbonCoordinates(Math.cos(phase) * point.x + Math.sin(phase) * point.z, -Math.sin(phase) * point.x + Math.cos(phase) * point.z, curvature);
+  const angle = ribbon.angle - phase;
   const wrapped = angle - pitch * Math.floor(angle / pitch + 0.5);
   const x = Math.abs(wrapped) - arc / 2 + Math.min(CONFIG.projectOrbitCollision.SIDE_INSET, arc * 0.12) + corner;
   const y = Math.abs(point.y) - height / 2 + corner;
   let face = Math.hypot(Math.max(x, 0), Math.max(y, 0)) + Math.min(Math.max(x, y), 0) - corner;
+  if (curvature < 0.9999) face = Math.max(face, Math.abs(ribbon.angle) - Math.PI * CONFIG.heroAssembly.EDGE_FADE_START);
   if (reveal < 1) {
     const halfSweep = Math.PI * reveal;
     const middle = orbit.ENTRANCE_ORIGIN + (Math.sign(orbit.SPEED) || -1) * halfSweep;
@@ -41,8 +45,8 @@ export function projectCardDistance(point: Vector3, reveal = 1, phase = 0, layou
     const wrappedSweep = Math.atan2(Math.sin(relative), Math.cos(relative));
     face = Math.max(face, Math.abs(wrappedSweep) - halfSweep);
   }
-  const radius = Math.hypot(point.x, point.z);
-  const depth = Math.abs(radius - 1) - CONFIG.projectOrbitCollision.HALF_THICKNESS;
+  const radius = Math.max(0, 1 + ribbon.depth * curvature);
+  const depth = Math.abs(ribbon.depth) - CONFIG.projectOrbitCollision.HALF_THICKNESS;
   const distance = Math.hypot(Math.max(face, 0), Math.max(depth, 0)) + Math.min(Math.max(face, depth), 0);
   return Math.max(depth, distance * Math.min(1, radius));
 }
@@ -62,6 +66,7 @@ uniform mat4 simulationFromOrbit;
 uniform float orbitScale;
 uniform float orbitReveal;
 uniform float orbitPhase;
+uniform float orbitCurvature;
 uniform vec4 orbitShape;
 #define orbitPitch orbitShape.x
 #define cardHalfWidth orbitShape.y
@@ -70,14 +75,26 @@ uniform vec4 orbitShape;
 const float cardThickness = ${C.HALF_THICKNESS};
 const float collisionSkin = ${C.SKIN};
 
+vec3 ribbonCoordinates(vec3 p) {
+  float s = sin(orbitPhase);
+  float c = cos(orbitPhase);
+  vec2 world = vec2(c * p.x + s * p.z, -s * p.x + c * p.z);
+  if (orbitCurvature < 0.0001) return vec3(world.x - orbitPhase, world.y - 1.0, world.x);
+  vec2 curved = vec2(world.x * orbitCurvature, 1.0 + (world.y - 1.0) * orbitCurvature);
+  float angle = atan(curved.x, curved.y) / orbitCurvature;
+  return vec3(angle - orbitPhase, (length(curved) - 1.0) / orbitCurvature, angle);
+}
+
 float cardAngle(vec3 p) {
-  float angle = atan(p.x, p.z);
+  float angle = ribbonCoordinates(p).x;
   return angle - orbitPitch * floor(angle / orbitPitch + 0.5);
 }
 
 float cardDistance(vec3 p) {
+  vec3 ribbon = ribbonCoordinates(p);
   vec2 q = abs(vec2(cardAngle(p), p.y)) - vec2(cardHalfWidth, cardHalfHeight) + cardCorner;
   float face = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - cardCorner;
+  if (orbitCurvature < 0.9999) face = max(face, abs(ribbon.z) - ${Math.PI * CONFIG.heroAssembly.EDGE_FADE_START});
   if (orbitReveal < 1.0) {
     float halfSweep = ${Math.PI} * orbitReveal;
     float middle = ${O.ENTRANCE_ORIGIN} + ${(Math.sign(O.SPEED) || -1).toFixed(1)} * halfSweep;
@@ -85,8 +102,8 @@ float cardDistance(vec3 p) {
     float wrappedSweep = atan(sin(relative), cos(relative));
     face = max(face, abs(wrappedSweep) - halfSweep);
   }
-  float radius = length(p.xz);
-  vec2 d = vec2(face, abs(radius - 1.0) - cardThickness);
+  float radius = max(0.0, 1.0 + ribbon.y * orbitCurvature);
+  vec2 d = vec2(face, abs(ribbon.y) - cardThickness);
   return max(d.y, (length(max(d, 0.0)) + min(max(d.x, d.y), 0.0)) * min(1.0, radius));
 }
 
@@ -107,7 +124,8 @@ vec3 cardEscape(vec3 p, float radius) {
   float horizontal = cardHalfWidth + radius + collisionSkin - abs(angle);
   bool gapFits = orbitPitch * 0.5 - cardHalfWidth > radius + collisionSkin;
   if (gapFits && horizontal < vertical) {
-    return normalize(vec3(p.z, 0.0, -p.x)) * (angle < 0.0 ? -1.0 : 1.0);
+    float tangentAngle = ribbonCoordinates(p).z * orbitCurvature - orbitPhase;
+    return vec3(cos(tangentAngle), 0.0, -sin(tangentAngle)) * (angle < 0.0 ? -1.0 : 1.0);
   }
   return vec3(0.0, p.y < 0.0 ? -1.0 : 1.0, 0.0);
 }
@@ -117,7 +135,7 @@ void collideOrbit(vec3 previousPosition, vec3 rest, float localRadius, float dt,
   float radius = localRadius * orbitScale;
   vec3 start = (orbitStart * vec4(previousPosition, 1.0)).xyz;
   vec3 end = (orbitEnd * vec4(position, 1.0)).xyz;
-  if (max(length(start.xz), length(end.xz)) < 1.0 - radius - cardThickness - ${C.STEER_RANGE}) return;
+  if (orbitCurvature > 0.9999 && max(length(start.xz), length(end.xz)) < 1.0 - radius - cardThickness - ${C.STEER_RANGE}) return;
   if (min(start.y, end.y) > cardHalfHeight + radius + ${C.STEER_RANGE}) return;
   if (max(start.y, end.y) < -cardHalfHeight - radius - ${C.STEER_RANGE}) return;
   vec3 freeVelocity = (end - start) / dt;
