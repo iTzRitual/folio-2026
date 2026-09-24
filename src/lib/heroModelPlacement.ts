@@ -26,3 +26,9 @@ export function fitHeroModelSlot(slot: ReturnType<typeof heroModelSlot>, extent:
   const fit = height * CONFIG.heroAssembly.MODEL_GAP_FILL / Math.max(extent, 0.0001);
   return { y: (slot.top + slot.bottom) / 2, scale: Math.min(targetScale, fit) };
 }
+
+export function fitHeroOrbitSlot(slot: ReturnType<typeof heroModelSlot>, cardHeight: number, expansion: number) {
+  const height = Math.max(0, slot.top - slot.bottom - slot.padding * 2);
+  const target = MathUtils.clamp(height * CONFIG.heroAssembly.ORBIT_GAP_FILL / Math.max(cardHeight, 0.0001), 1, CONFIG.heroAssembly.ORBIT_MAX_SCALE);
+  return MathUtils.lerp(1, target, expansion);
+}

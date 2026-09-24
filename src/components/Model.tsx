@@ -32,6 +32,7 @@ useGLTF.setDecoderPath("/draco/");
 export default function Model({ isDebug }: { isDebug: boolean }) {
   const animGroupRef = useRef<THREE.Group>(null);
   const transitionScaleGroupRef = useRef<THREE.Group>(null);
+  const orbitAnchorRef = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Group>(null);
   const skullSurfaceRef = useRef<THREE.Group>(null);
   const orbitCollider = useRef<ProjectOrbitCollider>({ object: null, radius: 1, active: false });
@@ -148,7 +149,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       modelDepth.current,
     );
     const scatterExtent = debug.skullAppearance.mode === "glass" ? 0 : assembly.scatter * modelExtent.scatter;
-    const heroPlacement = layoutMode === "narrow" || inDetails ? null : fitHeroModelSlot(
+    const heroPlacement = layoutMode === "narrow" ? null : fitHeroModelSlot(
       heroModelSlot(heroLayout, scrollProgress),
       (modelExtent.height + scatterExtent) * responsiveScale / modelViewport.height,
       assembly.scale,
@@ -157,6 +158,17 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
     // depth closer, so the cut's world Y has to travel through this to land on
     // the same screen height.
     const foldDepthScale = modelViewport.height / viewport.height;
+
+    if (orbitAnchorRef.current && animGroupRef.current) {
+      orbitAnchorRef.current.visible = !workstationRevealed && assembly.orbitOpacity > 0;
+      orbitAnchorRef.current.position.set(
+        layoutMode === "narrow" && compactHeight ? modelViewport.width * CONFIG.model.NARROW_COMPACT_X_FRACTION : 0,
+        heroPlacement ? heroPlacement.y * modelViewport.height : CONFIG.model.BASE_MODEL_Y + assembly.rise * modelViewport.height,
+        CONFIG.model.DEPTH_Z,
+      );
+      const narrowScale = layoutMode === "narrow" ? assembly.scale * (compactHeight ? CONFIG.model.NARROW_COMPACT_HERO_SCALE : CONFIG.model.NARROW_HERO_SCALE) : 1;
+      orbitAnchorRef.current.scale.copy(animGroupRef.current.scale).multiplyScalar(narrowScale);
+    }
 
     FOLD_CLIP.constant =
       inDetails
@@ -189,7 +201,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
             10,
             dt,
           );
-      animGroupRef.current.position.y = heroPlacement || teleported
+      animGroupRef.current.position.y = (heroPlacement && !inDetails) || teleported
         ? targetY
         : THREE.MathUtils.damp(
             animGroupRef.current.position.y,
@@ -209,7 +221,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       const currentScale = teleported
         ? 0
         : transitionScaleGroupRef.current.scale.x;
-      const smoothScale = heroPlacement?.scale ?? THREE.MathUtils.damp(
+      const smoothScale = heroPlacement && !inDetails ? heroPlacement.scale : THREE.MathUtils.damp(
         currentScale,
         targetScale,
         10,
@@ -236,9 +248,11 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
 
   return (
     <group>
+      <group ref={orbitAnchorRef}>
+        {surface && <ProjectOrbit colliderRef={orbitCollider} entranceProgressRef={entranceProgressRef} skullGeometry={surface} skullRef={skullSurfaceRef} />}
+      </group>
       <group position={[0, 0.1, CONFIG.model.DEPTH_Z]} ref={animGroupRef}>
         <group ref={transitionScaleGroupRef}>
-          {surface && <ProjectOrbit colliderRef={orbitCollider} entranceProgressRef={entranceProgressRef} skullGeometry={surface} skullRef={skullSurfaceRef} />}
           <group ref={mesh}>
             <group
               ref={skullRotationGroupRef}

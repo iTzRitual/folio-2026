@@ -6,14 +6,17 @@ const C = CONFIG.heroAssembly;
 export function heroAssemblyAt(progress: number, reducedMotion = false) {
   const p = MathUtils.clamp(progress, 0, 1);
   const fade = MathUtils.smoothstep(p, C.FADE_START, C.FADE_END);
+  const acceleration = MathUtils.clamp((p - C.ORBIT_ACCEL_START) / (1 - C.ORBIT_ACCEL_START), 0, 1);
   return {
     unfold: reducedMotion ? 0 : MathUtils.smoothstep(p, C.UNFOLD_START, C.UNFOLD_END),
     scatter: reducedMotion || p >= CONFIG.model.DETAILS_POPUP_START ? 0 : MathUtils.smoothstep(p, C.SCATTER_START, C.SCATTER_END),
     opacity: 1 - fade,
+    orbitOpacity: 1 - MathUtils.smoothstep(p, C.ORBIT_FADE_START, C.ORBIT_FADE_END),
+    orbitExpansion: reducedMotion ? 0 : MathUtils.smoothstep(p, C.ORBIT_EXPAND_START, C.ORBIT_EXPAND_END),
     dissolve: fade,
     scale: MathUtils.lerp(1, C.EXIT_SCALE, p),
     rise: reducedMotion ? 0 : p * C.UP_TRAVEL + MathUtils.smoothstep(p, C.EXIT_RISE_START, C.FADE_END) * C.EXIT_RISE,
-    spin: reducedMotion ? 0 : (Math.sign(CONFIG.projectOrbit.SPEED) || -1) * Math.PI * 2 * C.SPIN_TURNS * p,
+    spin: reducedMotion ? 0 : (Math.sign(CONFIG.projectOrbit.SPEED) || -1) * Math.PI * 2 * (C.SPIN_TURNS * p + C.ORBIT_ACCEL_TURNS * acceleration ** 2),
   };
 }
 

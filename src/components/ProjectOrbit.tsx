@@ -16,6 +16,8 @@ import { useProjectOrbitDrag } from "@/hooks/useProjectOrbitDrag";
 import { createProjectOrbitHud } from "@/lib/projectOrbitHud";
 import { useOrbitSignal } from "@/context/OrbitSignalContext";
 import { heroAssemblyAt } from "@/lib/heroAssembly";
+import { fitHeroOrbitSlot, heroModelSlot } from "@/lib/heroModelPlacement";
+import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 
 const C = CONFIG.projectOrbit;
 const project = projectsData.find((project) => project.slug === "controller-configurator")!;
@@ -30,7 +32,10 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     loaded.colorSpace = SRGBColorSpace;
     loaded.needsUpdate = true;
   });
-  const { responsiveScale } = useHeroLayout();
+  const heroLayout = useHeroLayout();
+  const { responsiveScale } = heroLayout;
+  const { layoutMode } = useSceneCapabilities();
+  const modelDepth = useMemo(() => new Vector3(0, 0, CONFIG.model.DEPTH_Z), []);
   const { progressRef, revealProgressRef } = useHeroTransition();
   const { startTrigger } = useAnimationContext();
   const reducedMotion = usePrefersReducedMotion();
@@ -168,7 +173,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     if (!currentMaterial) return;
     const dt = Math.min(delta, 1 / 30);
     const assembly = heroAssemblyAt(progressRef.current, reducedMotion);
-    const exit = 1 - assembly.opacity;
+    const exit = 1 - assembly.orbitOpacity;
     const present = startTrigger && revealProgressRef.current === 0 && !caseStudyStage.open;
     currentMaterial.uniforms.uContentOpacity.value = settings.contentOpacity;
     currentMaterial.uniforms.uFrontOpacity.value = settings.frontOpacity;
@@ -214,8 +219,15 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     const targetOpacity = present && intro.started ? 1 : 0;
     const opacityResponse = targetOpacity > currentMaterial.uniforms.uOpacity.value ? C.ENTRANCE_RESPONSE : C.RESPONSE;
     currentMaterial.uniforms.uOpacity.value = MathUtils.damp(currentMaterial.uniforms.uOpacity.value, targetOpacity, opacityResponse, dt);
-    currentMaterial.uniforms.uExitOpacity.value = assembly.opacity;
+    currentMaterial.uniforms.uExitOpacity.value = assembly.orbitOpacity;
     if (group.current) {
+      const orbitScale = layoutMode === "narrow" ? 1 : fitHeroOrbitSlot(
+        heroModelSlot(heroLayout, progressRef.current),
+        radius * layout.height / state.viewport.getCurrentViewport(state.camera, modelDepth).height,
+        assembly.orbitExpansion,
+      );
+      group.current.scale.setScalar(orbitScale);
+      group.current.position.z = layoutMode === "narrow" ? 0 : -radius * orbitScale * assembly.unfold;
       group.current.rotation.x = MathUtils.degToRad(settings.tiltX) * (1 - assembly.unfold);
       group.current.rotation.z = MathUtils.degToRad(settings.tiltZ) * (1 - assembly.unfold);
       group.current.visible = currentMaterial.uniforms.uOpacity.value > 0.001 && exit < 1;
@@ -246,7 +258,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     colliderRef.current.radius = radius;
     colliderRef.current.shape = collisionShape;
     colliderRef.current.active = present && exit < 1 && reveal > 0 && currentMaterial.uniforms.uOpacity.value > 0.01;
-    colliderRef.current.opacity = currentMaterial.uniforms.uOpacity.value * assembly.opacity;
+    colliderRef.current.opacity = currentMaterial.uniforms.uOpacity.value * assembly.orbitOpacity;
     colliderRef.current.reveal = reveal;
     colliderRef.current.phase = rotation.current?.rotation.y ?? 0;
     colliderRef.current.curvature = 1 - assembly.unfold;

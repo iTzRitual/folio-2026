@@ -6,7 +6,7 @@ import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShap
 import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
 import { orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
 import { heroAssemblyAt, orbitRibbonPoint, orbitRibbonCoordinates } from "@/lib/heroAssembly";
-import { fitHeroModelSlot, heroModelSlot } from "@/lib/heroModelPlacement";
+import { fitHeroModelSlot, fitHeroOrbitSlot, heroModelSlot } from "@/lib/heroModelPlacement";
 
 const intro = CONFIG.projectOrbit;
 const direction = Math.sign(intro.SPEED);
@@ -181,7 +181,16 @@ assert.equal(heroAssemblyAt(0.65).unfold, 1);
 assert.equal(heroAssemblyAt(0.65).opacity, 1, "The unfolded cards remain visible before the shared exit");
 assert.equal(heroAssemblyAt(0.88).opacity, 0, "The hero exits before the details skull returns");
 assert.equal(heroAssemblyAt(0.9).scatter, 0, "The details skull has an intact rest shape");
-assert.deepEqual(heroAssemblyAt(0.5, true), { ...heroAssemblyAt(0.5), unfold: 0, scatter: 0, spin: 0, rise: 0 }, "Reduced motion removes unwrapping, scattering and scroll spin");
+assert.deepEqual(heroAssemblyAt(0.5, true), { ...heroAssemblyAt(0.5), unfold: 0, scatter: 0, spin: 0, rise: 0, orbitExpansion: 0 }, "Reduced motion removes unwrapping, scattering, expansion and scroll spin");
+assert.equal(heroAssemblyAt(0.82).orbitOpacity, 1, "The large ribbon stays visible through the later scroll phase");
+assert.equal(heroAssemblyAt(0.9).orbitOpacity, 0, "The ribbon exits before the model moves to details");
+const scrollSpeedAt = (p: number) => Math.abs((heroAssemblyAt(p + 0.0001).spin - heroAssemblyAt(p).spin) / 0.0001);
+assert(scrollSpeedAt(0.7) > scrollSpeedAt(0.1) * 2.5, "The later scroll phase accelerates the ribbon");
+assert(Math.abs(scrollSpeedAt(CONFIG.heroAssembly.ORBIT_ACCEL_START - 0.0001) - scrollSpeedAt(CONFIG.heroAssembly.ORBIT_ACCEL_START)) < 0.01, "Scroll acceleration starts without a velocity jump");
+const orbitSlot = { top: 0.4, bottom: -0.3, padding: 0.02 };
+assert.equal(fitHeroOrbitSlot(orbitSlot, 0.15, 0), 1, "Hero and reduced motion preserve the original card size");
+assert(fitHeroOrbitSlot(orbitSlot, 0.15, 1) > 2, "The unfolded ribbon fills more of the available gap independently of skull scale");
+assert.equal(fitHeroOrbitSlot({ top: 0.1, bottom: 0.09, padding: 0.02 }, 0.15, 1), 1, "The ribbon retains its original size until it fades instead of collapsing");
 const ribbonLayout = projectOrbitLayout({ count: 6, gap: 0.42 });
 for (const curvature of [1, 0.75, 0.25, 0.001, 0]) {
   for (const phase of [-9.2, -0.4, 0.6, 13.1]) {
