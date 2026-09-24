@@ -16,6 +16,7 @@ import { CONFIG } from "../config/constants";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { wrapText } from "@/lib/textMetrics";
+import { heroTextOffsets } from "@/lib/heroModelPlacement";
 
 const LABEL_EXIT_START = CONFIG.heroText.LABEL_EXIT_START;
 const LABEL_EXIT_END = CONFIG.heroText.LABEL_EXIT_END;
@@ -46,22 +47,10 @@ export function HeroText() {
 
   useFrame(() => {
     const heroExit = progressRef.current;
-    const titleYOffset =
-      layoutMode === "narrow"
-        ? 0
-        : heroExit * viewport.height * CONFIG.heroLayout.TITLE_Y_MULTIPLIER;
-    const subtitleProgress = 1 - Math.pow(1 - heroExit, CONFIG.heroLayout.SUBTITLE_PROGRESS_POWER);
-    const subtitleYOffset =
-      layoutMode === "narrow"
-        ? 0
-        : subtitleProgress * viewport.height * CONFIG.heroLayout.SUBTITLE_Y_MULTIPLIER;
-    const heroYOffset =
-      layoutMode === "narrow"
-        ? 0
-        : heroExit * viewport.height * CONFIG.heroLayout.HERO_Y_MULTIPLIER;
+    const offsets = heroTextOffsets(layoutMode === "narrow" ? 0 : heroExit, viewport.height);
 
     if (titleGroupRef.current) {
-      titleGroupRef.current.position.y = titleYOffset;
+      titleGroupRef.current.position.y = offsets.title;
     }
     // A case study reached through its own URL opens over an unscrolled hero,
     // which the flight would otherwise magnify into the frame around the
@@ -70,11 +59,11 @@ export function HeroText() {
     const present = caseStudyStage.dim < 1;
 
     if (subtitleGroupRef.current) {
-      subtitleGroupRef.current.position.y = subtitleYOffset;
+      subtitleGroupRef.current.position.y = offsets.subtitle;
       subtitleGroupRef.current.visible = present;
     }
     if (heroGroupRef.current) {
-      heroGroupRef.current.position.y = heroYOffset;
+      heroGroupRef.current.position.y = offsets.hero;
       heroGroupRef.current.visible = present;
     }
   });

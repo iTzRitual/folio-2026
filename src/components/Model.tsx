@@ -17,6 +17,7 @@ import { SkullParticles } from "@/components/SkullParticles";
 import { SkullGlass } from "@/components/SkullGlass";
 import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
 import { heroAssemblyAt } from "@/lib/heroAssembly";
+import { followHeroModelSlot, heroModelSlot } from "@/lib/heroModelPlacement";
 
 // Nothing of the model may show above the details gradient. Cutting it there
 // rather than fading it keeps the model's own opacity out of it: the cut edge
@@ -42,7 +43,8 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   }, [nodes]);
   useEffect(() => () => surface?.dispose(), [surface]);
 
-  const { responsiveScale: baseResponsiveScale } = useHeroLayout();
+  const heroLayout = useHeroLayout();
+  const { responsiveScale: baseResponsiveScale } = heroLayout;
   const { startTrigger } = useAnimationContext();
   const { progressRef, revealProgressRef, modelAnchorRef } = useHeroTransition();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -103,6 +105,25 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const responsiveScale = baseResponsiveScale * debug.particles.scale;
 
   const skullRotation = debug.skullRotation;
+  const modelExtent = useMemo(() => {
+    if (!surface) return { height: 0, scatter: 0 };
+    const rotation = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(skullRotation.x, skullRotation.y, skullRotation.z));
+    const box = new THREE.Box3();
+    const point = new THREE.Vector3();
+    const swirl = new THREE.Vector3();
+    const positions = surface.attributes.position;
+    let swirlExtent = 0;
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i);
+      swirl.set(-point.y, point.x, 0).applyMatrix4(rotation);
+      swirlExtent = Math.max(swirlExtent, Math.abs(swirl.y));
+      box.expandByPoint(point.applyMatrix4(rotation));
+    }
+    return {
+      height: box.max.y - box.min.y,
+      scatter: 2 * (CONFIG.heroAssembly.SCATTER_DISTANCE + (swirlExtent + CONFIG.heroAssembly.SCATTER_SWIRL_NOISE) * CONFIG.heroAssembly.SCATTER_SWIRL),
+    };
+  }, [surface, skullRotation.x, skullRotation.y, skullRotation.z]);
 
   useFrame((state, delta) => {
     const scrollProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
@@ -126,6 +147,16 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       state.camera,
       modelDepth.current,
     );
+    const scatterExtent = debug.skullAppearance.mode === "glass" ? 0 : assembly.scatter * modelExtent.scatter;
+    const heroPlacement = layoutMode === "narrow" || inDetails ? null : followHeroModelSlot(
+      heroModelSlot(heroLayout, scrollProgress),
+      (modelExtent.height + scatterExtent) * responsiveScale / modelViewport.height,
+      (animGroupRef.current?.position.y ?? 0) / modelViewport.height,
+      transitionScaleGroupRef.current?.scale.y ?? 1,
+      assembly.scale,
+      dt,
+      teleported || prefersReducedMotion,
+    );
     // The scrim is authored against the details sheet at z≈0; the model hangs a
     // depth closer, so the cut's world Y has to travel through this to land on
     // the same screen height.
@@ -138,7 +169,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
 
     if (animGroupRef.current) {
       animGroupRef.current.visible = !workstationRevealed && (inDetails || assembly.opacity > 0);
-      const heroYCurrent =
+      const heroYCurrent = heroPlacement ? heroPlacement.y * modelViewport.height :
         CONFIG.model.BASE_MODEL_Y +
         assembly.rise * modelViewport.height;
       const detailsTargetY =
@@ -162,7 +193,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
             10,
             dt,
           );
-      animGroupRef.current.position.y = teleported
+      animGroupRef.current.position.y = heroPlacement || teleported
         ? targetY
         : THREE.MathUtils.damp(
             animGroupRef.current.position.y,
@@ -182,7 +213,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
       const currentScale = teleported
         ? 0
         : transitionScaleGroupRef.current.scale.x;
-      const smoothScale = THREE.MathUtils.damp(
+      const smoothScale = heroPlacement?.scale ?? THREE.MathUtils.damp(
         currentScale,
         targetScale,
         10,

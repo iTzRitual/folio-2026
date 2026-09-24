@@ -6,6 +6,7 @@ import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShap
 import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
 import { orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
 import { heroAssemblyAt, orbitRibbonPoint, orbitRibbonCoordinates } from "@/lib/heroAssembly";
+import { followHeroModelSlot, heroModelSlot } from "@/lib/heroModelPlacement";
 
 const intro = CONFIG.projectOrbit;
 const direction = Math.sign(intro.SPEED);
@@ -199,3 +200,30 @@ for (const curvature of [1, 0.75, 0.25, 0.001, 0]) {
 }
 assert(Math.abs(heroAssemblyAt(0.5).spin) > Math.PI * 1.5, "Scrolling strongly accelerates the orbit");
 console.log("PASS: scroll exit keeps cards visible, flattens the orbit, and preserves collision geometry and reduced motion.");
+
+for (const screenHeight of [600, 720, 1080]) {
+  const layout = { viewport: { width: 12, height: 8 }, marginY: 1.6, titleY: -2.6, size: { width: 1440, height: screenHeight } };
+  for (const fps of [30, 60, 120]) {
+    let placement = { y: 0, scale: 1 };
+    for (const progress of [0, 0.1, 0.5, 0.8, 0.3, 0.85, 0]) {
+      const slot = heroModelSlot(layout, progress);
+      const extent = 0.5 + heroAssemblyAt(progress).scatter * 0.4;
+      placement = followHeroModelSlot(slot, extent, placement.y, placement.scale, 1, 1 / fps);
+      assert(placement.y + extent * placement.scale / 2 <= slot.top - slot.padding + 1e-10, "Fast scrolling and reversal keep the skull below the subtitle");
+      assert(placement.y - extent * placement.scale / 2 >= slot.bottom + slot.padding - 1e-10, "Fast scrolling and reversal keep the skull above the title");
+      assert(placement.scale >= 0 && Number.isFinite(placement.y), "Placement remains finite across viewport sizes");
+    }
+  }
+}
+const restingSlot = { top: 0.4, bottom: -0.3, padding: 0.02 };
+const atFps = (fps: number) => {
+  let placement = { y: -0.1, scale: 0.2 };
+  for (let frame = 0; frame < fps; frame++) placement = followHeroModelSlot(restingSlot, 0.2, placement.y, placement.scale, 1, 1 / fps);
+  return placement;
+};
+for (const fps of [30, 60, 120]) {
+  assert(Math.abs(atFps(fps).y - atFps(120).y) < 1e-10, "Model following is frame-rate independent");
+  assert(Math.abs(atFps(fps).scale - atFps(120).scale) < 1e-10, "Model recovery is frame-rate independent");
+}
+assert.equal(followHeroModelSlot(restingSlot, 0.2, -0.1, 0.2, 1, 1 / 60, true).y, (restingSlot.top + restingSlot.bottom) / 2, "Reduced motion removes positional lag");
+console.log("PASS: the hero model stays between text blocks during fast scrolling and reversal, with frame-rate-independent following.");

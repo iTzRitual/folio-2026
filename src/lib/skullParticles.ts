@@ -42,7 +42,7 @@ void main() {
   }
   vec3 noise = vec3(sin(uv.x * 173.0 + uv.y * 71.0), cos(uv.x * 89.0 - uv.y * 137.0), sin(uv.y * 113.0));
   vec3 outward = normalize(rest + noise * 0.15 + vec3(0.0001));
-  vec3 scatter = outward * ${CONFIG.heroAssembly.SCATTER_DISTANCE} + vec3(-rest.y, rest.x, noise.z * 0.2) * ${CONFIG.heroAssembly.SCATTER_SWIRL};
+  vec3 scatter = outward * ${CONFIG.heroAssembly.SCATTER_DISTANCE} + vec3(-rest.y, rest.x, noise.z * ${CONFIG.heroAssembly.SCATTER_SWIRL_NOISE}) * ${CONFIG.heroAssembly.SCATTER_SWIRL};
   vec3 target = rest + scatter * scrollScatter * (0.7 + 0.3 * abs(noise.x));
   vec3 velocity = previous.xyz + ((target - position) * spring + cursorForce) * delta;
   velocity *= exp(-damping * delta);
