@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { MeshSurfaceSampler } from "three/addons/math/MeshSurfaceSampler.js";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
 import { CONFIG } from "@/config/constants";
-import { projectOrbitCollisionShader } from "@/lib/projectOrbitCollision";
+import { projectOrbitCollisionShader, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
 import { createSkullEntranceMotion } from "@/lib/skullEntrance";
 
 export interface SkullSimulationUniforms {
@@ -181,6 +181,7 @@ export function createSkullParticles(
     orbitActive: { value: 0 },
     orbitReveal: { value: 1 },
     orbitPhase: { value: 0 },
+    orbitShape: { value: projectOrbitCollisionShape() },
     orbitStart: { value: new THREE.Matrix4() },
     orbitEnd: { value: new THREE.Matrix4() },
     simulationFromOrbit: { value: new THREE.Matrix4() },
@@ -260,7 +261,11 @@ export function createSkullParticles(
     setEntranceScale(scale: number, delta: number, active: boolean) {
       uniforms.entranceVelocity.value = entrance.sample(scale, delta, active);
     },
-    setOrbit(matrix: THREE.Matrix4, active: boolean, reveal = 1, phase = 0) {
+    setOrbit(matrix: THREE.Matrix4, active: boolean, reveal = 1, phase = 0, shape?: THREE.Vector4) {
+      if (shape && !uniforms.orbitShape.value.equals(shape)) {
+        uniforms.orbitShape.value.copy(shape);
+        orbitInitialized = false;
+      }
       currentOrbit.copy(matrix);
       currentReveal = reveal;
       currentPhase = phase;

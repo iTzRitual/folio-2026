@@ -5,8 +5,7 @@ import { ORBIT_SIGNAL_DEFAULTS, type OrbitSignalConfig } from "@/config/orbitSig
 
 export const OrbitSignalContext = createContext<{
   config: OrbitSignalConfig;
-  previewTime: number | null;
-}>({ config: ORBIT_SIGNAL_DEFAULTS, previewTime: null });
+}>({ config: ORBIT_SIGNAL_DEFAULTS });
 
 export function useOrbitSignal() {
   return useContext(OrbitSignalContext);

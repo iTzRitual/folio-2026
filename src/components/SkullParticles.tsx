@@ -118,7 +118,7 @@ export function SkullParticles({
         && progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON && revealProgressRef.current === 0);
       const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
         && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
-      particles.setOrbit(orbitTransform, active, orbitCollider.current.reveal, orbitCollider.current.phase);
+      particles.setOrbit(orbitTransform, active, orbitCollider.current.reveal, orbitCollider.current.phase, orbitCollider.current.shape);
     }
     particles.uniforms.cursorRadius.value = settings.cursorRadius;
     particles.uniforms.cursorStrength.value = settings.cursorStrength;
@@ -187,6 +187,7 @@ export function SkullParticles({
         <SkullGlass
           geometry={fragmentGeometry.geometry}
           fragments={fragmentUniforms}
+          orbitCollider={orbitCollider}
           lowQuality={lowQuality}
           clippingPlanes={clippingPlanes}
         />

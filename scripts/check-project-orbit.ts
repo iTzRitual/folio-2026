@@ -1,21 +1,11 @@
 import assert from "node:assert/strict";
 import { CONFIG } from "@/config/constants";
-import { createProjectOrbitGeometry } from "@/lib/projectOrbit";
+import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT } from "@/lib/projectOrbit";
 import { Group, Matrix4, Vector3 } from "three";
-import { orbitCollisionTransform, projectCardDistance } from "@/lib/projectOrbitCollision";
-import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
+import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
+import { projectOrbitEntranceAt, projectOrbitIdleStep } from "@/lib/projectOrbitEntrance";
 
 const intro = CONFIG.projectOrbit;
-const glitchTicks = new Set<number>();
-for (let index = 0; index < intro.COUNT; index++) {
-  const card = createProjectOrbitGeometry(1, index);
-  const offsets = card.attributes.glitchTimeOffset;
-  const offset = offsets.getX(0);
-  assert(Array.from({ length: offsets.count }, (_, vertex) => offsets.getX(vertex)).every((value) => value === offset), "Every vertex in a card shares its own glitch clock");
-  glitchTicks.add(Math.floor(offset * CONFIG.projectPreview.GLITCH_HZ));
-  card.dispose();
-}
-assert.equal(glitchTicks.size, intro.COUNT, "Every card starts at a different glitch timestamp");
 const direction = Math.sign(intro.SPEED);
 const duration = intro.ENTRANCE_DURATION;
 const first = projectOrbitEntranceAt(0);
@@ -64,12 +54,16 @@ for (const radius of [0.4, 0.9, 1.4]) {
     minY = Math.min(minY, y);
     maxY = Math.max(maxY, y);
   }
-  assert(Math.abs(radius * arc / (maxY - minY) - CONFIG.projectPreview.ASPECT) < 1e-6, "Arc width preserves the project preview ratio");
+  assert(Math.abs(radius * arc * (1 + 2 * intro.HOLOGRAM_BLEED) / (maxY - minY) - PROJECT_ORBIT_ASPECT) < 1e-6, "Orbit cards retain the original project aspect ratio including glow padding");
   assert(arc < Math.PI * 2 / CONFIG.projectOrbit.COUNT, "Adjacent cards retain a gap around the entire ring");
-  const maxShift = CONFIG.projectPreview.GLITCH_SLICE + CONFIG.projectPreview.GLITCH_SPLIT;
   const minU = Math.min(...Array.from({ length: uvs.count }, (_, i) => uvs.getX(i)));
   const maxU = Math.max(...Array.from({ length: uvs.count }, (_, i) => uvs.getX(i)));
-  assert(minU < -maxShift && maxU > 1 + maxShift, "Both edges have room for fully displaced glitch bands and RGB fringes");
+  assert(minU < 0 && maxU > 1, "The frame glow has room outside the card");
+  assert.equal(PROJECT_ORBIT_ASPECT, CONFIG.projectPreview.ASPECT, "The complete project fits without changing its proportions");
+  assert(intro.HOLOGRAM_BLEED > intro.HOLOGRAM_GLOW_FADE_END, "Glow fades to zero before the padded mesh ends");
+  const halfHeight = arc / PROJECT_ORBIT_ASPECT / 2;
+  assert(projectCardDistance(new Vector3(0, halfHeight - 0.001, 1)) < 0, "The shorter card retains collision at its top edge");
+  assert(projectCardDistance(new Vector3(0, halfHeight + 0.02, 1)) > 0, "Fragments can pass above the shorter card");
   geometry.dispose();
 }
 
@@ -80,6 +74,7 @@ parent.add(orbit, simulation);
 parent.position.set(2, -3, 2);
 parent.rotation.set(0.2, -0.6, 0.4);
 orbit.rotation.set(CONFIG.projectOrbit.TILT_X, 0.7, CONFIG.projectOrbit.TILT_Z);
+orbit.position.y = CONFIG.projectOrbit.OFFSET_Y;
 simulation.rotation.set(-1.3, -3.13, -1.57);
 const transform = new Matrix4();
 const pitch = Math.PI * 2 / CONFIG.projectOrbit.COUNT;
@@ -102,3 +97,51 @@ parent.scale.setScalar(0);
 assert.equal(orbitCollisionTransform(simulation, { object: orbit, radius: 1, active: true }, transform), null, "Hidden intro geometry cannot produce a singular simulation transform");
 
 console.log("PASS: orbit cards follow the circular surface, preserve preview proportions, face outwards, and retain gaps at every size.");
+
+for (const count of [6, 10, 24]) {
+  for (const gap of [0.08, 0.42, 0.65]) {
+    for (const cardScale of [0.5, 1]) {
+      const layout = projectOrbitLayout({ count, gap, cardScale });
+      const shape = projectOrbitCollisionShape(layout);
+      assert(shape.y > shape.w && shape.z > shape.w, "Every lab setting retains a valid rounded collider");
+      const card = createProjectOrbitGeometry(1, layout);
+      const positions = card.attributes.position;
+      const uv = card.attributes.uv;
+      for (let i = 0; i < positions.count; i++) {
+        assert(Math.abs(positions.getY(i) - (uv.getY(i) - 0.5) * layout.height) < 1e-6, "Live card size preserves video proportions");
+      }
+      assert(projectCardDistance(new Vector3(0, 0, 1), 1, 0, layout) < 0, "A card center remains solid after tuning");
+      assert(projectCardDistance(new Vector3(0, layout.height / 2 + 0.01, 1), 1, 0, layout) > 0, "Collision height follows live tuning");
+      const angle = layout.pitch / 2;
+      assert(projectCardDistance(new Vector3(Math.sin(angle), 0, Math.cos(angle)), 1, 0, layout) > 0, "Gaps remain open across the lab control range");
+      card.dispose();
+    }
+  }
+}
+console.log("PASS: lab layout extremes preserve complete media proportions and matching collision surfaces.");
+
+for (const fps of [20, 30, 60, 120]) {
+  let phase = 0;
+  for (let frame = 0; frame < fps * 10; frame++) phase += projectOrbitIdleStep(1 / fps);
+  assert(Math.abs(phase - intro.SPEED * 10) < 1e-10, "Idle covers the same angle at 20, 30, 60 and 120 FPS");
+}
+assert.equal(projectOrbitIdleStep(2), 0, "Resuming after a background pause does not jump around the ring");
+for (const cardCount of [6, 10, 24]) {
+  const arc = projectOrbitLayout({ count: cardCount }).arc;
+  const endpoint = projectOrbitEntranceAt(duration, arc).phase;
+  const before = (endpoint - projectOrbitEntranceAt(duration - 0.0001, arc).phase) / 0.0001;
+  const after = (projectOrbitEntranceAt(duration + 0.0001, arc).phase - endpoint) / 0.0001;
+  assert(Math.abs(before - after) < 0.001, "Entrance hands off to idle with continuous angular velocity at every card count");
+}
+const speedAt = (time: number) => Math.abs((projectOrbitEntranceAt(time + 0.0001).phase - projectOrbitEntranceAt(time).phase) / 0.0001);
+const cruiseSpeed = speedAt(0);
+assert(Math.abs(speedAt(intro.ENTRANCE_CRUISE_DURATION / 2) - cruiseSpeed) < 0.001, "Cards keep their momentum throughout the first stage");
+assert(speedAt(duration / 2) > cruiseSpeed * 0.8, "The ring retains most of its speed halfway through the entrance");
+assert(speedAt(duration * 0.9) < cruiseSpeed * 0.05, "The second stage settles gently into idle");
+const stageBoundary = intro.ENTRANCE_CRUISE_DURATION;
+assert(Math.abs(speedAt(stageBoundary - 0.0001) - speedAt(stageBoundary)) < 0.001, "Braking begins without a velocity jump");
+assert.equal(projectOrbitEntranceAt(duration * 0.75).reveal, 1, "The loop closes while the ring is still braking");
+let reveal90 = 0;
+while (projectOrbitEntranceAt(reveal90).reveal < 0.9) reveal90 += 0.001;
+assert(1 - Math.exp(-intro.ENTRANCE_RESPONSE * reveal90) > 0.99, "Cards are fully readable before the entrance settles");
+console.log("PASS: orbit timing preserves velocity at handoff, frame-rate-independent idle and prompt entrance opacity.");

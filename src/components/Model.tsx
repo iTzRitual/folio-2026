@@ -257,6 +257,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
                 {debug.skullAppearance.mode === "glass" && surface && (
                   <SkullGlass
                     geometry={surface}
+                    orbitCollider={orbitCollider}
                     lowQuality={lowQuality}
                     clippingPlanes={FOLD_CLIP_PLANES}
                   />

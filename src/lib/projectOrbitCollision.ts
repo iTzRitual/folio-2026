@@ -1,10 +1,13 @@
-import { Matrix4, Vector3, type Object3D } from "three";
+import { Matrix4, Vector3, Vector4, type Object3D } from "three";
 import { CONFIG } from "@/config/constants";
+import { projectOrbitLayout } from "@/lib/projectOrbit";
 
 export interface ProjectOrbitCollider {
   object: Object3D | null;
   radius: number;
   active: boolean;
+  shape?: Vector4;
+  opacity?: number;
   reveal?: number;
   phase?: number;
 }
@@ -21,16 +24,14 @@ export function orbitCollisionTransform(object: Object3D, collider: ProjectOrbit
   return target;
 }
 
-export function projectCardDistance(point: Vector3, reveal = 1, phase = 0) {
+export function projectCardDistance(point: Vector3, reveal = 1, phase = 0, layout = projectOrbitLayout()) {
   if (reveal <= 0) return Infinity;
   const orbit = CONFIG.projectOrbit;
-  const pitch = Math.PI * 2 / orbit.COUNT;
-  const arc = pitch * (1 - orbit.GAP);
-  const height = arc / CONFIG.projectPreview.ASPECT;
+  const { pitch, arc, height } = layout;
   const corner = height * orbit.CORNER_RADIUS;
   const angle = Math.atan2(point.x, point.z);
   const wrapped = angle - pitch * Math.floor(angle / pitch + 0.5);
-  const x = Math.abs(wrapped) - arc / 2 + CONFIG.projectOrbitCollision.SIDE_INSET + corner;
+  const x = Math.abs(wrapped) - arc / 2 + Math.min(CONFIG.projectOrbitCollision.SIDE_INSET, arc * 0.12) + corner;
   const y = Math.abs(point.y) - height / 2 + corner;
   let face = Math.hypot(Math.max(x, 0), Math.max(y, 0)) + Math.min(Math.max(x, y), 0) - corner;
   if (reveal < 1) {
@@ -48,9 +49,10 @@ export function projectCardDistance(point: Vector3, reveal = 1, phase = 0) {
 
 const O = CONFIG.projectOrbit;
 const C = CONFIG.projectOrbitCollision;
-const pitch = Math.PI * 2 / O.COUNT;
-const arc = pitch * (1 - O.GAP);
-const height = arc / CONFIG.projectPreview.ASPECT;
+
+export function projectOrbitCollisionShape(layout = projectOrbitLayout()) {
+  return new Vector4(layout.pitch, layout.arc / 2 - Math.min(C.SIDE_INSET, layout.arc * 0.12), layout.height / 2, layout.height * O.CORNER_RADIUS);
+}
 
 export const projectOrbitCollisionShader = `
 uniform float orbitActive;
@@ -60,10 +62,11 @@ uniform mat4 simulationFromOrbit;
 uniform float orbitScale;
 uniform float orbitReveal;
 uniform float orbitPhase;
-const float orbitPitch = ${pitch};
-const float cardHalfWidth = ${arc / 2 - C.SIDE_INSET};
-const float cardHalfHeight = ${height / 2};
-const float cardCorner = ${height * O.CORNER_RADIUS};
+uniform vec4 orbitShape;
+#define orbitPitch orbitShape.x
+#define cardHalfWidth orbitShape.y
+#define cardHalfHeight orbitShape.z
+#define cardCorner orbitShape.w
 const float cardThickness = ${C.HALF_THICKNESS};
 const float collisionSkin = ${C.SKIN};
 

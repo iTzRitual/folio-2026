@@ -1,17 +1,24 @@
-import { gsap } from "gsap";
 import { CONFIG } from "@/config/constants";
 
 const C = CONFIG.projectOrbit;
-const ease = gsap.parseEase(C.ENTRANCE_EASE);
 const circumference = Math.PI * 2;
 const direction = Math.sign(C.SPEED) || -1;
 const halfCard = circumference / C.COUNT * (1 - C.GAP) / 2;
+const cruiseDuration = C.ENTRANCE_CRUISE_DURATION;
+const brakeDuration = C.ENTRANCE_DURATION - cruiseDuration;
+const cruiseSpeed = circumference * C.ENTRANCE_TURNS / (cruiseDuration + brakeDuration / 2);
 
-export function projectOrbitEntranceAt(elapsed: number) {
+export function projectOrbitIdleStep(delta: number) {
+  return delta > 0 && delta <= C.IDLE_MAX_FRAME_DELTA ? delta * C.SPEED : 0;
+}
+
+export function projectOrbitEntranceAt(elapsed: number, cardArc = halfCard * 2) {
   const time = Math.max(0, elapsed);
-  const travel = circumference * ease(Math.min(1, time / C.ENTRANCE_DURATION)) + Math.abs(C.SPEED) * time;
+  const brake = Math.min(1, Math.max(0, (time - cruiseDuration) / brakeDuration));
+  const brakeTravel = brake - 2.5 * brake ** 4 + 3 * brake ** 5 - brake ** 6;
+  const travel = cruiseSpeed * (Math.min(time, cruiseDuration) + brakeDuration * brakeTravel) + Math.abs(C.SPEED) * time;
   return {
-    phase: C.ENTRANCE_ORIGIN - direction * halfCard + direction * travel,
+    phase: C.ENTRANCE_ORIGIN - direction * cardArc / 2 + direction * travel,
     reveal: Math.min(1, travel / circumference),
   };
 }

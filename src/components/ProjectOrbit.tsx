@@ -1,20 +1,19 @@
 import { useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { BufferGeometry, DoubleSide, Group, MathUtils, Matrix4, ShaderMaterial, SRGBColorSpace, Vector2, Vector3, Vector4, VideoTexture } from "three";
+import { Box3, BufferGeometry, DoubleSide, Group, MathUtils, Matrix4, ShaderMaterial, SRGBColorSpace, Vector2, Vector3, Vector4, VideoTexture } from "three";
 import { CONFIG } from "@/config/constants";
 import { projectsData } from "@/data/content";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useAnimationContext } from "@/context/AnimationContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { createProjectOrbitGeometry, projectOrbitFragmentShader, projectOrbitVertexShader } from "@/lib/projectOrbit";
+import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT, projectOrbitFragmentShader, projectOrbitVertexShader } from "@/lib/projectOrbit";
 import { caseStudyStage } from "@/lib/caseStudyStage";
-import type { ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
-import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
-import { createSkullSignalMask } from "@/lib/skullSignalMask";
+import { projectOrbitCollisionShape, type ProjectOrbitCollider } from "@/lib/projectOrbitCollision";
+import { projectOrbitEntranceAt, projectOrbitIdleStep } from "@/lib/projectOrbitEntrance";
+import { createProjectOrbitHud } from "@/lib/projectOrbitHud";
 import { useOrbitSignal } from "@/context/OrbitSignalContext";
-import { SIGNAL_MODES } from "@/config/orbitSignal";
 
 const C = CONFIG.projectOrbit;
 const project = projectsData.find((project) => project.slug === "controller-configurator")!;
@@ -34,16 +33,33 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   const { startTrigger } = useAnimationContext();
   const reducedMotion = usePrefersReducedMotion();
   const signal = useOrbitSignal();
-  const signalClock = useRef({ seed: signal.config.seed, time: 0 });
-  const skullMask = useMemo(() => createSkullSignalMask(skullGeometry), [skullGeometry]);
+  const skullBounds = useMemo(() => {
+    skullGeometry.computeBoundingBox();
+    const bounds = skullGeometry.boundingBox!;
+    return {
+      corners: Array.from({ length: 8 }, (_, i) => new Vector3(
+        i & 1 ? bounds.max.x : bounds.min.x,
+        i & 2 ? bounds.max.y : bounds.min.y,
+        i & 4 ? bounds.max.z : bounds.min.z,
+      )),
+      center: bounds.getCenter(new Vector3()),
+      projected: new Box3(),
+      point: new Vector3(),
+    };
+  }, [skullGeometry]);
   const group = useRef<Group>(null);
   const rotation = useRef<Group>(null);
   const materialRef = useRef<ShaderMaterial>(null);
   const entrance = useRef({ elapsed: 0, started: false, complete: false });
   const playback = useRef<{ video: HTMLVideoElement; active: boolean } | null>(null);
   const worldScale = useMemo(() => new Vector3(), []);
-  const radius = responsiveScale * C.RADIUS_MULT;
-  const geometries = useMemo(() => Array.from({ length: C.COUNT }, (_, index) => createProjectOrbitGeometry(radius, index)), [radius]);
+  const settings = signal.config;
+  const radius = responsiveScale * settings.radius;
+  const layout = useMemo(() => projectOrbitLayout({ count: settings.count, gap: settings.gap, cardScale: settings.cardScale }), [settings.count, settings.gap, settings.cardScale]);
+  const collisionShape = useMemo(() => projectOrbitCollisionShape(layout), [layout]);
+  const geometries = useMemo(() => Array.from({ length: layout.count }, (_, index) => createProjectOrbitGeometry(radius, layout, index)), [radius, layout]);
+  const hudTexture = useMemo(() => createProjectOrbitHud(project.title), []);
+  useEffect(() => () => hudTexture.dispose(), [hudTexture]);
   const material = useMemo(() => {
     const image = texture.image as { width: number; height: number };
     const aspect = image.width / image.height;
@@ -52,9 +68,12 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       fragmentShader: projectOrbitFragmentShader,
       uniforms: {
         uMap: { value: texture },
+        uHudMap: { value: hudTexture },
+        uHudStyle: { value: 0 },
+        uHudDetail: { value: 0 },
         uVideo: { value: false },
-        uCover: { value: new Vector2(Math.min(1, CONFIG.projectPreview.ASPECT / aspect), Math.min(1, aspect / CONFIG.projectPreview.ASPECT)) },
-        uAspect: { value: CONFIG.projectPreview.ASPECT },
+        uCover: { value: new Vector2(Math.max(1, PROJECT_ORBIT_ASPECT / aspect), Math.max(1, aspect / PROJECT_ORBIT_ASPECT)) },
+        uAspect: { value: PROJECT_ORBIT_ASPECT },
         uRadius: { value: C.CORNER_RADIUS },
         uBorder: { value: C.BORDER_WIDTH },
         uOpacity: { value: 0 },
@@ -64,16 +83,16 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
         uOrbitFrame: { value: new Matrix4() },
         uReveal: { value: 0 },
         uTime: { value: 0 },
-        uGlitch: { value: CONFIG.projectPreview.REST_GLITCH },
+        uGlitch: { value: 0 },
+        uGlitchMediaOnly: { value: 0 },
         uGlitchParams: { value: new Vector4(CONFIG.projectPreview.GLITCH_BANDS, CONFIG.projectPreview.GLITCH_SLICE, CONFIG.projectPreview.GLITCH_SPLIT, CONFIG.projectPreview.GLITCH_HZ) },
-        uSkullMask: { value: skullMask.texture },
-        uSignalSurface: { value: new Vector2() },
-        uSignalPattern: { value: new Vector4() },
-        uSignalDamage: { value: new Vector4() },
-        uSignalTime: { value: 0 },
-        uSignalMode: { value: 0 },
-        uSignalAnimated: { value: 1 },
-        uHologramOpacity: { value: C.HOLOGRAM_OPACITY },
+        uSkullBounds: { value: new Vector4() },
+        uSkullDepth: { value: 0 },
+        uCardSize: { value: new Vector2() },
+        uFadeReach: { value: 1 },
+        uContentOpacity: { value: 0 },
+        uFrontOpacity: { value: 0 },
+        uGlow: { value: 0 },
         uHologramTint: { value: C.HOLOGRAM_TINT },
         uScan: { value: new Vector3(C.HOLOGRAM_SCAN_LINES, C.HOLOGRAM_SCAN_STRENGTH, C.HOLOGRAM_SCAN_SPEED) },
       },
@@ -83,7 +102,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       forceSinglePass: true,
       toneMapped: false,
     });
-  }, [texture, skullMask]);
+  }, [texture, hudTexture]);
 
   useEffect(() => {
     if (reducedMotion || !project.loop) return;
@@ -104,7 +123,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       if (!Number.isFinite(aspect) || aspect <= 0) return;
       material.uniforms.uMap.value = videoTexture;
       material.uniforms.uVideo.value = true;
-      material.uniforms.uCover.value.set(Math.min(1, CONFIG.projectPreview.ASPECT / aspect), Math.min(1, aspect / CONFIG.projectPreview.ASPECT));
+      material.uniforms.uCover.value.set(Math.max(1, PROJECT_ORBIT_ASPECT / aspect), Math.max(1, aspect / PROJECT_ORBIT_ASPECT));
     };
     const visibility = () => {
       if (document.hidden) {
@@ -129,14 +148,13 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       material.uniforms.uVideo.value = false;
       const image = texture.image as { width: number; height: number };
       const aspect = image.width / image.height;
-      material.uniforms.uCover.value.set(Math.min(1, CONFIG.projectPreview.ASPECT / aspect), Math.min(1, aspect / CONFIG.projectPreview.ASPECT));
+      material.uniforms.uCover.value.set(Math.max(1, PROJECT_ORBIT_ASPECT / aspect), Math.max(1, aspect / PROJECT_ORBIT_ASPECT));
       videoTexture.dispose();
     };
   }, [material, texture, reducedMotion]);
 
   useEffect(() => () => geometries.forEach((geometry) => geometry.dispose()), [geometries]);
   useEffect(() => () => material.dispose(), [material]);
-  useEffect(() => () => skullMask.dispose(), [skullMask]);
   useEffect(() => () => { colliderRef.current.object = null; colliderRef.current.active = false; }, [colliderRef]);
 
   useFrame((state, delta) => {
@@ -145,21 +163,17 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     const dt = Math.min(delta, 1 / 30);
     const exit = MathUtils.smoothstep(progressRef.current, 0, C.EXIT_END);
     const present = startTrigger && revealProgressRef.current === 0 && !caseStudyStage.open;
-    const settings = signal.config;
-    const clock = signalClock.current;
-    if (clock.seed !== settings.seed || !startTrigger) {
-      clock.seed = settings.seed;
-      clock.time = 0;
-    }
-    if (present && !document.hidden && !reducedMotion && signal.previewTime === null) clock.time += dt;
-    currentMaterial.uniforms.uSignalTime.value = (signal.previewTime ?? clock.time) * settings.pace;
-    currentMaterial.uniforms.uSignalPattern.value.set(settings.seed / 997, settings.drift, settings.density, settings.size);
-    currentMaterial.uniforms.uSignalDamage.value.set(settings.clearance, settings.displacement, settings.bursts, settings.separation);
-    currentMaterial.uniforms.uSignalMode.value = SIGNAL_MODES.indexOf(settings.mode);
-    currentMaterial.uniforms.uSignalAnimated.value = reducedMotion ? 0 : 1;
-    currentMaterial.uniforms.uSignalSurface.value.set(radius, radius * Math.PI * 2 / C.COUNT * (1 - C.GAP) / CONFIG.projectPreview.ASPECT);
+    currentMaterial.uniforms.uContentOpacity.value = settings.contentOpacity;
+    currentMaterial.uniforms.uFrontOpacity.value = settings.frontOpacity;
+    currentMaterial.uniforms.uFadeReach.value = settings.fadeReach;
+    currentMaterial.uniforms.uGlow.value = settings.glow;
+    currentMaterial.uniforms.uHudStyle.value = settings.style === "cyberpunk" ? 1 : 0;
+    currentMaterial.uniforms.uHudDetail.value = settings.hudDetail;
+    const width = radius * layout.arc;
+    currentMaterial.uniforms.uCardSize.value.set(width, width / PROJECT_ORBIT_ASPECT);
     currentMaterial.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
-    currentMaterial.uniforms.uGlitch.value = reducedMotion ? 0 : CONFIG.projectPreview.REST_GLITCH;
+    currentMaterial.uniforms.uGlitch.value = reducedMotion ? 0 : settings.glitch;
+    currentMaterial.uniforms.uGlitchMediaOnly.value = settings.glitchScope === "media" ? 1 : 0;
     const videoActive = present && exit < 1 && !reducedMotion && !document.hidden;
     const currentPlayback = playback.current;
     if (currentPlayback && currentPlayback.active !== videoActive) {
@@ -176,36 +190,57 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     if (startTrigger && entranceProgressRef.current.progress >= C.ENTRANCE_START) intro.started = true;
     if (intro.started && reducedMotion) intro.complete = true;
     if (rotation.current && present && exit < 1 && intro.started && !reducedMotion && !document.hidden) {
-      if (intro.complete) rotation.current.rotation.y += dt * C.SPEED;
+      if (intro.complete) rotation.current.rotation.y += projectOrbitIdleStep(delta);
       else {
         intro.elapsed = entranceProgressRef.current.orbitElapsed;
-        rotation.current.rotation.y = projectOrbitEntranceAt(intro.elapsed).phase;
+        rotation.current.rotation.y = projectOrbitEntranceAt(intro.elapsed, layout.arc).phase;
         intro.complete = intro.elapsed >= C.ENTRANCE_DURATION;
       }
     }
-    const reveal = intro.complete ? 1 : projectOrbitEntranceAt(intro.elapsed).reveal;
+    const reveal = intro.complete ? 1 : projectOrbitEntranceAt(intro.elapsed, layout.arc).reveal;
     currentMaterial.uniforms.uReveal.value = reveal;
-    currentMaterial.uniforms.uOpacity.value = MathUtils.damp(currentMaterial.uniforms.uOpacity.value, present && intro.started ? 1 - exit : 0, C.RESPONSE, dt);
+    const targetOpacity = present && intro.started ? 1 - exit : 0;
+    const opacityResponse = targetOpacity > currentMaterial.uniforms.uOpacity.value ? C.ENTRANCE_RESPONSE : C.RESPONSE;
+    currentMaterial.uniforms.uOpacity.value = MathUtils.damp(currentMaterial.uniforms.uOpacity.value, targetOpacity, opacityResponse, dt);
     if (group.current) {
       group.current.visible = currentMaterial.uniforms.uOpacity.value > 0.001 && exit < 1;
       group.current.getWorldPosition(currentMaterial.uniforms.uOrbitCenter.value);
       group.current.getWorldScale(worldScale);
       currentMaterial.uniforms.uOrbitRadius.value = radius * worldScale.x;
       currentMaterial.uniforms.uOrbitFrame.value.copy(group.current.matrixWorld).invert();
-      if (group.current.visible && skullRef.current && !document.hidden) skullMask.render(state.gl, state.camera, skullRef.current);
+      if (group.current.visible && skullRef.current) {
+        const skull = skullRef.current;
+        skull.updateWorldMatrix(true, false);
+        const { corners, center, projected, point } = skullBounds;
+        projected.makeEmpty();
+        for (const corner of corners) {
+          point.copy(corner).applyMatrix4(skull.matrixWorld).project(state.camera);
+          projected.expandByPoint(point);
+        }
+        currentMaterial.uniforms.uSkullBounds.value.set(
+          (projected.min.x + projected.max.x) / 2,
+          (projected.min.y + projected.max.y) / 2,
+          (projected.max.x - projected.min.x) / 2,
+          (projected.max.y - projected.min.y) / 2,
+        );
+        point.copy(center).applyMatrix4(skull.matrixWorld).applyMatrix4(state.camera.matrixWorldInverse);
+        currentMaterial.uniforms.uSkullDepth.value = -point.z;
+      }
     }
     colliderRef.current.object = rotation.current;
     colliderRef.current.radius = radius;
+    colliderRef.current.shape = collisionShape;
     colliderRef.current.active = present && exit < 1 && reveal > 0 && currentMaterial.uniforms.uOpacity.value > 0.01;
+    colliderRef.current.opacity = currentMaterial.uniforms.uOpacity.value;
     colliderRef.current.reveal = reveal;
     colliderRef.current.phase = rotation.current?.rotation.y ?? 0;
   }, -2);
 
   return (
-    <group ref={group} rotation={[C.TILT_X, 0, C.TILT_Z]}>
+    <group ref={group} position={[0, responsiveScale * settings.offsetY, 0]} rotation={[MathUtils.degToRad(settings.tiltX), 0, MathUtils.degToRad(settings.tiltZ)]}>
       <group ref={rotation}>
-        {Array.from({ length: C.COUNT }, (_, index) => {
-          const angle = index / C.COUNT * Math.PI * 2;
+        {Array.from({ length: layout.count }, (_, index) => {
+          const angle = index / layout.count * Math.PI * 2;
           return (
             <mesh
               key={index}

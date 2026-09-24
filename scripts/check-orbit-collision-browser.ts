@@ -1,6 +1,6 @@
 import { Matrix4, Vector3, WebGLRenderer } from "three";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
-import { projectCardDistance, projectOrbitCollisionShader } from "@/lib/projectOrbitCollision";
+import { projectCardDistance, projectOrbitCollisionShader, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
 import { CONFIG } from "@/config/constants";
 
 export function checkOrbitCollision(renderer: WebGLRenderer) {
@@ -35,6 +35,7 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
       dt: { value: dt }, radius: { value: radius }, home: { value: home }, spring: { value: spring },
       orbitActive: { value: active ? 1 : 0 }, orbitScale: { value: 1 },
       orbitReveal: { value: reveal }, orbitPhase: { value: 0 },
+      orbitShape: { value: projectOrbitCollisionShape() },
       orbitStart: { value: new Matrix4() }, orbitEnd: { value: new Matrix4() },
       simulationFromOrbit: { value: new Matrix4() },
     };
