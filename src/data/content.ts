@@ -22,6 +22,11 @@ export type ThemeOption = (typeof headerContent.themeOptions)[number];
 
 export const experienceData = [
     {
+        company: "micro1",
+        position: "Senior AI Trainer (Contractor)",
+        duration: "2026 - Present",
+    },
+    {
         company: "Nowa Łukasz Walter",
         position: "Fullstack Engineer",
         duration: "2026 - Present",
@@ -214,14 +219,25 @@ export const achievementsData = [
 
 export const coursesData = [
     {
-        title: "Animations on the Web - Advanced Interactions",
+        title: "aiforui.dev - AI for Designers and Engineers",
         issuer: "Emil Kowalski",
+        date: "In progress",
+    },
+    {
+        title: "WebGPU & TSL",
+        description: "Real-time shader workflows",
+        issuer: "Bruno Simon",
         date: "In progress",
     },
     {
         title: "Three.js Journey – Creative 3D Web Development",
         issuer: "Bruno Simon",
         date: "In progress",
+    },
+    {
+        title: "Animations on the Web - Advanced Interactions",
+        issuer: "Emil Kowalski",
+        date: "2026",
     },
     {
         title: "Enterprise React & Architecture",

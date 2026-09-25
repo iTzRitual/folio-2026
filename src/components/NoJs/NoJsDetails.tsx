@@ -106,7 +106,8 @@ export function NoJsDetails() {
                             key={`${item.title}-${item.issuer}`}
                             className="text-left text-lg leading-relaxed font-karla text-(--text-body)"
                         >
-                            - {item.title} @ {item.issuer} ({item.date})
+                            - {item.date} / {item.title}
+                            {"description" in item && ` – ${item.description}`} @ {item.issuer}
                         </li>
                     ))}
                 </ul>

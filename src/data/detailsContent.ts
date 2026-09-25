@@ -33,7 +33,8 @@ const educationLines = educationData.map(
   (item) => `${item.field} (${item.degree}) @ ${item.institution}`,
 );
 const courseLines = coursesData.map(
-  (item) => `${item.date} / ${item.title} @ ${item.issuer}`,
+  (item) =>
+    `${item.date} / ${item.title}${"description" in item ? ` – ${item.description}` : ""} @ ${item.issuer}`,
 );
 
 export const DETAILS_SECTION_CONTENT = {
