@@ -201,7 +201,9 @@ export const CONFIG = {
   },
   scrollTimeline: {
     VIEWPORTS: SCROLL_TIMELINE_VIEWPORTS,
-    LENIS_LERP: 0.1,
+    LENIS_DECAY: 6,
+    LENIS_DURATION: 1.8,
+    LENIS_SETTLE_START: 1.3,
   },
   pointerCamera: {
     ENABLED: true,

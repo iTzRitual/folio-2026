@@ -12,6 +12,7 @@ import { NoJsContent } from "@/components/NoJs/NoJsContent";
 import { CONFIG } from "@/config/constants";
 import { useFontsReady } from "@/hooks/useFontsReady";
 import { usePageScrollRuntime } from "@/hooks/usePageScrollRuntime";
+import { pageScrollEasing } from "@/lib/pageScrollMotion";
 import { useTheme } from "@/context/ThemeContext";
 import {
     DEBUG_DEFAULTS,
@@ -32,7 +33,9 @@ const TIMELINE_VIEWPORTS = CONFIG.scrollTimeline.VIEWPORTS;
 
 const LENIS_OPTIONS = {
     autoRaf: false,
-    lerp: CONFIG.scrollTimeline.LENIS_LERP,
+    lerp: 0,
+    duration: CONFIG.scrollTimeline.LENIS_DURATION,
+    easing: pageScrollEasing,
 } as const;
 
 export default function Home() {

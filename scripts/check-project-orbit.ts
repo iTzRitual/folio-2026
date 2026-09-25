@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { CONFIG } from "@/config/constants";
 import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT } from "@/lib/projectOrbit";
 import { Group, Matrix4, Vector3 } from "three";
@@ -7,6 +9,7 @@ import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
 import { orbitIdleSpeed, orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
 import { heroAssemblyAt, orbitRibbonPoint, orbitRibbonCoordinates } from "@/lib/heroAssembly";
 import { fitHeroModelSlot, fitHeroOrbitSlot, heroModelSlot } from "@/lib/heroModelPlacement";
+import { pageScrollEasing } from "@/lib/pageScrollMotion";
 
 const intro = CONFIG.projectOrbit;
 const direction = Math.sign(intro.SPEED);
@@ -250,3 +253,42 @@ for (const screenHeight of [600, 720, 1080]) {
   }
 }
 console.log("PASS: the hero model stays between text blocks and follows scroll directly without temporal lag.");
+
+const lenisSource = readFileSync("node_modules/lenis/dist/lenis.mjs", "utf8");
+const animateEnd = lenisSource.indexOf("// packages/core/src/debounce.ts");
+assert(animateEnd > 0, "Update the Lenis animation harness if its module layout changes");
+const LenisAnimate = runInNewContext(`${lenisSource.slice(0, animateEnd)}\nAnimate;`);
+const scrollConfig = CONFIG.scrollTimeline;
+for (const fps of [30, 60, 120]) {
+  for (const distance of [-2000, -240, -1, 1, 240, 2000]) {
+    const animate = new LenisAnimate();
+    const steps: number[] = [];
+    let previous = 0;
+    let time = 0;
+    animate.fromTo(0, distance, {
+      lerp: 0,
+      duration: scrollConfig.LENIS_DURATION,
+      easing: pageScrollEasing,
+      onUpdate: (value: number) => {
+        steps.push(Math.abs(value - previous));
+        assert(value * Math.sign(distance) >= previous * Math.sign(distance), "Lenis settles without reversing direction");
+        previous = value;
+      },
+    });
+    for (let frame = 0; animate.isRunning && frame < fps * (scrollConfig.LENIS_DURATION + 1); frame++) {
+      time += 1 / fps;
+      animate.advance(1 / fps);
+      if (time < scrollConfig.LENIS_SETTLE_START) {
+        assert(Math.abs(previous - distance * (1 - Math.exp(-scrollConfig.LENIS_DECAY * time))) < 1e-8, "The main Lenis deceleration matches the previous exponential trajectory");
+      }
+    }
+    assert.equal(previous, distance, "Lenis reaches its exact target");
+    for (let i = 1; i < steps.length; i++) {
+      assert(steps[i] <= steps[i - 1] + 1e-9, "No frame, including Lenis completion, accelerates during deceleration");
+    }
+    assert(steps.at(-1)! < 0.001, "The final scroll step is imperceptible even for a large wheel gesture");
+  }
+}
+assert.equal(pageScrollEasing(0), 0);
+assert.equal(pageScrollEasing(1), 1);
+console.log("PASS: installed Lenis preserves exponential braking and settles without a terminal snap at 30, 60 and 120 FPS in both directions.");

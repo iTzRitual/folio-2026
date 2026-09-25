@@ -109,7 +109,7 @@ export function SceneMotionProvider({ children }: { children: ReactNode }) {
 
     if (revealProgressRef.current > 0) {
       targetScrollVelocityRef.current *= Math.exp(
-        -60 * CONFIG.scrollTimeline.LENIS_LERP * delta,
+        -CONFIG.scrollTimeline.LENIS_DECAY * delta,
       );
     } else {
       targetScrollVelocityRef.current = MathUtils.clamp(
