@@ -4,8 +4,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { HeroTransitionContextProvider } from "@/context/HeroTransitionContext";
 import { CONFIG } from "@/config/constants";
+import { useFrame } from "@react-three/fiber";
+import { useLenis } from "lenis/react";
+import { rootScrollLock } from "@/lib/rootScrollLock";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const transitionDistance = () => window.innerHeight * (CONFIG.scrollTimeline.VIEWPORTS - 1);
 
 interface HeroTransitionProviderProps {
   children: ReactNode;
@@ -16,6 +21,7 @@ export function HeroTransitionProvider({
   children,
   detailsOverflowViewports,
 }: HeroTransitionProviderProps) {
+  const lenis = useLenis();
   const progressRef = useRef(0);
   const detailsScrollRef = useRef(0);
   const revealProgressRef = useRef(0);
@@ -31,28 +37,14 @@ export function HeroTransitionProvider({
     ScrollTrigger.refresh();
   }, [detailsOverflowViewports]);
 
+  useFrame(() => {
+    const scroll = rootScrollLock.active ? rootScrollLock.y : lenis?.animatedScroll ?? window.scrollY;
+    progressRef.current = Math.min(Math.max(scroll / transitionDistance(), 0), 1);
+  }, -4);
+
   useGSAP(() => {
-    const scrollState = { progress: 0 };
-
-    const transitionDistance = () =>
-      window.innerHeight * (CONFIG.scrollTimeline.VIEWPORTS - 1);
-
     const revealDistance = () =>
       window.innerHeight * CONFIG.workstation.REVEAL_VIEWPORTS;
-
-    const tween = gsap.to(scrollState, {
-      progress: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: document.body,
-        start: "top top",
-        end: () => `+=${transitionDistance()}`,
-        scrub: true,
-      },
-      onUpdate: () => {
-        progressRef.current = Math.min(Math.max(scrollState.progress, 0), 1);
-      },
-    });
 
     const readDetailsScroll = (scroll: number) => {
       const transition = transitionDistance();
@@ -79,8 +71,6 @@ export function HeroTransitionProvider({
     });
 
     return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
       detailsTrigger.kill();
     };
   }, []);

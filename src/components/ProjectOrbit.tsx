@@ -207,9 +207,10 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       }
     }
     const moving = present && exit < 1 && intro.complete && !document.hidden;
-    advanceOrbit(delta, moving && progressRef.current <= CONFIG.heroAssembly.UNFOLD_START, reducedMotion, moving);
+    const scrollAngle = intro.complete ? assembly.spin - scrollSpin.current : 0;
+    advanceOrbit(delta, moving && progressRef.current <= CONFIG.heroAssembly.UNFOLD_START, reducedMotion, moving, scrollAngle);
     if (rotation.current) {
-      if (intro.complete) rotation.current.rotation.y += assembly.spin - scrollSpin.current;
+      rotation.current.rotation.y += scrollAngle;
       scrollSpin.current = intro.complete ? assembly.spin : 0;
       currentMaterial.uniforms.uPhase.value = rotation.current.rotation.y;
     }

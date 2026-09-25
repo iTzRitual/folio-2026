@@ -2,7 +2,7 @@ import { useEffect, useMemo, type RefObject } from "react";
 import { useThree } from "@react-three/fiber";
 import { Group, Raycaster, Vector2, Vector3 } from "three";
 import { CONFIG } from "@/config/constants";
-import { orbitMomentumStep, orbitReleaseVelocity, type OrbitDragSample } from "@/lib/projectOrbitMotion";
+import { orbitIdleSpeed, orbitMomentumStep, orbitReleaseVelocity, type OrbitDragSample } from "@/lib/projectOrbitMotion";
 
 const C = CONFIG.projectOrbit;
 
@@ -12,6 +12,7 @@ export function useProjectOrbitDrag(rotation: RefObject<Group | null>, orbit: Re
     enabled: false,
     reducedMotion: false,
     velocity: C.SPEED as number,
+    idleSpeed: C.SPEED as number,
     friction: C.DRAG.FRICTION as number,
     held: false,
     cancel: () => {},
@@ -88,6 +89,7 @@ export function useProjectOrbitDrag(rotation: RefObject<Group | null>, orbit: Re
       if (event.pointerId !== drag.id || !rotation.current) return;
       const angle = ((event.clientX - drag.x) * drag.axis.x + (event.clientY - drag.y) * drag.axis.y) / drag.pixelsPerRadian;
       rotation.current.rotation.y += angle;
+      runtime.idleSpeed = orbitIdleSpeed(angle, runtime.idleSpeed);
       drag.x = event.clientX;
       drag.y = event.clientY;
       const time = performance.now();
@@ -124,7 +126,7 @@ export function useProjectOrbitDrag(rotation: RefObject<Group | null>, orbit: Re
     };
   }, [get, orbit, rotation, runtime]);
 
-  return (delta: number, enabled: boolean, reducedMotion: boolean, moving = enabled) => {
+  return (delta: number, enabled: boolean, reducedMotion: boolean, moving = enabled, scrollAngle = 0) => {
     if (runtime.enabled && !enabled) {
       const velocity = runtime.velocity;
       const friction = runtime.friction;
@@ -136,12 +138,16 @@ export function useProjectOrbitDrag(rotation: RefObject<Group | null>, orbit: Re
     }
     runtime.enabled = enabled;
     runtime.reducedMotion = reducedMotion;
+    if (Math.abs(scrollAngle) > C.DIRECTION_EPSILON) {
+      runtime.idleSpeed = orbitIdleSpeed(scrollAngle, runtime.idleSpeed);
+      runtime.velocity = runtime.idleSpeed;
+    }
     if (!moving) {
-      runtime.velocity = C.SPEED;
+      runtime.velocity = runtime.idleSpeed;
       return;
     }
     if (runtime.held || reducedMotion || !rotation.current) return;
-    const next = orbitMomentumStep(runtime.velocity, delta, runtime.friction);
+    const next = orbitMomentumStep(runtime.velocity, delta, runtime.friction, runtime.idleSpeed);
     runtime.velocity = next.velocity;
     rotation.current.rotation.y += next.angle;
   };

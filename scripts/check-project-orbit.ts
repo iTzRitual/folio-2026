@@ -4,7 +4,7 @@ import { createProjectOrbitGeometry, projectOrbitLayout, PROJECT_ORBIT_ASPECT } 
 import { Group, Matrix4, Vector3 } from "three";
 import { orbitCollisionTransform, projectCardDistance, projectOrbitCollisionShape } from "@/lib/projectOrbitCollision";
 import { projectOrbitEntranceAt } from "@/lib/projectOrbitEntrance";
-import { orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
+import { orbitIdleSpeed, orbitMomentumStep, orbitReleaseVelocity } from "@/lib/projectOrbitMotion";
 import { heroAssemblyAt, orbitRibbonPoint, orbitRibbonCoordinates } from "@/lib/heroAssembly";
 import { fitHeroModelSlot, fitHeroOrbitSlot, heroModelSlot } from "@/lib/heroModelPlacement";
 
@@ -175,6 +175,33 @@ assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 80, phase: 0.3
 assert.equal(orbitReleaseVelocity([{ time: 0, phase: 0 }, { time: 10, phase: 3 }], 12), intro.DRAG.MAX_SPEED, "Extreme gestures respect the speed limit");
 assert.equal(orbitMomentumStep(4, 2, intro.DRAG.FRICTION).angle, 0, "Returning to a hidden tab does not jump the orbit");
 console.log("PASS: orbit gestures preserve release direction, discard stale velocity and decay consistently across frame rates.");
+
+for (const direction of [-1, 1]) {
+  let idleSpeed = orbitIdleSpeed(direction * 0.01, intro.SPEED);
+  idleSpeed = orbitIdleSpeed(0, idleSpeed);
+  idleSpeed = orbitIdleSpeed(-direction * intro.DIRECTION_EPSILON / 2, idleSpeed);
+  assert.equal(Math.sign(idleSpeed), direction, "Idle retains the last gesture direction through rest and numerical noise");
+  for (const fps of [30, 60, 120]) {
+    let velocity = direction * 4;
+    for (let frame = 0; frame < fps * 6; frame++) {
+      const next = orbitMomentumStep(velocity, 1 / fps, intro.DRAG.FRICTION, idleSpeed);
+      assert.equal(Math.sign(next.angle), direction, "Release inertia never reverses on its way to idle");
+      velocity = next.velocity;
+    }
+    assert(Math.abs(velocity - idleSpeed) < 0.001, "A fling settles into idle in its own direction");
+    let progress = direction === -1 ? 0.3 : 0.7;
+    const target = direction === -1 ? 0.7 : 0.3;
+    for (let frame = 0; frame < fps * 3; frame++) {
+      const next = target + (progress - target) * Math.exp(-7 / fps);
+      const scrollAngle = heroAssemblyAt(next).spin - heroAssemblyAt(progress).spin;
+      idleSpeed = orbitIdleSpeed(scrollAngle, idleSpeed);
+      const angle = scrollAngle + orbitMomentumStep(idleSpeed, 1 / fps, intro.DRAG.FRICTION, idleSpeed).angle;
+      assert.equal(Math.sign(angle), direction, "Decelerating scroll and idle reinforce each other instead of alternately reversing");
+      progress = next;
+    }
+  }
+}
+console.log("PASS: scroll and drag hand off to persistent directional idle without reversing during deceleration.");
 
 assert.equal(heroAssemblyAt(0).unfold, 0);
 assert.equal(heroAssemblyAt(0.65).unfold, 1);

@@ -13,12 +13,16 @@ export function orbitReleaseVelocity(samples: OrbitDragSample[], now: number) {
   return Math.max(-C.DRAG.MAX_SPEED, Math.min(C.DRAG.MAX_SPEED, velocity));
 }
 
-export function orbitMomentumStep(velocity: number, delta: number, friction: number) {
+export function orbitIdleSpeed(angle: number, previous: number) {
+  return Math.abs(angle) > C.DIRECTION_EPSILON ? Math.sign(angle) * Math.abs(C.SPEED) : previous;
+}
+
+export function orbitMomentumStep(velocity: number, delta: number, friction: number, idleSpeed: number = C.SPEED) {
   if (delta <= 0 || delta > C.IDLE_MAX_FRAME_DELTA) return { velocity, angle: 0 };
   const decay = Math.exp(-friction * delta);
-  const difference = velocity - C.SPEED;
+  const difference = velocity - idleSpeed;
   return {
-    velocity: C.SPEED + difference * decay,
-    angle: C.SPEED * delta + difference * (1 - decay) / friction,
+    velocity: idleSpeed + difference * decay,
+    angle: idleSpeed * delta + difference * (1 - decay) / friction,
   };
 }
