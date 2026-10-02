@@ -106,15 +106,19 @@ for (const axis of ["x", "z"]) {
 assert(tb.min.z > C.WINDOW_POSITION.z + 0.1, "Open lid clears wall and sill");
 assert(tb.max.x < db.min.x, "Cabinet music area clears main desk");
 assert(Math.abs(C.CABINET_POSITION.y - C.CABINET_SIZE.y + 0.72) < 1e-6, "Raised cabinet remains grounded");
+const speakerAsset = boundsModel(`public${C.SPEAKER_MODEL_URL}`);
 const speakerBounds = [C.LEFT_SPEAKER_POSITION, C.RIGHT_SPEAKER_POSITION].map((p, i) => {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(C.SPEAKER_SIZE.x, C.SPEAKER_SIZE.y, C.SPEAKER_SIZE.z));
-  mesh.position.set(p.x, frame.supportY + p.y + C.SPEAKER_SIZE.y / 2, p.z);
-  mesh.rotation.y = THREE.MathUtils.degToRad(C.SPEAKER_YAW) * (i ? -1 : 1);
-  const box = bounds(mesh);
+  const speaker = speakerAsset.getObjectByName(i ? "Edifier_Active" : "Edifier_Passive");
+  assert(speaker, "Both Edifier variants are exported");
+  const native = bounds(speaker);
+  assert(Math.abs(native.min.y) < 1e-6, "Speaker feet rest on their placement origin");
+  const size = native.getSize(new THREE.Vector3());
+  for (const axis of ["x", "y", "z"]) assert(Math.abs(size[axis] - C.SPEAKER_SIZE[axis]) < .002, "Edifier preserves the blockout envelope");
+  speaker.position.set(p.x, frame.supportY + p.y, p.z);
+  speaker.rotation.y = THREE.MathUtils.degToRad(C.SPEAKER_YAW) * (i ? -1 : 1);
+  const box = bounds(speaker);
   assert(!box.intersectsBox(mb) && !box.intersectsBox(kb), "Rear speakers clear the monitor and keyboard");
   for (const axis of ["x", "z"]) assert(box.min[axis] > db.min[axis] && box.max[axis] < db.max[axis], "Speakers fit on desktop");
-  mesh.geometry.dispose();
-  mesh.material.dispose();
   return box;
 });
 assert(!speakerBounds[0].intersectsBox(speakerBounds[1]), "Speakers remain separate");

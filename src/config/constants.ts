@@ -271,6 +271,8 @@ export const CONFIG = {
     LEFT_SPEAKER_POSITION: { x: -0.47, y: 0, z: -0.59 },
     RIGHT_SPEAKER_POSITION: { x: 0.51, y: 0, z: -0.56 },
     SPEAKER_SIZE: { x: 0.145, y: 0.23, z: 0.17 },
+    SPEAKER_MODEL_URL: "/glbs/edifier-r1280dbs.glb",
+    SPEAKER_ENV_INTENSITY: { day: 0.4, night: 0.12 },
     SPEAKER_YAW: 12,
     FEATURED_RECORD_POSITION: { x: -0.625407508, y: 0, z: -0.255 },
     FEATURED_RECORD_YAW: 90,
