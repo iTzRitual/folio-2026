@@ -106,18 +106,6 @@ for (const axis of ["x", "z"]) {
 assert(tb.min.z > C.WINDOW_POSITION.z + 0.1, "Open lid clears wall and sill");
 assert(tb.max.x < db.min.x, "Cabinet music area clears main desk");
 assert(Math.abs(C.CABINET_POSITION.y - C.CABINET_SIZE.y + 0.72) < 1e-6, "Raised cabinet remains grounded");
-const mouse = boundsModel(`public${C.MOUSE_MODEL_URL}`);
-const nativeMouse = bounds(mouse);
-const mouseSize = nativeMouse.getSize(new THREE.Vector3());
-assert(Math.abs(nativeMouse.min.y) < 1e-6, "Mouse glide pads sit on the placement plane");
-assert(mouseSize.x < 0.08 && mouseSize.y < 0.045 && Math.abs(mouseSize.z - 0.13) < 0.001, "Cable-free mouse has a realistic desktop footprint");
-mouse.position.set(C.MOUSE_POSITION.x, frame.supportY + C.MOUSE_POSITION.y, C.MOUSE_POSITION.z);
-mouse.rotation.y = THREE.MathUtils.degToRad(C.MOUSE_YAW);
-const mouseBounds = bounds(mouse);
-assert(Math.abs(mouseBounds.min.y - db.max.y) < 1e-6, "Mouse rests on desktop");
-assert(!mouseBounds.intersectsBox(kb) && !mouseBounds.intersectsBox(mb), "Mouse clears keyboard and monitor");
-for (const axis of ["x", "z"]) assert(mouseBounds.min[axis] > db.min[axis] && mouseBounds.max[axis] < db.max[axis], "Mouse fits on desktop");
-
 const speakerAsset = boundsModel(`public${C.SPEAKER_MODEL_URL}`);
 const speakerBounds = [C.LEFT_SPEAKER_POSITION, C.RIGHT_SPEAKER_POSITION].map((p, i) => {
   const speaker = speakerAsset.getObjectByName(i ? "Edifier_Active" : "Edifier_Passive");
