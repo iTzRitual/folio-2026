@@ -8,7 +8,7 @@ import bmesh
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector
-from mathutils.geometry import tessellate_polygon
+from mathutils.geometry import delaunay_2d_cdt
 
 OUT = Path(__file__).resolve().parent
 PROJECT = OUT.parents[1]
@@ -146,24 +146,28 @@ chassis = mesh('Continuous lower chassis', verts, faces, gloss)
 
 
 def patch(name, outline, mat, lift=.7, surface=top, thickness=.65, density=12):
-    polygon = [Vector((x,z,0)) for x,z in outline]
-    triangles = tessellate_polygon([polygon])
-    verts, faces = [], []
-    for triangle in triangles:
-        a,b,c = [polygon[i] for i in triangle]
-        if (b-a).cross(c-a).z > 0:
-            b,c = c,b
-        rows = {}
-        for i in range(density+1):
-            for j in range(density+1-i):
-                p = a + (b-a)*i/density + (c-a)*j/density
-                rows[(i,j)] = len(verts)
-                verts.append((p.x,surface(p.x,p.y)+lift,p.y))
-        for i in range(density):
-            for j in range(density-i):
-                faces.append((rows[(i,j)],rows[(i+1,j)],rows[(i,j+1)]))
-                if j < density-i-1:
-                    faces.append((rows[(i+1,j)],rows[(i+1,j+1)],rows[(i,j+1)]))
+    spacing = 1.2 if density > 4 else .7
+    polygon = []
+    for i, point in enumerate(outline):
+        start, end = Vector(point), Vector(outline[(i+1)%len(outline)])
+        steps = max(1,math.ceil((end-start).length/spacing))
+        polygon.extend(start+(end-start)*j/steps for j in range(steps))
+    area = sum(polygon[i].x*polygon[(i+1)%len(polygon)].y-polygon[(i+1)%len(polygon)].x*polygon[i].y for i in range(len(polygon)))
+    if area < 0:
+        polygon.reverse()
+    perimeter = list(range(len(polygon)))
+    for x in np.arange(min(p[0] for p in outline)+spacing/2,max(p[0] for p in outline),spacing):
+        for z in np.arange(min(p[1] for p in outline)+spacing/2,max(p[1] for p in outline),spacing):
+            inside = False
+            for i, (ax,az) in enumerate(outline):
+                bx,bz = outline[(i+1)%len(outline)]
+                if (az>z)!=(bz>z) and x<(bx-ax)*(z-az)/(bz-az)+ax:
+                    inside = not inside
+            if inside:
+                polygon.append(Vector((x,z)))
+    coordinates, _, triangles, _, _, _ = delaunay_2d_cdt(polygon,[],[perimeter],1,.00001,False)
+    verts = [(p.x,surface(p.x,p.y)+lift,p.y) for p in coordinates]
+    faces = [tuple(reversed(face)) for face in triangles]
     obj = mesh(name, verts, faces, mat)
     if thickness:
         bpy.context.view_layer.objects.active = obj
@@ -180,7 +184,7 @@ patch('Right primary button', [(6,-64),(24,-60),(28,-36),(29,-7),(28,8),(7,1),(6
 patch('Left outer blade', [(-25,-61),(-29,-48),(-29,-22),(-27,-17),(-25,-23)], shell, .8)
 patch('Right outer blade', [(26,-58),(29,-46),(30,-24),(31,0),(30,21),(28,12),(30,-7),(29,-38)], shell, .65)
 palm = [(-24,20),(-2,10),(8,9),(28,16)] + [(width(z)*.975,z) for z in [24,32,40,48,55,60,63,64]] + [(-width(z)*.975,z) for z in [64,63,60,55,48,40,32]]
-patch('Sculpted palm shell', palm, shell, .75, density=10)
+patch('Sculpted palm shell', palm, shell, .95, density=10)
 patch('Left DPI shoulder', [(-27,-13),(-25,16),(-7,8),(-10,-3)], shell, 1)
 patch('DPI forward key', [(-27,-45),(-23,-42),(-23,-22),(-27,-17),(-29,-24)], buttons, 1.4)
 patch('DPI back key', [(-27,-15),(-23,-19),(-19,-7),(-23,-2)], buttons, 1.4)
@@ -261,8 +265,8 @@ for i in range(33):
 for i in range(32,-1,-1):
     a = math.radians(60 + 270*i/32)
     arc.append((logo_x+3.8*math.cos(a),logo_z-3.8*math.sin(a)))
-patch('Illuminated G arc',arc,cyan,.89,thickness=.1,density=2)
-patch('Illuminated G crossbar', [(logo_x,logo_z-.8),(logo_x+6.4,logo_z-.8),(logo_x+6.4,logo_z+5.3),(logo_x+4,logo_z+5.3),(logo_x+4,logo_z+1.4),(logo_x,logo_z+1.4)],cyan,.9,thickness=.1,density=3)
+patch('Illuminated G arc',arc,cyan,1.09,thickness=.1,density=2)
+patch('Illuminated G crossbar', [(logo_x,logo_z-.8),(logo_x+6.4,logo_z-.8),(logo_x+6.4,logo_z+5.3),(logo_x+4,logo_z+5.3),(logo_x+4,logo_z+1.4),(logo_x,logo_z+1.4)],cyan,1.1,thickness=.1,density=3)
 
 font_path = '/System/Library/Fonts/Supplemental/Arial.ttf'
 font = bpy.data.fonts.load(font_path) if Path(font_path).exists() else None
@@ -352,7 +356,7 @@ camera.data.ortho_scale = .19
 scene.camera = camera
 scene.world.color = (.13,.13,.13)
 scene.render.engine = 'CYCLES'
-scene.cycles.samples = 32
+scene.cycles.samples = 24
 scene.cycles.use_denoising = True
 scene.render.resolution_x = 1200
 scene.render.resolution_y = 1000
