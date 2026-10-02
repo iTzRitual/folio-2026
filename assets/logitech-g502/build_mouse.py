@@ -338,7 +338,7 @@ def aim(obj,target):
     obj.rotation_euler = Matrix((x,y,z)).transposed().to_euler()
 
 
-bpy.ops.mesh.primitive_plane_add(size=200,location=(0,-.0003,0),rotation=(math.pi/2,0,0))
+bpy.ops.mesh.primitive_plane_add(size=2,location=(0,-.0003,0),rotation=(math.pi/2,0,0))
 floor = bpy.context.object
 floor.name = 'STUDIO floor'
 floor.data.materials.append(material('STUDIO warm grey',(.18,.17,.155),.85))
