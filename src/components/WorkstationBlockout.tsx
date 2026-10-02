@@ -8,6 +8,7 @@ import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
 import { DeskCollectionProps } from "./WorkstationDeskProps";
+import { LogitechMouse } from "./LogitechMouse";
 import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
 export { Block } from "./WorkstationPrimitives";
 
@@ -43,11 +44,7 @@ export function DesktopProxies({ supportY }: { supportY: number }) {
   const { workstation: w, lighting } = useDebugSettings();
   return <group name="DesktopAccessories">
     <DeskCollectionProps supportY={supportY} />
-    <group name="Mouse" position={xyz(w.mousePosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.mouse), 0]}>
-      <Ellipsoid size={[0.032, 0.019, 0.054]} position={[0, 0.019, 0]} />
-      <Cylinder radius={0.007} height={0.006} rotation={[0, 0, Math.PI / 2]} position={[0, 0.036, -0.017]} />
-      <Block size={[0.001, 0.001, 0.025]} position={[0, 0.037, -0.019]} color={charcoal} />
-    </group>
+    <LogitechMouse supportY={supportY} />
     <group name="Controller" position={xyz(w.controllerPosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.controller), 0]}>
       <Ellipsoid size={[0.062, 0.02, 0.028]} position={[0, 0.025, -0.008]} color={charcoal} />
       {[-1, 1].map(side => <group key={side}>
