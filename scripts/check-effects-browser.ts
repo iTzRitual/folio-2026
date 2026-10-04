@@ -17,6 +17,8 @@ export async function checkEffects(renderer: WebGLRenderer) {
   assert(selectAntialiasingSamples([1], [1]) === 0, "One sample must use the SMAA fallback");
   assert(selectAntialiasingSamples([], []) === 0, "Unsupported multisampling must use SMAA");
   assert(selectAntialiasingSamples([4, 2], [4]) === 0, "Color and depth must support the same count");
+  assert(selectAntialiasingSamples([8, 4, 2], [8, 4, 2], 4) === 4, "The workstation must use four samples without exceeding its budget");
+  assert(selectAntialiasingSamples([4], [4], 4) === 4, "Four-sample-only hardware must support geometry antialiasing");
   const scene = new Scene();
   scene.background = new Color("#28455c");
   const camera = new PerspectiveCamera();
@@ -69,7 +71,7 @@ export async function checkEffects(renderer: WebGLRenderer) {
         const reference = capture();
         assert(reference.slice(0, 3).some(value => value > 0), "Pipeline output must not be blank");
         for (let change = 0; change < 16; change++) {
-          const mode = change % 3 === 0 ? "msaa" : "smaa";
+          const mode = (["msaa", "smaa", "workstation"] as const)[change % 3];
           pipeline.setAntialiasingMode(mode);
           const buffers = [pipeline.composer.inputBuffer, pipeline.composer.outputBuffer];
           let disposals = 0;
@@ -82,6 +84,7 @@ export async function checkEffects(renderer: WebGLRenderer) {
           pipeline.aberration.setTaps(change % 3 === 0 ? 3 : 8);
           pipeline.composer.setSize(change % 2 === 0 ? 48 : 32, 32);
           pipeline.composer.render(1 / 60);
+          assert(pipeline.composer.outputBuffer.samples === 0, "Fullscreen effects must not allocate a second multisampled buffer");
           const activePasses = pipeline.composer.passes.filter(pass => pass.enabled);
           assert(activePasses.filter(pass => pass.renderToScreen).length === 1 && activePasses.at(-1)?.renderToScreen === true, "Only the last active pass may render to screen in either antialiasing mode");
           assert(pipeline.composer.passes.every((pass, index) => pass === passes[index]) && pipeline.composer.passes.length === passes.length, "Quality and resize must retain the same passes");
@@ -108,6 +111,8 @@ export async function checkEffects(renderer: WebGLRenderer) {
     scene.background = new Color("black");
     const pipeline = new PortfolioEffectPipeline(renderer, scene, camera);
     const actualSamples = pipeline.composer.multisampling;
+    pipeline.setAntialiasingMode("workstation");
+    const workstationSamples = pipeline.composer.multisampling;
     try {
       await waitForAntialiasing(pipeline);
       pipeline.header.setActive(false);
@@ -128,9 +133,9 @@ export async function checkEffects(renderer: WebGLRenderer) {
         renderer.clear();
         renderer.render(scene, camera);
         const baselineEdges = readEdges();
-        for (const mode of ["msaa", "smaa"] as const) {
+        for (const mode of ["msaa", "smaa", "workstation"] as const) {
           pipeline.setAntialiasingMode(mode);
-          assert(pipeline.composer.multisampling === (mode === "msaa" ? actualSamples : 0), "AA mode changes must select the negotiated sample count");
+          assert(pipeline.composer.multisampling === (mode === "workstation" ? workstationSamples : mode === "msaa" ? actualSamples : 0), "AA mode changes must select the negotiated sample count");
           for (const aberration of [false, true]) {
             pipeline.setAberrationEnabled(aberration);
             pipeline.composer.render(1 / 60);
@@ -141,13 +146,38 @@ export async function checkEffects(renderer: WebGLRenderer) {
           }
         }
       }
+      if (workstationSamples > 1) {
+        pipeline.setAntialiasingMode("workstation");
+        pipeline.setAberrationEnabled(false);
+        renderer.setPixelRatio(1);
+        pipeline.composer.setSize(64, 64);
+        scene.background = new Color("#45484d");
+        material.color.set("#55585d");
+        const pixels = new Uint8Array(64 * 64 * 4);
+        const levels = () => {
+          context.readPixels(0, 0, 64, 64, context.RGBA, context.UNSIGNED_BYTE, pixels);
+          const background = pixels[0];
+          const interior = pixels[(32 * 64 + 32) * 4];
+          const edgeLevels = new Set<number>();
+          for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i] > background && pixels[i] < interior) edgeLevels.add(pixels[i]);
+          }
+          return edgeLevels.size;
+        };
+        renderer.setRenderTarget(null);
+        renderer.clear();
+        renderer.render(scene, camera);
+        const baseline = levels();
+        pipeline.composer.render(1 / 60);
+        assert(levels() >= baseline + Math.min(workstationSamples - 1, 3), "Workstation AA must smooth low-contrast gray contours that color-edge filters miss");
+      }
     } finally {
       pipeline.dispose();
       geometry.dispose();
       material.dispose();
     }
     assert(renderer.info.memory.textures === baselineTextures, "Antialiasing targets and lookup textures must be released after DPR changes");
-    return `PASS: 64 AA/effect toggles and resizes retain pass ownership and neutral pixels; unchanged AA preserves buffers; early/normal unmounts release GPU textures; SMAA and ${actualSamples > 1 ? `MSAA ${actualSamples}×` : "the MSAA fallback (native MSAA unavailable within budget)"} smooth geometry at DPR 0.75/1/1.5 with aberration on and off.`;
+    return `PASS: 64 AA/effect toggles and resizes retain pass ownership and neutral pixels; only geometry uses MSAA; unchanged AA preserves buffers; early/normal unmounts release GPU textures; portfolio MSAA ${actualSamples}×, workstation MSAA ${workstationSamples}× and SMAA smooth geometry at DPR 0.75/1/1.5; supported workstation MSAA preserves low-contrast edge coverage.`;
   } finally {
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(size.x, size.y);

@@ -187,6 +187,7 @@ export const CONFIG = {
   },
   antialiasing: {
     MSAA_SAMPLES: 2,
+    WORKSTATION_MSAA_SAMPLES: 4,
     SMAA_PRESET: "HIGH",
   },
   performanceMonitor: {
@@ -194,7 +195,7 @@ export const CONFIG = {
     UPPER_FPS: 58,
     DECLINE_COOLDOWN_MS: 3000,
     INCLINE_COOLDOWN_MS: 12000,
-    LOW_DPR: 0.75,
+    LOW_DPR: 1,
     BALANCED_DPR: 1,
     HIGH_DPR: 1.5,
   },

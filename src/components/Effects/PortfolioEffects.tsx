@@ -51,11 +51,11 @@ export function PortfolioEffects() {
   useFrame((_, delta) => {
     const pipeline = pipelineRef.current;
     if (!pipeline) return;
-    const enabled = qualityTier !== "low" && !reducedMotion;
+    const workstationSurfaceActive = revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
+    const enabled = !workstationSurfaceActive && qualityTier !== "low" && !reducedMotion;
     pipeline.setAberrationEnabled(enabled);
     pipeline.header.configure(headerExclusion.strength, headerExclusion.threshold, headerExclusion.softness);
-    const workstationSurfaceActive = revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
-    pipeline.setAntialiasingMode(workstationSurfaceActive ? "smaa" : "msaa");
+    pipeline.setAntialiasingMode(workstationSurfaceActive ? "workstation" : "msaa");
     pipeline.header.setActive(!workstationSurfaceActive);
     const effect = pipeline.aberration;
     effect.setTaps(Math.min(scrollBlur.taps, affordableTaps(size.width, size.height), inputMode === "coarse" ? CONFIG.customAberration.SCROLL_TAPS_COARSE : CONFIG.customAberration.SCROLL_TAPS));

@@ -4,10 +4,10 @@ import { CONFIG } from "@/config/constants";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 import { HeaderExclusionEffect } from "./HeaderExclusionEffect";
 
-export function selectAntialiasingSamples(colorSamples: Iterable<number>, depthSamples: Iterable<number>) {
+export function selectAntialiasingSamples(colorSamples: Iterable<number>, depthSamples: Iterable<number>, budget: number = CONFIG.antialiasing.MSAA_SAMPLES) {
   const depth = new Set(depthSamples);
   return Math.max(0, ...Array.from(colorSamples).filter(samples =>
-    samples > 1 && samples <= CONFIG.antialiasing.MSAA_SAMPLES && depth.has(samples),
+    samples > 1 && samples <= budget && depth.has(samples),
   ));
 }
 
@@ -20,6 +20,7 @@ export class PortfolioEffectPipeline {
   private readonly aberrationPass: EffectPass;
   private readonly antialiasingPass: EffectPass;
   private readonly multisampling: number;
+  private readonly workstationMultisampling: number;
   private readonly renderer: WebGLRenderer;
   private readonly autoClear: boolean;
   private disposed = false;
@@ -30,7 +31,8 @@ export class PortfolioEffectPipeline {
     const context = renderer.getContext() as WebGL2RenderingContext;
     const colorSamples: Int32Array = context.getInternalformatParameter(context.RENDERBUFFER, context.RGBA16F, context.SAMPLES);
     const depthSamples: Int32Array = context.getInternalformatParameter(context.RENDERBUFFER, context.DEPTH_COMPONENT24, context.SAMPLES);
-    this.multisampling = selectAntialiasingSamples(colorSamples, depthSamples);
+    this.workstationMultisampling = selectAntialiasingSamples(colorSamples, depthSamples, CONFIG.antialiasing.WORKSTATION_MSAA_SAMPLES);
+    this.multisampling = selectAntialiasingSamples(colorSamples, depthSamples) || this.workstationMultisampling;
     this.header = new HeaderExclusionEffect(scene, camera);
     this.aberration = new CustomAberrationEffect();
     this.antialiasing = new SMAAEffect({ preset: SMAAPreset[CONFIG.antialiasing.SMAA_PRESET] });
@@ -52,9 +54,13 @@ export class PortfolioEffectPipeline {
     this.updateOutput();
   }
 
-  setAntialiasingMode(mode: "msaa" | "smaa") {
-    const samples = mode === "msaa" ? this.multisampling : 0;
-    if (this.composer.multisampling !== samples) this.composer.multisampling = samples;
+  setAntialiasingMode(mode: "msaa" | "smaa" | "workstation") {
+    const samples = mode === "workstation" ? this.workstationMultisampling : mode === "msaa" ? this.multisampling : 0;
+    if (this.composer.multisampling !== samples) {
+      this.composer.multisampling = samples;
+      this.composer.outputBuffer.samples = 0;
+      this.composer.outputBuffer.dispose();
+    }
     this.antialiasingPass.enabled = samples === 0;
     this.updateOutput();
   }
