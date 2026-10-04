@@ -84,7 +84,7 @@ export function ThemeIconToggle({
           type="button"
           onClick={onToggle}
           aria-label={`Switch to ${isLight ? "dark" : "light"} theme`}
-          className="pointer-events-auto block h-11 w-11 cursor-pointer border-0 bg-transparent p-0 outline-none"
+          className="scene-focus pointer-events-auto block h-11 w-11 cursor-pointer rounded-full border-0 bg-transparent p-0"
         />
       </Html>
     </group>

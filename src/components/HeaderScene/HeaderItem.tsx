@@ -45,6 +45,7 @@ export function HeaderItem({
   const groupRef = useRef<THREE.Group>(null);
   const revealedRef = useRef(false);
   const hoveredRef = useRef(false);
+  const focusedRef = useRef(false);
   const restHex = useRef("");
   const hoverHex = useRef("");
   const hoverCursor = useRef(0);
@@ -68,7 +69,7 @@ export function HeaderItem({
     const material = materialRef.current;
     if (!material) return;
 
-    const wanted = hoveredRef.current ? 1 : 0;
+    const wanted = hoveredRef.current || focusedRef.current ? 1 : 0;
     const step = delta / CONFIG.header.HOVER_DURATION;
     hoverCursor.current =
       wanted > hoverCursor.current
@@ -127,7 +128,7 @@ export function HeaderItem({
     document.body.style.cursor = "auto";
   };
 
-  const twinClass = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${weightClass} leading-none block no-underline outline-none ${
+  const twinClass = `scene-focus whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${weightClass} leading-none block no-underline ${
     anchorX === "right" ? "-translate-x-full" : "left-0"
   } -translate-y-1/2`;
   const twinStyle: React.CSSProperties = {
@@ -207,6 +208,8 @@ export function HeaderItem({
             style={twinStyle}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
+            onFocus={() => { focusedRef.current = true; }}
+            onBlur={() => { focusedRef.current = false; }}
           >
             {hitPad}
             {twinBody}
@@ -219,6 +222,8 @@ export function HeaderItem({
             onClick={onActivate}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
+            onFocus={() => { focusedRef.current = true; }}
+            onBlur={() => { focusedRef.current = false; }}
           >
             {hitPad}
             {twinBody}

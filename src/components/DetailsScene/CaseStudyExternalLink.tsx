@@ -104,7 +104,7 @@ export function CaseStudyExternalLink({
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View project, opens in a new tab"
-          className="pointer-events-none invisible flex min-h-11 items-center justify-center whitespace-nowrap font-karla font-extrabold leading-none text-transparent no-underline outline-none"
+          className="scene-focus pointer-events-none invisible flex min-h-11 items-center justify-center whitespace-nowrap font-karla font-extrabold leading-none text-transparent no-underline"
           style={{
             width: `${Math.max(width * pxPerUnit, 44)}px`,
             height: `${Math.max(height * pxPerUnit, 44)}px`,

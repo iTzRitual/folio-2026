@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
 } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
@@ -29,6 +30,7 @@ import { useProjectHoverActions } from "@/context/ProjectHoverContext";
 import { useCaseStudyActions } from "@/context/CaseStudyContext";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { mixHex } from "@/lib/oklab";
+import { projectLinkContent } from "@/data/content";
 
 // Built once instead of on every hover enter and leave.
 const FINE_POINTER_QUERY =
@@ -143,13 +145,19 @@ export function DetailsLink({
   // a transform sliding out from under a stationary cursor fires no DOM leave,
   // so its answer went stale the moment the list scrolled.
   const pointerInsideRef = useRef(false);
+  const focusedRef = useRef(false);
+  const actionRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
+  const actionContainerRef = useRef<HTMLDivElement>(null);
+  const attachActionRef = useCallback((element: HTMLAnchorElement | HTMLButtonElement | null) => {
+    actionRef.current = element;
+  }, []);
   const hoveredRef = useRef(false);
   const plateShownRef = useRef(false);
   const restHexRef = useRef("");
   const activeHexRef = useRef("");
   const activeCursorRef = useRef(0);
 
-  const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLElement>(
+  const { groupRef, twinRef, revealedRef } = useCurlFade<HTMLDivElement>(
     (opacity) => {
       const shown = plateShownRef.current ? 1 : 0;
       if (materialRef.current) materialRef.current.opacity = shown;
@@ -160,9 +168,14 @@ export function DetailsLink({
       const interactive = opacity > CONFIG.detailsLink.INTERACT_MIN_OPACITY;
       if (interactive === interactiveRef.current) return;
       interactiveRef.current = interactive;
+      if (actionContainerRef.current) actionContainerRef.current.inert = !interactive;
       syncHoverRef.current();
     },
   );
+
+  useLayoutEffect(() => {
+    if (actionContainerRef.current) actionContainerRef.current.inert = !interactiveRef.current;
+  });
 
   // The curl is a vertex shader, invisible to the raycaster. Sending the row's
   // own edges through it and spanning the chord between them keeps the hit area
@@ -260,7 +273,7 @@ export function DetailsLink({
     if (event.button !== 0) return;
     event.stopPropagation();
     if (caseStudyIndex === undefined) {
-      twinRef.current?.click();
+      actionRef.current?.click();
       return;
     }
     openCaseStudy(caseStudyIndex);
@@ -287,7 +300,7 @@ export function DetailsLink({
       chargeRef.current = press.charge;
       if (press.charge >= 1 && !press.opened) {
         press.opened = true;
-        twinRef.current?.click();
+        window.open(href, "_blank", "noopener,noreferrer");
       }
       return;
     }
@@ -332,7 +345,7 @@ export function DetailsLink({
   useFrame((_, delta) => {
     stepHold();
 
-    const wanted = active ? 1 : 0;
+    const wanted = active || focusedRef.current ? 1 : 0;
     const step = delta / CONFIG.header.HOVER_DURATION;
     activeCursorRef.current =
       wanted > activeCursorRef.current
@@ -458,7 +471,7 @@ export function DetailsLink({
   const reducedMotion = () => REDUCED_MOTION_QUERY?.matches === true;
 
   const syncHover = () => {
-    const wanted = pointerInsideRef.current && interactiveRef.current;
+    const wanted = (pointerInsideRef.current || focusedRef.current) && interactiveRef.current;
     if (wanted === hoveredRef.current) return;
     hoveredRef.current = wanted;
     if (wanted) handleEnter();
@@ -472,7 +485,7 @@ export function DetailsLink({
   };
 
   const handleEnter = () => {
-    document.body.style.cursor = "pointer";
+    if (pointerInsideRef.current) document.body.style.cursor = "pointer";
     if (previewImage) setHoveredPreview(previewImage);
     if (reducedMotion()) return;
 
@@ -553,6 +566,37 @@ export function DetailsLink({
     hitCenterYRef.current = hitCenterY;
     hitHalfHeightRef.current = hitHalfHeight;
   }, [hitCenterY, hitHalfHeight]);
+
+  const twinClass = `scene-focus whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline`;
+  const twinStyle = {
+    fontSize: `${pixelFontSize}px`,
+    letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
+  };
+  const focus = () => {
+    focusedRef.current = true;
+    syncHover();
+  };
+  const blur = () => {
+    focusedRef.current = false;
+    syncHover();
+  };
+  const twinContent = (
+    <>
+      {hitPadEm > 0 && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 block"
+          style={{ top: `${-hitPadEm}em`, bottom: `${-hitPadEm}em` }}
+        />
+      )}
+      <p className="m-0 p-0" style={{ color: "transparent" }}>
+        {text}
+        <span className="inline-block" style={{ width: `${(arrowGap + arrowSize) / calculatedFontSize + 0.2}em` }}>
+          &#8203;
+        </span>
+      </p>
+    </>
+  );
 
   return (
     <group position={position} ref={groupRef}>
@@ -638,65 +682,54 @@ export function DetailsLink({
       )}
 
       <Html as="div" className={`${xAlignClass} ${yAlignClass}`}>
-        {(() => {
-          const content = (
-            <>
-          {hitPadEm > 0 && (
-            <span
-              aria-hidden
-              className="absolute inset-x-0 block"
-              style={{ top: `${-hitPadEm}em`, bottom: `${-hitPadEm}em` }}
-            />
-          )}
-          <p
-            className="m-0 p-0"
-            style={{ color: "transparent" }}
-          >
-            {text}
-            <span
-              className="inline-block"
-              style={{
-                width: `${(arrowGap + arrowSize) / calculatedFontSize + 0.2}em`,
-              }}
-            >
-              &#8203;
-            </span>
-          </p>
-            </>
-          );
-          const className = `whitespace-nowrap m-0 p-0 pointer-events-auto font-karla ${fontWeightClass} leading-none block relative no-underline outline-none`;
-          const style = {
-            fontSize: `${pixelFontSize}px`,
-            letterSpacing: `${letterSpacing + htmlLetterSpacingOffset}em`,
-          };
-
-          return opensCaseStudyDirectly && caseStudyIndex !== undefined ? (
-            <button
-              ref={twinRef as React.RefObject<HTMLButtonElement | null>}
-              type="button"
-              onClick={() => openCaseStudy(caseStudyIndex)}
-              aria-label={`Open case study: ${text}`}
-              className={`${className} min-h-11 border-0 bg-transparent text-left`}
-              style={style}
-            >
-              {content}
-            </button>
-          ) : (
-            <a
-              ref={twinRef as React.RefObject<HTMLAnchorElement | null>}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                if (event.detail > 0) event.preventDefault();
-              }}
-              className={className}
-              style={style}
-            >
-              {content}
-            </a>
-          );
-        })()}
+        <div ref={twinRef}>
+          <div ref={actionContainerRef}>
+            {caseStudyIndex !== undefined ? (
+              <button
+                ref={attachActionRef}
+                type="button"
+                onClick={(event) => {
+                  if (opensCaseStudyDirectly || event.detail === 0) openCaseStudy(caseStudyIndex);
+                }}
+                onFocus={focus}
+                onBlur={blur}
+                aria-label={`${projectLinkContent.caseStudy}: ${text}`}
+                className={`${twinClass} ${opensCaseStudyDirectly ? "min-h-11" : ""} flex flex-col items-start justify-start border-0 bg-transparent text-left`}
+                style={twinStyle}
+              >
+                {twinContent}
+              </button>
+            ) : (
+              <a
+                ref={attachActionRef}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onFocus={focus}
+                onBlur={blur}
+                onClick={(event) => {
+                  if (event.detail > 0) event.preventDefault();
+                }}
+                className={twinClass}
+                style={twinStyle}
+              >
+                {twinContent}
+              </a>
+            )}
+            {caseStudyIndex !== undefined && (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="scene-focus scene-live-link pointer-events-auto font-karla font-light"
+                aria-label={`${projectLinkContent.liveSite}: ${text}`}
+                style={{ fontSize: `${pixelFontSize}px` }}
+              >
+                {projectLinkContent.liveSite}
+              </a>
+            )}
+          </div>
+        </div>
       </Html>
     </group>
   );

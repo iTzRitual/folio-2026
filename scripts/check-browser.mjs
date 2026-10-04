@@ -5,6 +5,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPortfolioBrowser } from "./check-portfolio-browser.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const timeout = 120_000;
@@ -108,7 +109,8 @@ const profileRoot = path.resolve(tmpdir());
 const profile = await mkdtemp(path.join(profileRoot, "folio-browser-check-"));
 try {
   const urlIndex = process.argv.indexOf("--url");
-  let base = urlIndex < 0 ? undefined : process.argv[urlIndex + 1];
+  const portfolio = process.argv.includes("--portfolio");
+  let base = urlIndex < 0 ? process.argv.slice(2).find(argument => !argument.startsWith("--")) : process.argv[urlIndex + 1];
   if (urlIndex >= 0 && !base) throw new Error("--url requires the development server URL");
   if (!base) {
     const port = await freePort();
@@ -144,8 +146,13 @@ try {
     socket.addEventListener("error", reject, { once: true });
   });
   const devtools = new DevTools(socket);
-  const { targetId } = await devtools.send("Target.createTarget", { url });
+  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio ? "about:blank" : url });
   const { sessionId } = await devtools.send("Target.attachToTarget", { targetId, flatten: true });
+  if (portfolio) {
+    const results = await checkPortfolioBrowser(devtools, sessionId, base, path.join(root, "plans/browser-regressions"));
+    console.log(results.join("\n"));
+    console.log("PASS: mounted production scene keyboard and reflow checks. Screenshots saved in plans/browser-regressions.");
+  } else {
   const deadline = Date.now() + timeout;
   let result;
   while (Date.now() < deadline) {
@@ -159,6 +166,7 @@ try {
   if (result?.status !== "passed") throw new Error(result?.text ?? "Browser regression checks did not finish");
   console.log(result.text);
   console.log("PASS: browser GPU correctness checks completed with Chromium SwiftShader. This is not a hardware performance measurement.");
+  }
 } catch (error) {
   if (serverOutput) console.error(serverOutput);
   throw error;

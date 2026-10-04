@@ -116,3 +116,33 @@ p .block-line-wrapper {
 .debug-panel {
     overscroll-behavior: contain;
 }
+
+.scene-focus {
+    outline: none;
+}
+
+.scene-focus:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 4px;
+}
+
+.scene-live-link {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.scene-live-link:focus-visible {
+    width: max-content;
+    height: auto;
+    margin-top: 0.5em;
+    padding: 0.5em 0.75em;
+    clip-path: none;
+    background: var(--bg);
+    color: var(--text-primary);
+}

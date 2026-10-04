@@ -704,6 +704,8 @@ export const CONFIG = {
     // Wheel travel is read in frame heights so a flick moves the copy the
     // same distance whatever the window is.
     SCROLL_DAMPING: 9,
+    KEY_SCROLL_STEP_PX: 40,
+    KEY_SCROLL_PAGE_FRACTION: 0.9,
     // Room past the last line, so it does not end flush with the frame's
     // bottom edge.
     SCROLL_OVERSHOOT_MULT: 0.15,
@@ -711,6 +713,7 @@ export const CONFIG = {
     // rather than drawn over it.
     RENDER_ORDER: 40,
     MOBILE_FILL: 0.9,
+    MOBILE_RETURN_TOP_FRACTION: 0.05,
     MOBILE_EM_MULT: 0.045,
     MOBILE_TEXT_WIDTH_MULT: 0.88,
     MOBILE_FLIGHT_DURATION: 0.72,

@@ -287,6 +287,11 @@ export const DEFAULT_BIO_VARIANT: BioVariant = "narrative";
 
 export const bioData = bioVariants[DEFAULT_BIO_VARIANT];
 
+export const projectLinkContent = {
+    caseStudy: "Open case study",
+    liveSite: "Visit live site",
+} as const;
+
 export const skillsData = [
     "Visual Design",
     "UI/UX Design",

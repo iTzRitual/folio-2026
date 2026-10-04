@@ -15,6 +15,8 @@ import { caseStudyStage } from "@/lib/caseStudyStage";
 interface CaseStudyActions {
     open: (index: number) => void;
     close: () => void;
+    restoreFocus: () => void;
+    focusStudy: (target: HTMLElement) => void;
 }
 
 /** Index into projectsData of the open case study, or null. */
@@ -51,6 +53,8 @@ export function CaseStudyProvider({
     // that was landed on directly sits on an entry that belongs to whoever
     // linked here, and going back from it would leave the site.
     const ownsEntry = useRef(false);
+    const returnFocusRef = useRef<HTMLElement | null>(null);
+    const keyboardOpenRef = useRef(false);
 
     // Registered whether or not a study is open: the entry a study lives on is
     // still there after back, and stepping forward onto it again has to
@@ -74,6 +78,13 @@ export function CaseStudyProvider({
     const actions = useMemo(
         () => ({
             open: (index: number) => {
+                const focused = document.activeElement;
+                returnFocusRef.current =
+                    focused instanceof HTMLElement && focused.tabIndex >= 0
+                        ? focused
+                        : null;
+                keyboardOpenRef.current =
+                    returnFocusRef.current?.matches(":focus-visible") ?? false;
                 caseStudyStage.open = true;
                 caseStudyStage.instant = false;
                 setOpenIndex(index);
@@ -91,6 +102,26 @@ export function CaseStudyProvider({
                     return;
                 }
                 window.history.pushState(null, "", "/");
+            },
+            restoreFocus: () => {
+                const target = returnFocusRef.current;
+                returnFocusRef.current = null;
+                if (!target) return;
+                requestAnimationFrame(() => {
+                    if (
+                        !caseStudyStage.open &&
+                        target.isConnected &&
+                        !target.closest("[inert]") &&
+                        getComputedStyle(target).visibility !== "hidden"
+                    ) {
+                        target.focus({ preventScroll: true });
+                    }
+                });
+            },
+            focusStudy: (target: HTMLElement) => {
+                if (!keyboardOpenRef.current || !caseStudyStage.open) return;
+                keyboardOpenRef.current = false;
+                target.focus({ preventScroll: true });
             },
         }),
         [],

@@ -36,7 +36,7 @@ const cfg = CONFIG.caseStudy;
  */
 export function CaseStudyScene() {
     const openIndex = useOpenCaseStudy();
-    const { close } = useCaseStudyActions();
+    const { close, restoreFocus } = useCaseStudyActions();
     const { camera, viewport, size } = useThree();
     const prefersReducedMotion = usePrefersReducedMotion();
     const { layoutMode, compactHeight, inputMode } = useSceneCapabilities();
@@ -149,29 +149,61 @@ export function CaseStudyScene() {
     }, [openIndex, prefersReducedMotion]);
 
     useEffect(() => {
-        if (openIndex === null || !nativeStudyScroll) return;
+        if (openIndex === null) return;
         scroll.current = THREE.MathUtils.clamp(scroll.current, 0, limit);
         scrollTarget.current = THREE.MathUtils.clamp(
             scrollTarget.current,
             0,
             limit,
         );
-        scrollSurfaceRef.current?.scrollTo(
-            0,
-            scrollTarget.current * Math.max(pxPerUnit, 1),
-        );
+        if (nativeStudyScroll) {
+            scrollSurfaceRef.current?.scrollTo(
+                0,
+                scrollTarget.current * Math.max(pxPerUnit, 1),
+            );
+        }
     }, [openIndex, nativeStudyScroll, limit, pxPerUnit]);
 
     useEffect(() => {
         if (openIndex === null) return;
 
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") close();
+            if (event.key === "Escape") {
+                close();
+                return;
+            }
+            if (event.altKey || event.ctrlKey || event.metaKey) return;
+            if (
+                event.target instanceof Element &&
+                event.target.closest(
+                    "input, textarea, select, [contenteditable], [role=slider]",
+                )
+            ) return;
+            const step = cfg.KEY_SCROLL_STEP_PX / Math.max(pxPerUnit, 1);
+            const page = frameHeight * cfg.KEY_SCROLL_PAGE_FRACTION;
+            const positions: Record<string, number> = {
+                ArrowDown: scrollTarget.current + step,
+                ArrowUp: scrollTarget.current - step,
+                PageDown: scrollTarget.current + page,
+                PageUp: scrollTarget.current - page,
+                Home: 0,
+                End: limit,
+            };
+            if (!Object.hasOwn(positions, event.key)) return;
+            const next = positions[event.key];
+            event.preventDefault();
+            scrollTarget.current = THREE.MathUtils.clamp(next, 0, limit);
+            if (nativeStudyScroll) {
+                scrollSurfaceRef.current?.scrollTo(
+                    0,
+                    scrollTarget.current * Math.max(pxPerUnit, 1),
+                );
+            }
         };
 
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [openIndex, close]);
+    }, [openIndex, close, frameHeight, limit, nativeStudyScroll, pxPerUnit]);
 
     // The page scroll drives the details sheet, so leaving it live would slide
     // the sheet out from under a camera that is no longer looking at it. Handed
@@ -257,12 +289,14 @@ export function CaseStudyScene() {
         engaged.current = flying;
 
         const dt = Math.min(delta, 1 / 30);
-        scroll.current = THREE.MathUtils.damp(
-            scroll.current,
-            scrollTarget.current,
-            cfg.SCROLL_DAMPING,
-            dt,
-        );
+        scroll.current = prefersReducedMotion
+            ? scrollTarget.current
+            : THREE.MathUtils.damp(
+                scroll.current,
+                scrollTarget.current,
+                cfg.SCROLL_DAMPING,
+                dt,
+            );
 
         const target = anchor.current;
         const plateY =
@@ -286,6 +320,7 @@ export function CaseStudyScene() {
             control.follow = 1;
             control.width = 0;
             releaseScroll();
+            restoreFocus();
         } else {
             control.mode = "placed";
             // Ramped rather than cut, so the plate's hover grade and resting
@@ -353,9 +388,14 @@ export function CaseStudyScene() {
                     <CaseStudyReturn
                         position={[
                             (textWidth - plateWidth) / 2,
-                            plateHeight +
-                                frameHeight *
-                                    (cfg.COPY_GAP_MULT + cfg.MARK_GAP_MULT),
+                            narrowStudy
+                                ? plateHeight / 2 + frameHeight * (
+                                    cfg.COPY_GAP_MULT - cfg.PLATE_OFFSET +
+                                    0.5 - cfg.MOBILE_RETURN_TOP_FRACTION
+                                )
+                                : plateHeight + frameHeight * (
+                                    cfg.COPY_GAP_MULT + cfg.MARK_GAP_MULT
+                                ),
                             0,
                         ]}
                         progressRef={reveal}

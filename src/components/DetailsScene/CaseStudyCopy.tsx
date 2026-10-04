@@ -216,11 +216,15 @@ export function CaseStudyCopy({
         // are the wrong size, so a drag then would select text that is nowhere
         // near what it looks like it is over.
         const hidden = progressRef.current < 1;
-        if (hidden === twinHiddenRef.current) return;
-        twinHiddenRef.current = hidden;
+        const visibility = hidden ? "hidden" : "";
         const twin = twinRef.current;
+        if (
+            hidden === twinHiddenRef.current &&
+            twin?.style.visibility === visibility
+        ) return;
+        twinHiddenRef.current = hidden;
         if (twin) {
-            twin.style.visibility = hidden ? "hidden" : "";
+            twin.style.visibility = visibility;
             twin.style.pointerEvents = hidden ? "none" : "";
         }
     });
@@ -274,6 +278,7 @@ export function CaseStudyCopy({
             <Html as="div" className="left-0 top-0">
                 <div
                     ref={twinRef}
+                    data-case-study-copy
                     className="relative font-karla"
                     style={{ visibility: "hidden", pointerEvents: "none" }}
                 >

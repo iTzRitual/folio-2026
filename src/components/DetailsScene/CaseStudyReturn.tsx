@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, type RefObject } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import { Html, Text } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import type * as THREE from "three";
@@ -11,6 +11,7 @@ import { heroContent } from "@/data/content";
 import { mixHex } from "@/lib/oklab";
 import { blockReveal } from "./CaseStudyCopy";
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
+import { readTextBounds } from "@/lib/textBounds";
 
 const cfg = CONFIG.caseStudy;
 const LETTER_SPACING = CONFIG.detailsLayout.LETTER_SPACING;
@@ -44,10 +45,12 @@ export function CaseStudyReturn({
 }) {
     const { layoutMode } = useSceneCapabilities();
     const sticky = layoutMode === "narrow" && stickyOffsetRef !== undefined;
-    const { close } = useCaseStudyActions();
+    const { close, focusStudy } = useCaseStudyActions();
     const groupRef = useRef<THREE.Group>(null);
     const riseRef = useRef<THREE.Group>(null);
     const markRef = useRef<THREE.MeshBasicMaterial>(null);
+    const plateRef = useRef<THREE.MeshBasicMaterial>(null);
+    const [markWidth, setMarkWidth] = useState(0);
     const hintRef = useRef<THREE.MeshBasicMaterial>(null);
     const twinRef = useRef<HTMLDivElement>(null);
     const twinHiddenRef = useRef(true);
@@ -77,6 +80,13 @@ export function CaseStudyReturn({
             hintRef.current?.color.set(hex);
         }, []),
     );
+    const plateColor = useSweptColor(
+        "bg",
+        groupRef,
+        useCallback((hex: string) => {
+            plateRef.current?.color.set(hex);
+        }, []),
+    );
 
     const markSize = em * cfg.MARK_SIZE_EM;
     const hintSize = em * cfg.META_SIZE_EM;
@@ -100,6 +110,7 @@ export function CaseStudyReturn({
         }
         const eased = blockReveal(progressRef.current, 0, blocks);
         if (markRef.current) markRef.current.opacity = eased;
+        if (plateRef.current) plateRef.current.opacity = sticky ? eased : 0;
         if (hintRef.current) hintRef.current.opacity = sticky ? 0 : eased;
         if (riseRef.current) {
             riseRef.current.position.y =
@@ -125,12 +136,20 @@ export function CaseStudyReturn({
         // laid out for a frame that is not on screen yet, and a study that is
         // closed must not leave a button sitting over the list.
         const hidden = progressRef.current < 1;
-        if (hidden === twinHiddenRef.current) return;
-        twinHiddenRef.current = hidden;
+        const visibility = hidden ? "hidden" : "";
         const twin = twinRef.current;
+        if (
+            hidden === twinHiddenRef.current &&
+            twin?.style.visibility === visibility
+        ) return;
+        twinHiddenRef.current = hidden;
         if (twin) {
-            twin.style.visibility = hidden ? "hidden" : "";
+            twin.style.visibility = visibility;
             twin.style.pointerEvents = hidden ? "none" : "";
+            if (!hidden) {
+                const control = twin.querySelector<HTMLButtonElement>("button");
+                if (control) focusStudy(control);
+            }
         }
         // Hiding the twin under the pointer fires no leave of its own.
         if (hidden && hoveredRef.current) disengage();
@@ -143,8 +162,32 @@ export function CaseStudyReturn({
     return (
         <group ref={groupRef} position={position}>
             <group ref={riseRef}>
-                {!sticky && <Text
-                    renderOrder={cfg.RENDER_ORDER}
+                {sticky && markWidth > 0 && (
+                    <mesh
+                        position={[markWidth / 2, 0, 0]}
+                        renderOrder={cfg.RENDER_ORDER}
+                        raycast={() => null}
+                    >
+                        <planeGeometry args={[
+                            markWidth + markSize * cfg.MARK_HIT_PAD_EM * 2,
+                            Math.max(
+                                markSize * (1 + cfg.MARK_HIT_PAD_EM * 2),
+                                44 / Math.max(pxPerUnit, 1),
+                            ),
+                        ]} />
+                        <meshBasicMaterial
+                            ref={plateRef}
+                            color={plateColor}
+                            transparent
+                            opacity={0}
+                            toneMapped={false}
+                            depthTest={false}
+                            depthWrite={false}
+                        />
+                    </mesh>
+                )}
+                <Text
+                    renderOrder={cfg.RENDER_ORDER + 1}
                     anchorX="left"
                     anchorY="middle"
                     fontSize={markSize}
@@ -152,6 +195,10 @@ export function CaseStudyReturn({
                     letterSpacing={LETTER_SPACING}
                     lineHeight={1}
                     glyphGeometryDetail={CONFIG.detailsCurl.GLYPH_DETAIL}
+                    onSync={(mesh) => {
+                        const bounds = readTextBounds(mesh);
+                        if (bounds) setMarkWidth(bounds.maxX - bounds.minX);
+                    }}
                 >
                     {heroContent.title}
                     <meshBasicMaterial
@@ -163,7 +210,7 @@ export function CaseStudyReturn({
                         depthTest={false}
                         depthWrite={false}
                     />
-                </Text>}
+                </Text>
 
                 <Text
                     position={[width, 0, 0]}
@@ -210,7 +257,7 @@ export function CaseStudyReturn({
                             onMouseLeave={disengage}
                             onFocus={engage}
                             onBlur={disengage}
-                            className="absolute left-0 top-0 m-0 flex min-h-11 min-w-11 cursor-pointer items-center whitespace-nowrap border-0 bg-transparent p-0 font-extrabold leading-none outline-none pointer-events-auto"
+                            className="scene-focus absolute left-0 top-0 m-0 flex min-h-11 min-w-11 cursor-pointer items-center whitespace-nowrap border-0 bg-transparent p-0 font-extrabold leading-none pointer-events-auto"
                             style={{
                                 transform: "translateY(-50%)",
                                 fontSize: `${markSize * pxPerUnit}px`,
