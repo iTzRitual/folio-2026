@@ -293,7 +293,11 @@ export function createSkullParticles(
       uniforms.orbitActive.value = active ? 1 : 0;
       uniforms.orbitScale.value = orbitScale.setFromMatrixScale(matrix).x;
     },
-    update(delta: number, reducedMotion: boolean) {
+    update(delta: number, reducedMotion: boolean, active = true) {
+      if (!active) {
+        orbitInitialized = false;
+        return;
+      }
       if (delta <= 0) return;
       if (reducedMotion) {
         previousOrbit.copy(currentOrbit);

@@ -32,6 +32,7 @@ export function SkullParticles({
   const simulation = useRef<ReturnType<typeof createSkullParticles> | null>(null);
   const previousDetails = useRef(false);
   const orbitTransform = useMemo(() => new THREE.Matrix4(), []);
+  const worldScale = useMemo(() => new THREE.Vector3(), []);
   const { gl } = useThree();
   const { inputMode } = useSceneCapabilities();
   const { progressRef, revealProgressRef } = useHeroTransition();
@@ -119,10 +120,15 @@ export function SkullParticles({
     const assembly = heroAssemblyAt(progressRef.current, reducedMotion);
     if (inDetails && !previousDetails.current) particles.reset();
     previousDetails.current = inDetails;
+    object.getWorldScale(worldScale);
+    let visible = worldScale.x !== 0 && worldScale.y !== 0 && worldScale.z !== 0;
+    object.traverseAncestors(parent => { visible = visible && parent.visible; });
+    const running = visible && object.visible && !document.hidden && settings.scale > 0
+      && !inDetails && revealProgressRef.current <= 0.001;
     particles.uniforms.scrollScatter.value = assembly.scatter;
     if (fragments) {
       particles.setEntranceScale(entranceRef.current?.scale.x ?? 0, delta,
-        !reducedMotion && !document.hidden && settings.scale > 0
+        running && !reducedMotion
         && progressRef.current <= CONFIG.model.INTERACTION_LOCK_EPSILON && revealProgressRef.current === 0);
       const active = orbitCollider.current.active && settings.scale > 0 && !reducedMotion
         && orbitCollisionTransform(object, orbitCollider.current, orbitTransform) !== null;
@@ -185,8 +191,7 @@ export function SkullParticles({
     }
     state.previous.copy(state.position);
     state.initialized = active;
-    if (revealProgressRef.current > 0.001) return;
-    particles.update(delta, reducedMotion);
+    particles.update(delta, reducedMotion, running);
   }, -1);
 
   return (

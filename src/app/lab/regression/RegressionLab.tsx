@@ -7,6 +7,7 @@ import { checkOrbitCollision } from "../../../../scripts/check-orbit-collision-b
 import { checkSkullStartup } from "../../../../scripts/check-skull-startup-browser";
 import { checkSkullEntrance } from "../../../../scripts/check-skull-entrance-browser";
 import { checkSkullSeams } from "../../../../scripts/check-skull-seams-browser";
+import { checkSkullPause } from "../../../../scripts/check-skull-pause-browser";
 
 export default function RegressionLab() {
   const output = useRef<HTMLPreElement>(null);
@@ -19,7 +20,7 @@ export default function RegressionLab() {
       try {
         renderer = new WebGLRenderer();
         const results = [checkDetailsLayout(true)];
-        for (const check of [checkOrbitCollision, checkSkullStartup, checkSkullEntrance, checkSkullSeams]) {
+        for (const check of [checkOrbitCollision, checkSkullStartup, checkSkullEntrance, checkSkullSeams, checkSkullPause]) {
           results.push(check(renderer));
         }
         output.current.textContent = results.join("\n\n");
