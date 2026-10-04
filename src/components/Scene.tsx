@@ -1,14 +1,12 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useRef, useState } from "react";
-import { EffectComposer } from "@react-three/postprocessing";
+import { Suspense, useRef, useState } from "react";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
 import { Header } from "./Header";
 import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
-import { CustomAberration } from "./Effects/CustomAberration";
-import { HeaderExclusion } from "./Effects/HeaderExclusion";
+import { PortfolioEffects } from "./Effects/PortfolioEffects";
 import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
 import { Details } from "./Details";
 import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
@@ -18,16 +16,11 @@ import { HeroTransitionProvider } from "../context/HeroTransitionProvider";
 import { ProjectHoverProvider } from "../context/ProjectHoverContext";
 import { CaseStudyProvider } from "../context/CaseStudyContext";
 import { ThemeSweep } from "./ThemeSweep";
-import { Suspense } from "react";
-import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { ThemeBridge, type ThemeContextValue } from "@/context/ThemeContext";
 import { DebugSettingsBridge } from "@/context/DebugSettingsContext";
 import type { DebugSettings } from "@/config/debugSettings";
 import type { BioVariant } from "@/data/content";
-import {
-  SceneCapabilitiesProvider,
-  useSceneCapabilities,
-} from "@/context/SceneCapabilitiesContext";
+import { SceneCapabilitiesProvider } from "@/context/SceneCapabilitiesContext";
 import type {
   SceneInputMode,
   SceneQualityTier,
@@ -49,8 +42,6 @@ function SceneContent({
   bioVariant: BioVariant;
   detailsOverflowViewports: number;
 }) {
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const { qualityTier } = useSceneCapabilities();
   useStableSceneViewport();
 
   return (
@@ -77,14 +68,7 @@ function SceneContent({
                   <CaseStudyScene />
                 </WorkstationScene>
               </Suspense>
-              <EffectComposer multisampling={0}>
-                <>
-                  <HeaderExclusion />
-                  {!prefersReducedMotion && qualityTier !== "low" && (
-                    <CustomAberration />
-                  )}
-                </>
-              </EffectComposer>
+              <PortfolioEffects />
             </CaseStudyProvider>
           </ProjectHoverProvider>
         </SceneMotionProvider>

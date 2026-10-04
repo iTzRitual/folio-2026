@@ -767,6 +767,8 @@ export const CONFIG = {
     VEL_MULT: 0.016666,
     SCROLL_TAPS: 8,
     SCROLL_TAPS_MIN: 3,
+    SCROLL_TAPS_COARSE: 4,
+    SCROLL_INTENSITY_COARSE: 0.55,
     // Device pixels the pass can cover at full tap count. Above this the
     // taps are scaled down, since each one costs three dependent fetches
     // over the entire screen.

@@ -99,16 +99,18 @@ export class HeaderExclusionEffect extends Effect {
     const previousMask = this.camera.layers.mask;
     const previousClearAlpha = renderer.getClearAlpha();
 
-    this.camera.layers.set(HEADER_LAYER);
-    this.scene.background = null;
-    renderer.setClearAlpha(0);
-    renderer.setRenderTarget(this.target);
-    renderer.render(this.scene, this.camera);
-
-    this.scene.background = background;
-    renderer.setClearAlpha(previousClearAlpha);
-    renderer.setRenderTarget(previousTarget);
-    this.camera.layers.mask = previousMask;
+    try {
+      this.camera.layers.set(HEADER_LAYER);
+      this.scene.background = null;
+      renderer.setClearAlpha(0);
+      renderer.setRenderTarget(this.target);
+      renderer.render(this.scene, this.camera);
+    } finally {
+      this.scene.background = background;
+      renderer.setClearAlpha(previousClearAlpha);
+      renderer.setRenderTarget(previousTarget);
+      this.camera.layers.mask = previousMask;
+    }
   }
 
   setActive(active: boolean) {
@@ -123,10 +125,5 @@ export class HeaderExclusionEffect extends Effect {
 
   setSize(width: number, height: number) {
     this.target.setSize(width, height);
-  }
-
-  dispose() {
-    this.target.dispose();
-    super.dispose();
   }
 }

@@ -4,7 +4,7 @@ Run `npm run test:browser` from the project root. The runner starts an isolated 
 
 To reuse a running development server, run `npm run test:browser -- --url http://localhost:3000`. For interactive inspection, open `/lab/regression` on that server. The route returns 404 in production.
 
-The suite runs the production GPU collision and fragment shaders. It checks fast impacts, overlapping starts, size-dependent gaps, rounded corners, moving cards, spring return, zero-scale startup, entrance momentum at 30/60/120 Hz, reduced motion, and pixel-exact seamless settling. WebGL or floating-point target failures fail the suite explicitly.
+The suite runs the production GPU collision and fragment shaders. It checks fast impacts, overlapping starts, size-dependent gaps, rounded corners, moving cards, spring return, zero-scale startup, entrance momentum at 30/60/120 Hz, reduced motion, pixel-exact seamless settling and paused simulation work. The postprocessing suite checks stable pass ownership across toggles/resizes, neutral output, cleanup after remount, and shared state restoration after a render failure. WebGL or floating-point target failures fail the suite explicitly.
 
 The layout contract runs across ten viewport sizes and all Bio variants, with estimated metrics in `npm test` and loaded browser fonts in this suite. It checks section clearance, model interludes, Bio separation and complete scroll extents. Scene DOM mirror measurements are a separate integration check.
 

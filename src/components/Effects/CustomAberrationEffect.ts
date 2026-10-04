@@ -26,6 +26,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class CustomAberrationEffect extends Effect {
+  private taps: number;
   private readonly mouseUniform: Uniform<Vector2>;
   private readonly intensityUniform: Uniform<number>;
   private readonly gridSizeUniform: Uniform<Vector2>;
@@ -78,6 +79,15 @@ export class CustomAberrationEffect extends Effect {
     this.scrollBlurUniform = scrollBlurUniform;
     this.scrollSplitUniform = scrollSplitUniform;
     this.scrollVignetteUniform = scrollVignetteUniform;
+    this.taps = taps;
+  }
+
+  setTaps(taps: number) {
+    const next = Math.max(2, Math.round(taps));
+    if (next === this.taps) return;
+    this.taps = next;
+    this.setFragmentShader(buildFragmentShader(next));
+    this.setChanged();
   }
 
   setGrid(columns: number, rows: number, aspect: number) {
