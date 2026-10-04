@@ -17,19 +17,16 @@ import {
 import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useSceneMotion } from "@/context/SceneMotionContext";
 import { useTheme } from "@/context/ThemeContext";
+import { createWorkstationScrollbarController } from "@/lib/workstationScrollbar";
 import {
-  beginVSCodeScrollbarDrag,
   captureVSCodeSession,
   createVSCodeRenderer,
-  endVSCodeScrollbarDrag,
   handleVSCodeClick,
   handleVSCodeWheel,
   restoreVSCodeSession,
   setVSCodeLoadError,
   setVSCodeSources,
   updateVSCodeHover,
-  updateVSCodeScrollbarDrag,
-  type VSCodeScrollbarDrag,
   type VSCodeRenderer,
   type VSCodeSessionSnapshot,
 } from "@/lib/vscodeRenderer";
@@ -209,8 +206,24 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   const previousRevealRef = useRef<number | null>(null);
   const sourceLoadStartedRef = useRef(false);
   const sourceRefreshPendingRef = useRef(false);
-  const vscodeScrollbarDragRef = useRef<VSCodeScrollbarDrag | null>(null);
-  const suppressVSCodeClickRef = useRef(false);
+  const scrollbarController = useMemo(() => createWorkstationScrollbarController({
+    terminalTarget: window,
+    camera,
+    getBounds: () => gl.domElement.getBoundingClientRect(),
+    getSurface: () => interactionMeshRef.current,
+    getRenderer: () => vscodeRendererRef.current,
+    mapContentUv: (source, target) =>
+      crtScreenRef.current?.mapContentUv(source, target) ?? false,
+  }), [camera, gl]);
+  useEffect(() => scrollbarController.connect(), [scrollbarController]);
+  useFrame(() => {
+    if (scrollbarController.pointerId === null) return;
+    if (
+      !monitorHasSignal(monitorState) || isCaseStudyActive() ||
+      returnBridgeRef.current !== null || activeAppRef.current !== "vscode" ||
+      windowRuntimesRef.current.vscode.state !== "open"
+    ) scrollbarController.cancel();
+  });
   const returnScrollLeaseRef = useRef<RootScrollLockLease | null>(null);
   const currentMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
   const targetMouseRef = useRef(new THREE.Vector2(0.5, 0.5));
@@ -395,6 +408,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   }, [pageAberrationMaterial]);
 
   useEffect(() => {
+    scrollbarController.cancel();
     capturedRef.current = false;
     capturePendingRef.current = false;
     targetRef.current?.dispose();
@@ -402,7 +416,6 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     chromeTextureRef.current?.dispose();
     chromeTextureRef.current = null;
     if (vscodeRendererRef.current) {
-      endVSCodeScrollbarDrag(vscodeRendererRef.current);
       vscodeSessionRef.current = captureVSCodeSession(vscodeRendererRef.current);
     }
     vscodeTextureRef.current?.dispose();
@@ -419,8 +432,6 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     surfaceTransformRef.current = null;
     pageUvBoundsRef.current = null;
     browserLayoutRef.current = null;
-    vscodeScrollbarDragRef.current = null;
-    suppressVSCodeClickRef.current = false;
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
     if (surfaceGroupRef.current) {
@@ -440,6 +451,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     size.height,
     size.width,
     vscodeGenieUniforms,
+    scrollbarController,
   ]);
 
   useEffect(() => {
@@ -1517,8 +1529,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (suppressVSCodeClickRef.current) {
-      suppressVSCodeClickRef.current = false;
+    if (scrollbarController.consumeClick(event.nativeEvent.detail)) {
       event.stopPropagation();
       return;
     }
@@ -1682,12 +1693,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   const handlePagePointerDown = (event: ThreeEvent<PointerEvent>) => {
     if (!monitorHasSignal(monitorState)) return;
-    const pageUv = mapContentUv(event.uv, interactionUvRef.current);
-    const renderer = vscodeRendererRef.current;
-
     if (
-      !pageUv ||
-      !renderer ||
       returnBridgeRef.current !== null ||
       activeAppRef.current !== "vscode" ||
       windowRuntimesRef.current.vscode.state !== "open"
@@ -1695,52 +1701,15 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       return;
     }
 
-    const pointerX = pageUv.x * renderer.canvas.width;
-    const pointerY = (1 - pageUv.y) * renderer.canvas.height;
-    const drag = beginVSCodeScrollbarDrag(renderer, pointerX, pointerY);
-
-    if (!drag) return;
-
-    vscodeScrollbarDragRef.current = drag;
-    suppressVSCodeClickRef.current = true;
-    event.stopPropagation();
-    event.nativeEvent.preventDefault();
-    const target = event.nativeEvent.target;
-    if (target instanceof Element) {
-      target.setPointerCapture(event.pointerId);
-    }
+    scrollbarController.begin(event);
   };
 
   const handlePagePointerMove = (event: ThreeEvent<PointerEvent>) => {
-    const drag = vscodeScrollbarDragRef.current;
-    const renderer = vscodeRendererRef.current;
-    const pageUv = mapContentUv(event.uv, interactionUvRef.current);
-
-    if (!drag || !renderer || !pageUv) return;
-
-    updateVSCodeScrollbarDrag(
-      renderer,
-      drag,
-      pageUv.x * renderer.canvas.width,
-      (1 - pageUv.y) * renderer.canvas.height,
-    );
-    event.stopPropagation();
-    event.nativeEvent.preventDefault();
+    scrollbarController.move(event);
   };
 
   const finishVSCodeScrollbarDrag = (event: ThreeEvent<PointerEvent>) => {
-    const renderer = vscodeRendererRef.current;
-
-    if (!vscodeScrollbarDragRef.current || !renderer) return;
-
-    vscodeScrollbarDragRef.current = null;
-    endVSCodeScrollbarDrag(renderer);
-    event.stopPropagation();
-    event.nativeEvent.preventDefault();
-    const target = event.nativeEvent.target;
-    if (target instanceof Element && target.hasPointerCapture(event.pointerId)) {
-      target.releasePointerCapture(event.pointerId);
-    }
+    scrollbarController.finish(event);
   };
 
   return (
@@ -1850,8 +1819,6 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
           onPointerDown={handlePagePointerDown}
           onPointerMove={handlePagePointerMove}
           onPointerUp={finishVSCodeScrollbarDrag}
-          onPointerCancel={finishVSCodeScrollbarDrag}
-          onLostPointerCapture={finishVSCodeScrollbarDrag}
         >
           <meshBasicMaterial
             colorWrite={false}

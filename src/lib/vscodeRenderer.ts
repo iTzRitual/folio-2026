@@ -406,7 +406,7 @@ function getSelectedLines(renderer: VSCodeRenderer) {
     : [];
 }
 
-function getScrollbarGeometries(
+export function getScrollbarGeometries(
   renderer: VSCodeRenderer,
   metrics = getMetrics(renderer),
 ) {
