@@ -2,10 +2,10 @@
   "nominal_dimensions_m": [
     0.2032,
     0.805,
-    0.01
+    0.008
   ],
-  "triangles": 17654,
-  "vertices": 8813,
+  "triangles": 17652,
+  "vertices": 8812,
   "materials": 3,
   "mounting_holes": 8,
   "watertight": true,
@@ -13,5 +13,5 @@
     2048,
     512
   ],
-  "glb_bytes": 826352
+  "glb_bytes": 879964
 }

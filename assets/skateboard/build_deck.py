@@ -9,8 +9,10 @@ from mathutils import Matrix, Vector
 
 OUT = Path(__file__).resolve().parent
 PROJECT = OUT.parents[1]
-WIDTH, LENGTH, THICKNESS = .2032, .805, .010
+WIDTH, LENGTH, THICKNESS = .2032, .805, .008
 ROWS, COLUMNS = 112, 24
+EDGE_SEGMENTS = 14
+PHOTO_EDGE_INSET = 8
 PHOTO_WIDTH, PHOTO_HEIGHT = 1824, 1368
 OUTLINE = np.array([
     [144, 680, 680], [153, 626, 751], [180, 553, 819],
@@ -55,12 +57,9 @@ ply.node_tree.links.new(edge_attribute.outputs['Color'], ply.node_tree.nodes.get
 
 
 def half_width(y):
-    t = abs(y) / (LENGTH / 2)
-    shoulder = .75 if y < 0 else .735
-    if t <= shoulder:
-        return WIDTH / 2 * (1 - .025 * (t / shoulder) ** 2)
-    cap = min(1, (t - shoulder) / (1 - shoulder))
-    return WIDTH / 2 * .975 * max(0, 1 - cap ** 2.5) ** .5
+    t = min(1, abs(y) / (LENGTH / 2))
+    exponent = 7 if y < 0 else 6.5
+    return WIDTH / 2 * math.sqrt(max(0, 1 - t ** exponent))
 
 
 def profile(x, y):
@@ -77,7 +76,7 @@ def photo_coordinates(x, y):
     top = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 1])
     bottom = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 2])
     across = x / max(half_width(y), .000001)
-    py = (top + bottom) / 2 + across * max(0, (bottom - top) / 2 - 3)
+    py = (top + bottom) / 2 + across * max(0, (bottom - top) / 2 - PHOTO_EDGE_INSET)
     return px / PHOTO_WIDTH, 1 - py / PHOTO_HEIGHT
 
 
@@ -101,8 +100,8 @@ boundary += [r * (COLUMNS + 1) + COLUMNS for r in range(1, ROWS + 1)]
 boundary += [ROWS * (COLUMNS + 1) + c for c in range(COLUMNS - 1, -1, -1)]
 boundary += [r * (COLUMNS + 1) for r in range(ROWS - 1, 0, -1)]
 rings = [boundary]
-for layer in range(1, 14):
-    fraction = layer / 14
+for layer in range(1, EDGE_SEGMENTS):
+    fraction = layer / EDGE_SEGMENTS
     ring = []
     for index in boundary:
         x, y, z = vertices[index]
@@ -134,12 +133,12 @@ palette = [(.48, .25, .10, 1), (.64, .43, .22, 1), (.24, .08, .07, 1),
 for polygon, slot in zip(mesh.polygons, slots):
     polygon.material_index = slot
     polygon.use_smooth = True
+    strip = (polygon.index - 2 * ROWS * COLUMNS) // len(boundary)
+    layer = min(6, max(0, strip * 7 // EDGE_SEGMENTS))
     for index in polygon.loop_indices:
         x, y, z = mesh.vertices[mesh.loops[index].vertex_index].co
         uv_photo.data[index].uv = photo_coordinates(x, y)
         uv_flat.data[index].uv = (y / LENGTH + .5, .5 - x / WIDTH)
-        depth = (profile(x, y) + THICKNESS / 2 - z) / THICKNESS
-        layer = min(6, max(0, int(depth * 7)))
         colors.data[index].color = palette[layer] if slot == 2 else (1, 1, 1, 1)
 bpy.context.view_layer.objects.active = deck
 deck.select_set(True)
@@ -186,7 +185,7 @@ for px, py in HOLES:
     y = ((px - OUTLINE[0, 0]) / (OUTLINE[-1, 0] - OUTLINE[0, 0]) - .5) * LENGTH
     top = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 1])
     bottom = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 2])
-    x = (py - (top + bottom) / 2) / ((bottom - top) / 2 - 3) * half_width(y)
+    x = (py - (top + bottom) / 2) / ((bottom - top) / 2 - PHOTO_EDGE_INSET) * half_width(y)
     bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=.0027, depth=.12, location=(x, y, 0))
     cutter = bpy.context.object
     for mat in [graphic, grip, ply]:

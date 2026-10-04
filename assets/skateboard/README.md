@@ -2,7 +2,7 @@
 
 Finished deck replacing the wall skateboard blockout. The existing wall position and -90° rotation remain in `CONFIG.workstation`. Trucks and wheels are omitted for this pass.
 
-The deck is 80.5 × 20.32 cm with a 10 mm maple shell, transverse concave, asymmetric nose/tail kicks, rounded seven-ply edges, a dark grip surface and eight open mounting holes. Dimensions and curvature are modeling approximations from the supplied photograph, not manufacturer CAD.
+The deck is 80.5 × 20.32 cm with an 8 mm maple shell, transverse concave, asymmetric nose/tail kicks, rounded seven-ply edges, a dark grip surface and eight open mounting holes. Its continuously curved outline tapers into rounded ends without a separate shoulder joint. Each veneer band has a uniform edge color; photographed wear stays on the printed face. Dimensions and curvature are modeling approximations from the supplied photograph, not manufacturer CAD.
 
 `reference.jpg` is a JPEG conversion of the owner's `IMG_7519.HEIC`. The builder projects that photograph onto the deck using a traced silhouette, then bakes only its visible underside into `deck-albedo.jpg` (2048 × 512). It preserves the Nervous graphic, Vans/DC stickers, scratches, mounting marks and white circular pads. No replacement artwork was generated. Some lighting and wear from the photograph remain in the base color.
 

@@ -298,7 +298,7 @@ export const CONFIG = {
     PLANT_POSITION: { x: -1.22, y: 0.34, z: -0.61 },
     CAMERA_END: { x: -0.02, y: 0.53, z: 0.72 },
     CAMERA_TARGET: { x: -0.02, y: 0.27, z: -0.14 },
-    SKATEBOARD_SIZE: { width: 0.2032, length: 0.805, thickness: 0.01 },
+    SKATEBOARD_SIZE: { width: 0.2032, length: 0.805, thickness: 0.008 },
     SKATEBOARD_MODEL_URL: "/glbs/skateboard-deck.glb",
     SKATEBOARD_ENV_INTENSITY: { day: 0.4, night: 0.12 },
     POLAROIDS_POSITION: { x: -0.43, y: 0.63, z: -0.615 },
