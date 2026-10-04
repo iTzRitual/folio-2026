@@ -13,7 +13,8 @@ import {
 } from "@/context/CaseStudyContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { caseStudyStage } from "@/lib/caseStudyStage";
+import { caseStudyStage, isCaseStudyActive } from "@/lib/caseStudyStage";
+import { applyCaseStudyCamera } from "@/lib/caseStudyCamera";
 import { curlUniforms } from "@/lib/detailsCurl";
 import { CaseStudyCopy, useCaseStudyLayout } from "./CaseStudyCopy";
 import { CaseStudyReturn } from "./CaseStudyReturn";
@@ -282,7 +283,7 @@ export function CaseStudyScene() {
     // the sheet all act on this frame's flight rather than the last one's.
     useFrame((_, delta) => {
         const p = caseStudyStage.progress;
-        const flying = openIndex !== null || p > 1e-4;
+        const flying = isCaseStudyActive();
         // One last pass at rest hands the camera, the plate and the curl back
         // in their resting state; after that the scene is none of our business.
         if (!flying && !engaged.current) return;
@@ -303,16 +304,7 @@ export function CaseStudyScene() {
             target.y + cfg.PLATE_OFFSET * frameHeight + scroll.current * p;
         stickyOffsetRef.current = scroll.current * p;
 
-        camera.position.set(
-            THREE.MathUtils.lerp(0, target.x, p),
-            THREE.MathUtils.lerp(0, target.y, p),
-            THREE.MathUtils.lerp(
-                CONFIG.scene.CAMERA_REST_Z,
-                target.z + distance,
-                p,
-            ),
-        );
-        camera.updateMatrixWorld();
+        applyCaseStudyCamera(camera, target, distance, p);
 
         const control = caseStudyStage.plate;
         if (!flying) {

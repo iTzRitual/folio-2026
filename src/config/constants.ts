@@ -639,6 +639,7 @@ export const CONFIG = {
     CAPTION_TRAIL: "Hold for live site",
   },
   caseStudy: {
+    ACTIVE_EPSILON: 1e-4,
     // Fraction of the landed frame's width the plate spans. Below ~0.8 the
     // frame still reads as a page with margins rather than as a fullscreen
     // image, which is what keeps the copy underneath feeling attached.

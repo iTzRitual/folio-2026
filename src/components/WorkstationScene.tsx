@@ -9,7 +9,7 @@ import { useHeroLayout } from "@/context/HeroLayoutContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { caseStudyStage } from "@/lib/caseStudyStage";
+import { isCaseStudyActive } from "@/lib/caseStudyStage";
 import {
   acquireRootScrollLock,
   type RootScrollLockLease,
@@ -894,7 +894,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   };
 
   useFrame((_, delta) => {
-    if (returnBridgeRef.current) return;
+    if (returnBridgeRef.current || isCaseStudyActive()) return;
 
     for (const appId of ["safari", "vscode"] as const) {
       const runtime = windowRuntimesRef.current[appId];
@@ -943,6 +943,21 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   });
 
   useFrame((_, delta) => {
+    if (isCaseStudyActive()) {
+      if (pageGroupRef.current) pageGroupRef.current.visible = true;
+      if (surfaceGroupRef.current) surfaceGroupRef.current.visible = false;
+      if (htmlOverlayHiddenRef.current) {
+        setHtmlOverlayVisibility(
+          events.connected instanceof HTMLElement
+            ? events.connected
+            : gl.domElement.parentElement,
+          gl.domElement,
+          false,
+        );
+        htmlOverlayHiddenRef.current = false;
+      }
+      return;
+    }
     const scrollReveal = THREE.MathUtils.clamp(revealProgressRef.current, 0, 1);
     const previousReveal = previousRevealRef.current;
     const breakpoint = CONFIG.workstation.RETURN_BRIDGE_REVEAL_BREAKPOINT;
@@ -1093,15 +1108,13 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       reveal,
       settings.sceneFraming.maxZoomOut,
     );
-    if (!caseStudyStage.open && caseStudyStage.progress < 0.001) {
-      cameraPath.sample(cameraProgress, camera.position, cameraTarget);
-      camera.up.set(0, 1, 0);
-      camera.lookAt(cameraTarget);
-      applyPointerCamera(pointerCamera, camera, cameraTarget, settings.pointerCamera,
-        scrollReveal, scrollSpeedRef.current, delta,
-        inputMode === "fine" && !prefersReducedMotion);
-      camera.updateMatrixWorld();
-    }
+    cameraPath.sample(cameraProgress, camera.position, cameraTarget);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(cameraTarget);
+    applyPointerCamera(pointerCamera, camera, cameraTarget, settings.pointerCamera,
+      scrollReveal, scrollSpeedRef.current, delta,
+      inputMode === "fine" && !prefersReducedMotion);
+    camera.updateMatrixWorld();
 
     const surfaceProgress = prefersReducedMotion
       ? reveal
@@ -1145,6 +1158,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   useFrame((state, delta) => {
     if (
+      isCaseStudyActive() ||
       !capturedRef.current ||
       returnBridgeRef.current !== null ||
       revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START ||
@@ -1292,6 +1306,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   useFrame(() => {
     if (
+      isCaseStudyActive() ||
       (!capturePendingRef.current && !capturedRef.current) ||
       (capturedRef.current &&
         revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) ||

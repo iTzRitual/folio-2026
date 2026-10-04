@@ -18,6 +18,7 @@ function moduleFromSource(file, dependencies = {}) {
 const { CONFIG } = moduleFromSource("src/config/constants.ts");
 const { getCRTReferenceFrame } = moduleFromSource("src/lib/crtScreen.ts", { three: THREE, "@/config/constants": { CONFIG } });
 const { workstationToScreen, createWorkstationCameraPath, workstationCameraProgress } = moduleFromSource("src/lib/workstationFrame.ts", { three: THREE, "@/config/constants": { CONFIG } });
+const { applyCaseStudyCamera } = moduleFromSource("src/lib/caseStudyCamera.ts", { three: THREE, "@/config/constants": { CONFIG } });
 function boundsModel(file) {
   const raw = readFileSync(path.join(root, file));
   const length = raw.readUInt32LE(12);
@@ -195,6 +196,20 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
   const screenCenter = project(localScreen.clone().applyMatrix4(monitorTransform));
   assert(Math.abs(screenCenter.x) < 0.8 && Math.abs(screenCenter.y) < 0.8, "CRT remains in frame");
   reports.push({ viewport: [width, height], screenCenter: screenCenter.toArray() });
+  const studyAnchor = new THREE.Vector3(1.4, -0.6, 0.1);
+  for (const progress of [0, 0.25, 0.5, 1]) {
+    route.sample(1, camera.position, target);
+    camera.up.set(0.2, 0.9, 0.3);
+    camera.lookAt(target);
+    applyCaseStudyCamera(camera, studyAnchor, 2, progress);
+    assert(camera.getWorldDirection(new THREE.Vector3()).distanceTo(new THREE.Vector3(0, 0, -1)) < 1e-10, "Study handoff discards the workstation orientation at every flight stage");
+    assert(camera.up.equals(new THREE.Vector3(0, 1, 0)), "Study handoff restores a complete upright pose");
+    assert.equal(camera.aspect, width / height, "Study handoff preserves the active projection");
+    if (progress === 1) {
+      const projected = studyAnchor.clone().project(camera);
+      assert(Math.abs(projected.x) < 1e-10 && Math.abs(projected.y) < 1e-10, "A study reached from the workstation is centered without a skewed projection");
+    }
+  }
 }
-console.log("PASS: monitor/display frame alignment, support, open-lid clearances, frontal framing, camera collision samples, and exact reverse paths at three viewport sizes.");
+console.log("PASS: monitor/display frame alignment, support, open-lid clearances, frontal framing, camera collision samples, exact reverse paths and complete study camera handoff at three viewport sizes.");
 assert.equal(reports.length, 3);

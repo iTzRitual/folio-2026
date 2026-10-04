@@ -1,4 +1,5 @@
 import { Vector3 } from "three";
+import { CONFIG } from "@/config/constants";
 
 /** What the case study asks of the preview plate while it owns it. */
 export interface PlateControl {
@@ -26,6 +27,11 @@ interface CaseStudyStage {
     dim: number;
     pose: Vector3;
     plate: PlateControl;
+}
+
+export function isCaseStudyActive() {
+    return caseStudyStage.open ||
+        caseStudyStage.progress > CONFIG.caseStudy.ACTIVE_EPSILON;
 }
 
 /**

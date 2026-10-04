@@ -18,7 +18,7 @@ export async function checkPortfolioBrowser(devtools, sessionId, base, artifactR
     }
     const { data } = await send("Page.captureScreenshot", { format: "png" });
     await writeFile(path.join(artifactRoot, "failure.png"), Buffer.from(data, "base64"));
-    console.error(await evaluate(`JSON.stringify({path:location.pathname,scroll:scrollY,focused:document.activeElement?.outerHTML,buttons:[...document.querySelectorAll('button[aria-label]')].map(button=>({label:button.getAttribute('aria-label'),visibility:getComputedStyle(button).visibility,y:button.getBoundingClientRect().y}))})`));
+    console.error(await evaluate(`JSON.stringify({path:location.pathname,scroll:scrollY,focused:{tag:document.activeElement?.tagName,label:document.activeElement?.getAttribute('aria-label')},buttons:[...document.querySelectorAll('button[aria-label]')].map(button=>({label:button.getAttribute('aria-label'),visibility:getComputedStyle(button).visibility,y:button.getBoundingClientRect().y}))})`));
     throw new Error(`Portfolio check timed out: ${description}`);
   };
   const frames = () => evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
@@ -135,9 +135,36 @@ export async function checkPortfolioBrowser(devtools, sessionId, base, artifactR
     await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus({preventScroll:true})`);
     await key(" ", "Space", 32);
     await waitFor(returnVisible, "Space activation");
+    const initialCopy = await evaluate("(() => { const rect = document.querySelector('[data-case-study-copy] p').getBoundingClientRect(); return {x:rect.x,y:rect.y,width:rect.width}; })()");
     await key("Escape", "Escape", 27);
     await waitFor(`document.activeElement?.getAttribute('aria-label') === ${JSON.stringify(project)}`, "Space return focus");
-    results.push(`PASS: ${scenario.name} native keyboard actions, reading, visible focus and live-site link${scenario.reduced ? "; reduced-motion reading and fine reflow clamp" : ""}`);
+    if (scenario.name === "wide-fine") {
+      await evaluate("window.scrollTo(0, document.documentElement.scrollHeight - innerHeight)");
+      await waitFor("document.querySelector('button[aria-label=\"Desk lamp\"]')?.hidden === false && !!document.querySelector('.workstation-html-overlay-hidden')", "workstation reveal");
+      await screenshot("workstation-before-history");
+      const history = await send("Page.getNavigationHistory");
+      const forward = history.entries[history.currentIndex + 1];
+      assert.ok(forward?.url.includes("/projects/"), "The study entry must remain available through browser history");
+      await send("Page.navigateToHistoryEntry", { entryId: forward.id });
+      await waitFor(returnVisible, "history study entry from workstation");
+      await waitFor("getComputedStyle(document.querySelector('[data-case-study-copy]')).display !== 'none' && !document.querySelector('[data-case-study-copy]').closest('.workstation-html-overlay-hidden')", "study DOM ownership");
+      await settleCopy();
+      const restoredCopy = await evaluate("(() => { const rect = document.querySelector('[data-case-study-copy] p').getBoundingClientRect(); return {x:rect.x,y:rect.y,width:rect.width}; })()");
+      for (const axis of ["x", "y", "width"]) assert.ok(Math.abs(restoredCopy[axis] - initialCopy[axis]) < 2, `History handoff changed the study projection on ${axis}: ${initialCopy[axis]} → ${restoredCopy[axis]}`);
+      assert.equal(await evaluate("document.querySelector('button[aria-label=\"Desk lamp\"]').hidden"), true);
+      await screenshot("study-after-workstation-history");
+      const historyScroll = await evaluate("scrollY");
+      await key("Escape", "Escape", 27);
+      await waitFor(`(() => {
+        const atWorkstation = scrollY >= document.documentElement.scrollHeight - innerHeight - 1;
+        const ownerVisible = atWorkstation
+          ? document.querySelector('button[aria-label="Desk lamp"]')?.hidden === false
+          : getComputedStyle(document.querySelector(${JSON.stringify(selector)})).visibility !== 'hidden' && !document.querySelector(${JSON.stringify(selector)}).closest('.workstation-html-overlay-hidden');
+        return ${returnVisible} === false && ownerVisible;
+      })()`, "scroll owner restored after history study close");
+      assert.ok(Math.abs(await evaluate("scrollY") - historyScroll) < 1, "Closing a history study must preserve the browser-restored reading position");
+    }
+    results.push(`PASS: ${scenario.name} native keyboard actions, reading, visible focus and live-site link${scenario.reduced ? "; reduced-motion reading and fine reflow clamp" : scenario.name === "wide-fine" ? "; workstation history handoff and preserved browser scroll" : ""}`);
   }
   await send("Emulation.clearDeviceMetricsOverride");
   await send("Emulation.setEmulatedMedia", { features: [] });

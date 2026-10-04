@@ -8,6 +8,7 @@ import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { isCaseStudyActive } from "@/lib/caseStudyStage";
 
 const lamp = CONFIG.workstation.LEVITATING_LAMP;
 const noRaycast = () => null;
@@ -63,7 +64,7 @@ export function LevitatingLamp({ supportY, worldScale }: { supportY: number; wor
   useEffect(() => () => base.dispose(), [base]);
 
   const interactive = () => {
-    if (revealProgressRef.current < lamp.INTERACTION_REVEAL || !root.current) return false;
+    if (isCaseStudyActive() || revealProgressRef.current < lamp.INTERACTION_REVEAL || !root.current) return false;
     let visible = root.current.visible;
     root.current.traverseAncestors(parent => { visible = visible && parent.visible; });
     return visible;
