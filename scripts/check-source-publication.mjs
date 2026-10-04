@@ -16,6 +16,10 @@ assert.equal(isPublishedSourcePath(".vercel/project.json"), false);
 assert.equal(isPublishedSourcePath("plans/architecture-audit.md"), false);
 assert.equal(isPublishedSourcePath("src/private.pem"), false);
 assert.equal(normalizeSourcePath("src\\components\\Scene.tsx"), "src/components/Scene.tsx");
+assert.equal(normalizeSourcePath(".\\src\\components\\Scene.tsx"), "src/components/Scene.tsx");
+assert.equal(normalizeSourcePath("./src/components/Scene.tsx"), "src/components/Scene.tsx");
+assert.equal(isPublishedSourcePath("src\\components\\Scene.tsx"), true);
+assert.equal(isPublishedSourcePath("public\\source-manifest.json"), false);
+assert.equal(isPublishedSourcePath("notes\\private.json"), false);
 
 console.log("PASS: source publication stays inside approved roots and file types.");
-

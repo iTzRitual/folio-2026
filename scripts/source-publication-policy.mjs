@@ -41,7 +41,7 @@ const textExtensions = new Set([
 ]);
 
 export function normalizeSourcePath(file) {
-  return file.split(path.sep).join("/").replace(/\\/g, "/").replace(/^\.\//, "");
+  return file.replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
 export function isPublishedSourcePath(file) {

@@ -76,7 +76,7 @@ assert(Math.abs(displacement.length() / distance - settings.horizontalStrength *
 assert(displacement.clone().normalize().add(right).length() < 1e-12, "Camera translates left for a rightward pointer");
 const pivotProjection = pivot.clone().project(edge.camera);
 assert(Math.hypot(pivotProjection.x, pivotProjection.y) < 1e-12, "Nearer aim point stays fixed");
-assert(focus.clone().project(edge.camera).x < -0.05, "Workstation moves visibly in the same direction as the reference");
+assert(focus.clone().project(edge.camera).x < 0, "Workstation moves in the same direction as the reference independently of tuned strength");
 const foreground = base.position.clone().lerp(pivot, 0.5);
 assert(foreground.project(edge.camera).x > 0, "Foreground and background have genuine spatial parallax");
 
@@ -149,8 +149,15 @@ const referenceRuntime = createPointerCameraRuntime();
 referenceRuntime.x = 1;
 referenceRuntime.y = 1;
 referenceRuntime.pressed = true;
-applyPointerCamera(referenceRuntime, referenceCamera, referenceFocus, { ...settings, focusDepth: 1 }, 1, 0, 1 / 60, true);
-assert(referenceCamera.position.distanceTo(new Vector3(-settings.horizontalStrength * settings.sensitivity, 0.43848 - settings.verticalStrength * settings.sensitivity, 1.5383)) < 1e-12,
+const referenceSettings = {
+  ...settings,
+  horizontalStrength: 0.25,
+  verticalStrength: 0.125,
+  sensitivity: 1,
+  focusDepth: 1,
+};
+applyPointerCamera(referenceRuntime, referenceCamera, referenceFocus, referenceSettings, 1, 0, 1 / 60, true);
+assert(referenceCamera.position.distanceTo(new Vector3(-0.25, 0.43848 - 0.125, 1.5383)) < 1e-12,
   "Reference lens and aim distance reproduce Shopify's exact corner translation");
 
 const raycaster = new Raycaster();
