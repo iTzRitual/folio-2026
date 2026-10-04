@@ -15,18 +15,20 @@ export default function RegressionLab() {
 
   useEffect(() => {
     let cancelled = false;
-    void document.fonts.ready.then(() => {
+    void document.fonts.ready.then(async () => {
       if (cancelled || !output.current) return;
       let renderer: WebGLRenderer | undefined;
       try {
         renderer = new WebGLRenderer();
         const results = [checkDetailsLayout(true)];
         for (const check of [checkOrbitCollision, checkSkullStartup, checkSkullEntrance, checkSkullSeams, checkSkullPause, checkEffects]) {
-          results.push(check(renderer));
+          results.push(await check(renderer));
+          if (cancelled || !output.current) return;
         }
         output.current.textContent = results.join("\n\n");
         output.current.dataset.status = "passed";
       } catch (error) {
+        if (cancelled || !output.current) return;
         output.current.textContent = error instanceof Error ? error.stack ?? error.message : String(error);
         output.current.dataset.status = "failed";
       } finally {

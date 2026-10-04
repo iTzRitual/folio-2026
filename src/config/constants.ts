@@ -185,6 +185,10 @@ export const CONFIG = {
     COMPACT_HEIGHT: 520,
     COMPACT_ASPECT: 0.62,
   },
+  antialiasing: {
+    MSAA_SAMPLES: 2,
+    SMAA_PRESET: "HIGH",
+  },
   performanceMonitor: {
     LOWER_FPS: 50,
     UPPER_FPS: 58,
