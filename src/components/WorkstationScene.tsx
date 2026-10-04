@@ -25,24 +25,18 @@ import {
   type WindowAppId,
 } from "@/lib/workstationDesktop";
 import {
-  captureVSCodeSession,
-  createVSCodeRenderer,
   handleVSCodeClick,
   handleVSCodeWheel,
   restoreVSCodeSession,
   setVSCodeLoadError,
   setVSCodeSources,
   updateVSCodeHover,
-  type VSCodeRenderer,
-  type VSCodeSessionSnapshot,
 } from "@/lib/vscodeRenderer";
 import {
   loadSourceManifest,
   refreshSourceManifest,
   type SourceManifest,
 } from "@/lib/sourceManifest";
-import { HEADER_LAYER } from "./Effects/HeaderExclusionEffect";
-import { THEME_SWEEP_LAYER } from "./ThemeSweep";
 import { createMonitorState, monitorHasSignal } from "@/lib/monitorState";
 import { CRTMonitor } from "./CRTMonitor";
 import {
@@ -50,6 +44,7 @@ import {
   workstationCameraProgress,
 } from "@/lib/workstationFrame";
 import { applyPointerCamera, bindPointerCameraInput, createPointerCameraRuntime } from "@/lib/pointerCamera";
+import { PortfolioCapture } from "./Workstation/PortfolioCapture";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
   CRTDisplay,
@@ -68,21 +63,14 @@ import {
   affordableAberrationTaps,
   configureGenieGeometry,
   configurePageAberrationMaterial,
-  createBrowserChromeTexture,
-  createDockRenderer,
   createPageAberrationMaterial,
-  createPageMask,
   createPlaneGeometry,
-  createToolbarRenderer,
   createWindowChromeMaterial,
   drawToolbar,
   easeInOutQuint,
   getBrowserControlHit,
-  getBrowserLayout,
   getDockHoveredIndex,
   getDockItemBounds,
-  getPageTargetDimensions,
-  getTextureDimensions,
   getToolbarHit,
   isThemeToggleHit,
   setDockAppRunning,
@@ -90,10 +78,7 @@ import {
   setHtmlOverlayVisibility,
   updateDockRenderer,
   updateToolbarRenderer,
-  type DockRenderer,
   type GenieUniforms,
-  type PageUvBounds,
-  type ToolbarRenderer,
 } from "@/lib/virtualDesktop";
 
 
@@ -143,18 +128,9 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   const interactionMeshRef = useRef<THREE.Mesh>(null);
   const crtScreenRef = useRef<CRTDisplayHandle>(null);
   const pageAberrationMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
-  const targetRef = useRef<THREE.WebGLRenderTarget | null>(null);
-  const targetQualityRef = useRef(qualityTier);
-  const captureCamera = useMemo(() => new THREE.PerspectiveCamera(), []);
-  const chromeTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const vscodeTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const vscodeRendererRef = useRef<VSCodeRenderer | null>(null);
-  const vscodeSessionRef = useRef<VSCodeSessionSnapshot | null>(null);
+  const capture = useMemo(() => new PortfolioCapture(), []);
+  useEffect(() => () => capture.dispose(), [capture]);
   const sourceManifestRef = useRef<SourceManifest | null>(null);
-  const dockTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const dockRendererRef = useRef<DockRenderer | null>(null);
-  const toolbarTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const toolbarRendererRef = useRef<ToolbarRenderer | null>(null);
   const desktopSignalGroupRef = useRef<THREE.Group>(null);
   const playStationSignalRef = useRef<PlayStationSignalHandle>(null);
   const syncPlayStationSignal = useCallback(() => {
@@ -165,15 +141,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       desktopSignalGroupRef.current.visible = monitorHasSignal(monitorState);
     }
   });
-  const pageMaskRef = useRef<THREE.CanvasTexture | null>(null);
-  const surfaceTransformRef = useRef<{ scale: number; y: number } | null>(
-    null,
-  );
-  const capturedRef = useRef(false);
   const capturePendingRef = useRef(false);
   const htmlOverlayHiddenRef = useRef(false);
-  const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
-  const browserLayoutRef = useRef<ReturnType<typeof getBrowserLayout> | null>(null);
   const desktopController = useMemo(() => new WorkstationDesktop(), []);
   const returnBridgeRef = useRef<ReturnBridge | null>(null);
   const previousRevealRef = useRef<number | null>(null);
@@ -184,10 +153,10 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     camera,
     getBounds: () => gl.domElement.getBoundingClientRect(),
     getSurface: () => interactionMeshRef.current,
-    getRenderer: () => vscodeRendererRef.current,
+    getRenderer: () => capture.desktop?.vscode ?? null,
     mapContentUv: (source, target) =>
       crtScreenRef.current?.mapContentUv(source, target) ?? false,
-  }), [camera, gl]);
+  }), [camera, capture, gl]);
   useEffect(() => scrollbarController.connect(), [scrollbarController]);
   useFrame(() => {
     if (scrollbarController.pointerId === null) return;
@@ -366,9 +335,9 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   }, [pageAberrationMaterial]);
 
   useEffect(() => {
-    const target = targetRef.current;
-    const pageMask = pageMaskRef.current;
-    const bounds = pageUvBoundsRef.current;
+    const target = capture.target;
+    const pageMask = capture.desktop?.mask;
+    const bounds = capture.desktop?.bounds;
 
     if (target && pageMask && bounds) {
       configurePageAberrationMaterial(
@@ -378,33 +347,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         bounds,
       );
     }
-  }, [pageAberrationMaterial]);
+  }, [capture, pageAberrationMaterial]);
 
   useEffect(() => {
     scrollbarController.cancel();
-    capturedRef.current = false;
     capturePendingRef.current = false;
-    targetRef.current?.dispose();
-    targetRef.current = null;
-    chromeTextureRef.current?.dispose();
-    chromeTextureRef.current = null;
-    if (vscodeRendererRef.current) {
-      vscodeSessionRef.current = captureVSCodeSession(vscodeRendererRef.current);
-    }
-    vscodeTextureRef.current?.dispose();
-    vscodeTextureRef.current = null;
-    vscodeRendererRef.current = null;
-    dockTextureRef.current?.dispose();
-    dockTextureRef.current = null;
-    dockRendererRef.current = null;
-    toolbarTextureRef.current?.dispose();
-    toolbarTextureRef.current = null;
-    toolbarRendererRef.current = null;
-    pageMaskRef.current?.dispose();
-    pageMaskRef.current = null;
-    surfaceTransformRef.current = null;
-    pageUvBoundsRef.current = null;
-    browserLayoutRef.current = null;
+    capture.reset();
 
     if (pageGroupRef.current) pageGroupRef.current.visible = true;
     if (surfaceGroupRef.current) {
@@ -413,6 +361,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       surfaceGroupRef.current.scale.setScalar(1);
     }
   }, [
+    capture,
     genieUniforms,
     desktop.dockScale,
     desktop.dockOffsetX,
@@ -429,7 +378,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const prepare = () => {
-      if (!capturedRef.current) capturePendingRef.current = true;
+      if (!capture.ready) capturePendingRef.current = true;
     };
     if ("requestIdleCallback" in window) {
       const idleId = window.requestIdleCallback(prepare, { timeout: 1000 });
@@ -437,20 +386,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
     const timeoutId = globalThis.setTimeout(prepare, 200);
     return () => globalThis.clearTimeout(timeoutId);
-  }, [size.height, size.width]);
+  }, [capture, size.height, size.width]);
 
   useEffect(() => {
     return () => {
       releaseReturnScroll();
-      targetRef.current?.dispose();
-      chromeTextureRef.current?.dispose();
-      vscodeTextureRef.current?.dispose();
-      vscodeRendererRef.current = null;
-      dockTextureRef.current?.dispose();
-      dockRendererRef.current = null;
-      toolbarTextureRef.current?.dispose();
-      toolbarRendererRef.current = null;
-      pageMaskRef.current?.dispose();
       setHtmlOverlayVisibility(
         events.connected instanceof HTMLElement ? events.connected : null,
         gl.domElement,
@@ -463,7 +403,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     if (process.env.NODE_ENV !== "development") return;
 
     const refreshSources = async () => {
-      const renderer = vscodeRendererRef.current;
+      const renderer = capture.desktop?.vscode;
       if (
         !sourceLoadStartedRef.current ||
         !renderer ||
@@ -491,7 +431,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     );
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [capture]);
 
   useEffect(() => {
     const raycaster = new THREE.Raycaster();
@@ -507,13 +447,13 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         releaseReturnScroll();
       }
 
-      const renderer = vscodeRendererRef.current;
+      const renderer = capture.desktop?.vscode;
       const interactionMesh = interactionMeshRef.current;
 
       if (
         !renderer ||
         !interactionMesh ||
-        !capturedRef.current ||
+        !capture.ready ||
         returnBridgeRef.current !== null ||
         desktopController.activeApp !== "vscode" ||
         desktopController.runtimes.vscode.state !== "open"
@@ -585,7 +525,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         capture: true,
       });
     };
-  }, [camera, desktopController, gl, mapContentUv, monitorState]);
+  }, [camera, capture, desktopController, gl, mapContentUv, monitorState]);
 
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
@@ -603,20 +543,17 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     loadSourceManifest()
       .then((manifest) => {
         sourceManifestRef.current = manifest;
-        if (vscodeRendererRef.current) {
-          setVSCodeSources(vscodeRendererRef.current, manifest);
-          if (vscodeSessionRef.current) {
-            restoreVSCodeSession(
-              vscodeRendererRef.current,
-              vscodeSessionRef.current,
-            );
+        const renderer = capture.desktop?.vscode;
+        if (renderer) {
+          setVSCodeSources(renderer, manifest);
+          if (capture.session) {
+            restoreVSCodeSession(renderer, capture.session);
           }
         }
       })
       .catch(() => {
-        if (vscodeRendererRef.current) {
-          setVSCodeLoadError(vscodeRendererRef.current);
-        }
+        const renderer = capture.desktop?.vscode;
+        if (renderer) setVSCodeLoadError(renderer);
       });
   };
 
@@ -628,12 +565,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   const desktopPresentation: DesktopPresentation = {
     canPresent: (appId) => Boolean(
-      browserLayoutRef.current && dockRendererRef.current && getWindowGroup(appId),
+      capture.desktop?.layout && capture.desktop?.dock && getWindowGroup(appId),
     ),
     isVisible: (appId) => getWindowGroup(appId)?.visible === true,
     prepareAnimation: (appId) => {
-      const layout = browserLayoutRef.current;
-      const dock = dockRendererRef.current;
+      const layout = capture.desktop?.layout;
+      const dock = capture.desktop?.dock;
       if (!layout || !dock) return;
       configureGenieGeometry(
         getWindowGenie(appId),
@@ -654,8 +591,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   const beginReturnBridge = () => {
     const logicalBridge = desktopController.beginReturn(prefersReducedMotion, desktopPresentation);
     if (!logicalBridge) return false;
-    const layout = browserLayoutRef.current;
-    const dock = dockRendererRef.current;
+    const layout = capture.desktop?.layout;
+    const dock = capture.desktop?.dock;
     if (layout && dock) {
       updateDockRenderer(dock, desktop.dockMagnification, null, false, 1);
       desktopPresentation.prepareAnimation("safari");
@@ -680,7 +617,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     desktopController.animateTo(appId, target, prefersReducedMotion, desktopPresentation);
 
   const switchToApp = (appId: WindowAppId) => {
-    const dockRenderer = dockRendererRef.current;
+    const dockRenderer = capture.desktop?.dock;
     if (dockRenderer) {
       setDockAppRunning(
         dockRenderer,
@@ -884,20 +821,20 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
           0,
           1,
         );
-    if (!capturedRef.current && reveal >= CONFIG.workstation.BROWSER_REVEAL_START) {
+    if (!capture.ready && reveal >= CONFIG.workstation.BROWSER_REVEAL_START) {
       if (!capturePendingRef.current) {
         capturePendingRef.current = true;
         return;
       }
     }
 
-    if (capturedRef.current && pageGroupRef.current) {
+    if (capture.ready && pageGroupRef.current) {
       pageGroupRef.current.visible =
         reveal < CONFIG.workstation.BROWSER_REVEAL_START;
     }
 
-    if (surfaceGroupRef.current && capturedRef.current) {
-      const transform = surfaceTransformRef.current;
+    if (surfaceGroupRef.current && capture.ready) {
+      const transform = capture.desktop?.transform;
 
       if (transform) {
         const progress = THREE.MathUtils.clamp(surfaceProgress, 0, 1);
@@ -918,11 +855,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   useFrame((state, delta) => {
     if (
       isCaseStudyActive() ||
-      !capturedRef.current ||
+      !capture.ready ||
       returnBridgeRef.current !== null ||
       revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START ||
       !interactionMeshRef.current ||
-      !pageUvBoundsRef.current ||
+      !capture.desktop?.bounds ||
       !pageAberrationMaterialRef.current
     ) {
       return;
@@ -936,12 +873,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       intersections[0]?.uv,
       interactionUvRef.current,
     );
-    const bounds = pageUvBoundsRef.current;
+    const bounds = capture.desktop?.bounds;
     const mouseX = pageUv ? (pageUv.x - bounds.x) / bounds.width : -1;
     const mouseY = pageUv ? (pageUv.y - bounds.y) / bounds.height : -1;
     const pointerInsidePage =
       mouseX >= 0 && mouseX <= 1 && mouseY >= 0 && mouseY <= 1;
-    const dockRenderer = dockRendererRef.current;
+    const dockRenderer = capture.desktop?.dock;
     const pointerX =
       pageUv && dockRenderer
         ? pageUv.x * dockRenderer.canvas.width
@@ -950,11 +887,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       pageUv && dockRenderer
         ? (1 - pageUv.y) * dockRenderer.canvas.height
         : null;
-    const toolbarRenderer = toolbarRendererRef.current;
+    const toolbarRenderer = capture.desktop?.toolbar;
     if (toolbarRenderer) {
       updateToolbarRenderer(toolbarRenderer, pointerX, pointerY);
     }
-    const vscodeRenderer = vscodeRendererRef.current;
+    const vscodeRenderer = capture.desktop?.vscode;
     if (vscodeRenderer) {
       updateVSCodeHover(
         vscodeRenderer,
@@ -1066,8 +1003,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   useFrame(() => {
     if (
       isCaseStudyActive() ||
-      (!capturePendingRef.current && !capturedRef.current) ||
-      (capturedRef.current &&
+      (!capturePendingRef.current && !capture.ready) ||
+      (capture.ready &&
         revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) ||
       !pageGroupRef.current ||
       !surfaceGroupRef.current
@@ -1076,7 +1013,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
 
     if (
-      capturedRef.current &&
+      capture.ready &&
       (!monitorHasSignal(monitorState) ||
         windowGroupRef.current?.visible !== true ||
         desktopController.runtimes.safari.state === "minimized")
@@ -1084,121 +1021,26 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       return;
     }
 
-    const pixelRatio = gl.getPixelRatio();
-    const sourceDimensions = getPageTargetDimensions(
-      Math.round(size.width * pixelRatio),
-      Math.round(size.height * pixelRatio),
-      qualityTier,
+    const target = capture.render(
+      gl, scene, camera, pageGroupRef.current, surfaceGroupRef.current, size, qualityTier,
     );
-    const sourceWidth = sourceDimensions.width;
-    const sourceHeight = sourceDimensions.height;
-    if (!targetRef.current) {
-      const target = new THREE.WebGLRenderTarget(sourceWidth, sourceHeight, {
-        depthBuffer: true,
-        stencilBuffer: false,
-      });
-      target.texture.colorSpace = gl.outputColorSpace;
-      targetRef.current = target;
-      targetQualityRef.current = qualityTier;
-    }
-
-    const target = targetRef.current;
+    if (capture.ready) return;
     if (
-      targetQualityRef.current !== qualityTier ||
-      target.width !== sourceWidth ||
-      target.height !== sourceHeight
-    ) {
-      target.setSize(sourceWidth, sourceHeight);
-      targetQualityRef.current = qualityTier;
-    }
-    const previousTarget = gl.getRenderTarget();
-    const wasSurfaceVisible = surfaceGroupRef.current.visible;
-    const wasPageVisible = pageGroupRef.current.visible;
-    captureCamera.copy(camera);
-
-    surfaceGroupRef.current.visible = false;
-    pageGroupRef.current.visible = true;
-    captureCamera.position.set(0, 0, CONFIG.scene.CAMERA_REST_Z);
-    captureCamera.rotation.set(0, 0, 0);
-    captureCamera.fov = CONFIG.scene.CAMERA_FOV;
-    captureCamera.updateProjectionMatrix();
-    captureCamera.layers.enable(HEADER_LAYER);
-    captureCamera.layers.enable(THEME_SWEEP_LAYER);
-    captureCamera.updateMatrixWorld();
-    gl.setRenderTarget(target);
-    gl.clear();
-    gl.render(scene, captureCamera);
-    gl.setRenderTarget(previousTarget);
-    pageGroupRef.current.visible = capturedRef.current ? false : wasPageVisible;
-    surfaceGroupRef.current.visible = wasSurfaceVisible;
-
-    if (capturedRef.current) return;
-
-    const { width: textureWidth, height: textureHeight } = getTextureDimensions(
-      sourceWidth,
-      sourceHeight,
-    );
-    const layout = getBrowserLayout(
-      textureWidth,
-      textureHeight,
-      sourceWidth,
-      sourceHeight,
-      desktop,
-    );
-    const chromeTexture = createBrowserChromeTexture({
-      sourceWidth,
-      sourceHeight,
-      tuning: desktop,
-    });
-    const dockRenderer = createDockRenderer({
-      sourceWidth,
-      sourceHeight,
-      tuning: desktop,
-    });
-    const toolbarRenderer = createToolbarRenderer({ sourceWidth, sourceHeight });
-    const vscodeRenderer = createVSCodeRenderer({
-      width: textureWidth,
-      height: textureHeight,
+      !chromeMaterialRef.current || !vscodeMaterialRef.current ||
+      !dockMaterialRef.current || !toolbarMaterialRef.current
+    ) return;
+    const textures = capture.createDesktop(desktop, { width: planeWidth, height: planeHeight }, sourceManifestRef.current);
+    if (!textures) return;
+    const {
+      chrome: chromeTexture,
+      dock: dockRenderer,
+      toolbar: toolbarRenderer,
+      vscode: vscodeRenderer,
+      mask: pageMask,
       layout,
-      controlsScale: desktop.safariControlsScale,
-    });
-    const pageMask = createPageMask(textureWidth, textureHeight, layout);
-
-    if (
-      !chromeTexture ||
-      !dockRenderer ||
-      !toolbarRenderer ||
-      !vscodeRenderer ||
-      !pageMask ||
-      !chromeMaterialRef.current ||
-      !vscodeMaterialRef.current ||
-      !dockMaterialRef.current ||
-      !toolbarMaterialRef.current
-    ) {
-      return;
-    }
-
-    if (sourceManifestRef.current) {
-      setVSCodeSources(vscodeRenderer, sourceManifestRef.current);
-    }
-    if (vscodeSessionRef.current) {
-      restoreVSCodeSession(vscodeRenderer, vscodeSessionRef.current);
-    }
-
-    chromeTextureRef.current?.dispose();
-    chromeTextureRef.current = chromeTexture;
-    vscodeTextureRef.current?.dispose();
-    vscodeTextureRef.current = vscodeRenderer.texture;
-    vscodeRendererRef.current = vscodeRenderer;
-    dockTextureRef.current?.dispose();
-    dockTextureRef.current = dockRenderer.texture;
-    dockRendererRef.current = dockRenderer;
-    browserLayoutRef.current = layout;
-    toolbarTextureRef.current?.dispose();
-    toolbarTextureRef.current = toolbarRenderer.texture;
-    toolbarRendererRef.current = toolbarRenderer;
-    pageMaskRef.current?.dispose();
-    pageMaskRef.current = pageMask;
+      bounds,
+      transform,
+    } = textures;
     gl.initTexture(chromeTexture);
     gl.initTexture(dockRenderer.texture);
     gl.initTexture(toolbarRenderer.texture);
@@ -1209,16 +1051,6 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     dockMaterialRef.current.needsUpdate = true;
     toolbarMaterialRef.current.map = toolbarRenderer.texture;
     toolbarMaterialRef.current.needsUpdate = true;
-    const bounds = {
-      x: layout.x / textureWidth,
-      y:
-        1 -
-        (layout.y + layout.chromeHeight + layout.contentHeight) /
-          textureHeight,
-      width: layout.width / textureWidth,
-      height: layout.contentHeight / textureHeight,
-    };
-    pageUvBoundsRef.current = bounds;
     configureGenieGeometry(
       genieUniforms,
       layout,
@@ -1241,31 +1073,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       pageMask,
       bounds,
     );
-    const restDistance = CONFIG.scene.CAMERA_REST_Z - CONFIG.workstation.PLANE_Z;
-    const restHeight =
-      2 *
-      Math.tan(THREE.MathUtils.degToRad(captureCamera.fov) / 2) *
-      restDistance;
-    const restWidth = restHeight * captureCamera.aspect;
-    const contentWidth = planeWidth * (layout.width / textureWidth);
-    const contentCenterY =
-      planeHeight *
-      (0.5 -
-        (layout.y + layout.chromeHeight + layout.contentHeight / 2) /
-          textureHeight);
-    const scale = restWidth / contentWidth;
-
-    surfaceTransformRef.current = {
-      scale,
-      y: -contentCenterY * scale,
-    };
-    capturedRef.current = true;
     capturePendingRef.current = false;
     const revealVisible =
       revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
     pageGroupRef.current.visible = !revealVisible;
-    surfaceGroupRef.current.scale.setScalar(scale);
-    surfaceGroupRef.current.position.y = -contentCenterY * scale;
+    surfaceGroupRef.current.scale.setScalar(transform.scale);
+    surfaceGroupRef.current.position.y = transform.y;
     surfaceGroupRef.current.visible = revealVisible;
   }, 0.5);
 
@@ -1282,12 +1095,12 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
 
     const pageUv = mapContentUv(event.uv, interactionUvRef.current);
-    const bounds = pageUvBoundsRef.current;
+    const bounds = capture.desktop?.bounds;
 
     if (!pageUv || !bounds) return;
 
-    const toolbarRenderer = toolbarRendererRef.current;
-    const dockRenderer = dockRendererRef.current;
+    const toolbarRenderer = capture.desktop?.toolbar;
+    const dockRenderer = capture.desktop?.dock;
     const textureWidth =
       dockRenderer?.canvas.width ?? toolbarRenderer?.canvas.width;
     const textureHeight =
@@ -1372,7 +1185,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       }
     }
 
-    const browserLayout = browserLayoutRef.current;
+    const browserLayout = capture.desktop?.layout;
     const activeApp = desktopController.activeApp;
     const activeGroup = activeApp ? getWindowGroup(activeApp) : null;
     const windowIsVisible = activeGroup?.visible === true;
@@ -1408,8 +1221,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
     if (
       activeApp === "vscode" &&
-      vscodeRendererRef.current &&
-      handleVSCodeClick(vscodeRendererRef.current, pointerX, pointerY)
+      capture.desktop?.vscode &&
+      handleVSCodeClick(capture.desktop?.vscode, pointerX, pointerY)
     ) {
       event.stopPropagation();
       return;

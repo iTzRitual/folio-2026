@@ -9,6 +9,7 @@ import { checkSkullEntrance } from "../../../../scripts/check-skull-entrance-bro
 import { checkSkullSeams } from "../../../../scripts/check-skull-seams-browser";
 import { checkSkullPause } from "../../../../scripts/check-skull-pause-browser";
 import { checkEffects } from "../../../../scripts/check-effects-browser";
+import { checkPortfolioCapture } from "../../../../scripts/check-capture-browser";
 
 export default function RegressionLab() {
   const output = useRef<HTMLPreElement>(null);
@@ -21,7 +22,7 @@ export default function RegressionLab() {
       try {
         renderer = new WebGLRenderer();
         const results = [checkDetailsLayout(true)];
-        for (const check of [checkOrbitCollision, checkSkullStartup, checkSkullEntrance, checkSkullSeams, checkSkullPause, checkEffects]) {
+        for (const check of [checkOrbitCollision, checkSkullStartup, checkSkullEntrance, checkSkullSeams, checkSkullPause, checkEffects, checkPortfolioCapture]) {
           results.push(await check(renderer));
           if (cancelled || !output.current) return;
         }
