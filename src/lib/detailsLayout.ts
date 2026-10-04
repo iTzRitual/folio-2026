@@ -1,6 +1,7 @@
 import { CONFIG } from "@/config/constants";
 import {
     projectsData,
+    achievementsData,
     skillsData,
     bioVariants,
     DEFAULT_BIO_VARIANT,
@@ -51,6 +52,7 @@ export interface DetailsLayout {
     skillsColumns: number;
     skillsColumnWidth: number;
     sectionLines: Record<DetailsListSectionKey, string[]>;
+    achievementRows: { text: string; href: string }[];
     sections: Record<DetailsSectionKey, DetailsSectionOffsets>;
     contentHeight: number;
     usableHeight: number;
@@ -177,6 +179,7 @@ function calculateWideDetailsLayout({
         education: [...DETAILS_SECTION_CONTENT.education.wideLines],
         courses: [...DETAILS_SECTION_CONTENT.courses.wideLines],
     };
+    const achievementRows = achievementsData.map(({ name, link }) => ({ text: name, href: link }));
 
     const lineHeights: Record<DetailsListSectionKey, number> = {
         experience: bodyLineHeight,
@@ -271,6 +274,7 @@ function calculateWideDetailsLayout({
         skillsColumns: 1,
         skillsColumnWidth: bodyMaxWidth,
         sectionLines,
+        achievementRows,
         sections: offsets,
         contentHeight,
         usableHeight,
@@ -342,15 +346,22 @@ function calculateNarrowDetailsLayout({
                 fontsReady,
             ),
         );
+    const achievementRows = achievementsData.flatMap(({ name, link }) =>
+        wrapText(
+            name,
+            contentWidth - bodyFontSize * (CONFIG.detailsLink.ARROW_GAP_MULT + CONFIG.detailsLink.ARROW_SIZE_MULT + CONFIG.detailsLink.ARROW_TWIN_OVERHANG_EM),
+            bodyFontSize,
+            L.LETTER_SPACING,
+            fontsReady,
+        ).map((text) => ({ text, href: link })),
+    );
     const sectionLines: Record<DetailsListSectionKey, string[]> = {
         experience: wrapItems(
             DETAILS_SECTION_CONTENT.experience.narrowLines,
         ),
         skills: [...DETAILS_SECTION_CONTENT.skills.narrowLines],
         projects: [...DETAILS_SECTION_CONTENT.projects.narrowLines],
-        achievements: wrapItems(
-            DETAILS_SECTION_CONTENT.achievements.narrowLines,
-        ),
+        achievements: achievementRows.map(({ text }) => text),
         education: wrapItems(
             DETAILS_SECTION_CONTENT.education.narrowLines,
         ),
@@ -463,6 +474,7 @@ function calculateNarrowDetailsLayout({
         skillsColumns,
         skillsColumnWidth,
         sectionLines,
+        achievementRows,
         sections: offsets,
         contentHeight,
         usableHeight,

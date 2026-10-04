@@ -591,7 +591,7 @@ export function DetailsLink({
       )}
       <p className="m-0 p-0" style={{ color: "transparent" }}>
         {text}
-        <span className="inline-block" style={{ width: `${(arrowGap + arrowSize) / calculatedFontSize + 0.2}em` }}>
+        <span className="inline-block" style={{ width: `${(arrowGap + arrowSize) / calculatedFontSize + CONFIG.detailsLink.ARROW_TWIN_OVERHANG_EM}em` }}>
           &#8203;
         </span>
       </p>

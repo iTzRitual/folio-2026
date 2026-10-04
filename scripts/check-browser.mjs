@@ -10,6 +10,7 @@ import { checkScrollbarBrowser } from "./check-scrollbar-browser.mjs";
 import { checkRecoveryBrowser } from "./check-recovery-browser.mjs";
 import { checkDesktopBrowser } from "./check-desktop-browser.mjs";
 import { checkModelBrowser } from "./check-model-browser.mjs";
+import { checkLayoutBrowser } from "./check-layout-browser.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const timeout = 120_000;
@@ -118,6 +119,7 @@ try {
   const recovery = process.argv.includes("--recovery");
   const desktop = process.argv.includes("--desktop");
   const model = process.argv.includes("--model");
+  const layout = process.argv.includes("--layout");
   let base = urlIndex < 0 ? process.argv.slice(2).find(argument => !argument.startsWith("--")) : process.argv[urlIndex + 1];
   if (urlIndex >= 0 && !base) throw new Error("--url requires the development server URL");
   if (!base) {
@@ -154,9 +156,11 @@ try {
     socket.addEventListener("error", reject, { once: true });
   });
   const devtools = new DevTools(socket);
-  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop || model ? "about:blank" : url });
+  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop || model || layout ? "about:blank" : url });
   const { sessionId } = await devtools.send("Target.attachToTarget", { targetId, flatten: true });
-  if (model) {
+  if (layout) {
+    console.log(await checkLayoutBrowser(devtools, sessionId, base));
+  } else if (model) {
     console.log(await checkModelBrowser(devtools, sessionId, base));
   } else if (desktop) {
     console.log(await checkDesktopBrowser(devtools, sessionId, base));

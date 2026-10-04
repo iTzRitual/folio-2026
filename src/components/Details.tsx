@@ -16,7 +16,6 @@ import {
 import { BioSection } from "./DetailsScene/BioSection";
 import {
   projectsData,
-  achievementsData,
   DEFAULT_BIO_VARIANT,
   type BioVariant,
 } from "@/data/content";
@@ -313,15 +312,6 @@ export function Details({
     [layout.sectionLines.education],
   );
 
-  const achievementItems: DetailsSectionItem[] = useMemo(
-    () =>
-      achievementsData.map((achievement, index) => ({
-        text: layout.sectionLines.achievements[index],
-        href: achievement.link,
-      })),
-    [layout.sectionLines.achievements],
-  );
-
   const coursesItems: DetailsSectionItem[] = useMemo(
     () => layout.sectionLines.courses.map((text) => ({ text })),
     [layout.sectionLines.courses],
@@ -395,7 +385,7 @@ export function Details({
 
       <DetailsSection
         heading={DETAILS_SECTION_HEADINGS.achievements}
-        items={achievementItems}
+        items={layout.achievementRows}
         headingX={leftX}
         headingY={sectionY("achievements").headingY}
         bodyX={bodyColumnX}
