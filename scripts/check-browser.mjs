@@ -120,24 +120,25 @@ try {
   const desktop = process.argv.includes("--desktop");
   const model = process.argv.includes("--model");
   const layout = process.argv.includes("--layout");
+  const profiling = process.argv.includes("--profile");
   let base = urlIndex < 0 ? process.argv.slice(2).find(argument => !argument.startsWith("--")) : process.argv[urlIndex + 1];
   if (urlIndex >= 0 && !base) throw new Error("--url requires the development server URL");
   if (!base) {
     const port = await freePort();
     base = `http://127.0.0.1:${port}`;
-    server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), "dev", "-p", String(port)], {
+    server = spawn(process.execPath, [path.join(root, "node_modules/next/dist/bin/next"), profiling ? "start" : "dev", "-p", String(port)], {
       cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
     });
     const record = chunk => { serverOutput = (serverOutput + chunk).slice(-8000); };
     server.stdout.on("data", record);
     server.stderr.on("data", record);
   }
-  const url = new URL("/lab/regression", base).href;
+  const url = new URL(profiling ? "/" : "/lab/regression", base).href;
   await waitForServer(url, server);
   browser = spawn(binary, [
     "--headless=new", "--no-first-run", "--no-default-browser-check",
     "--remote-debugging-port=0", `--user-data-dir=${profile}`,
-    "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "about:blank",
+    ...(profiling ? [] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]), "about:blank",
   ], { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
   const endpoint = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Browser did not expose a DevTools endpoint")), timeout);
@@ -156,9 +157,12 @@ try {
     socket.addEventListener("error", reject, { once: true });
   });
   const devtools = new DevTools(socket);
-  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop || model || layout ? "about:blank" : url });
+  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop || model || layout || profiling ? "about:blank" : url });
   const { sessionId } = await devtools.send("Target.attachToTarget", { targetId, flatten: true });
-  if (layout) {
+  if (profiling) {
+    const { profilePortfolioBrowser } = await import("./profile-portfolio-browser.mjs");
+    console.log(await profilePortfolioBrowser(devtools, sessionId, base, path.join(root, "plans/production-profile"), root));
+  } else if (layout) {
     console.log(await checkLayoutBrowser(devtools, sessionId, base));
   } else if (model) {
     console.log(await checkModelBrowser(devtools, sessionId, base));
