@@ -1,33 +1,11 @@
-# GPU collision regression check
+# Browser GPU regression checks
 
-`check-orbit-collision-browser.ts` executes the production collision shader on WebGL and reads back positions and velocities. It checks fast impacts, overlapping starts, size-dependent gaps, rounded corners, open space, spring return at 30/60/120 Hz, moving cards, and disabled colliders.
+Run `npm run test:browser` from the project root. The runner starts an isolated Next.js development server and a headless Chromium browser, runs `/lab/regression`, reports failures with a nonzero exit code, and cleans up both processes and its temporary browser profile. It requires Node.js 22 and Chrome or Edge. Set `BROWSER_BINARY` when the browser is installed outside the usual paths.
 
-To run it with the development server, temporarily create `src/app/collision-check/page.tsx`:
+To reuse a running development server, run `npm run test:browser -- --url http://localhost:3000`. For interactive inspection, open `/lab/regression` on that server. The route returns 404 in production.
 
-```tsx
-"use client";
-import { useEffect, useRef } from "react";
-import { WebGLRenderer } from "three";
-import { checkOrbitCollision } from "../../../scripts/check-orbit-collision-browser";
+The suite runs the production GPU collision and fragment shaders. It checks fast impacts, overlapping starts, size-dependent gaps, rounded corners, moving cards, spring return, zero-scale startup, entrance momentum at 30/60/120 Hz, reduced motion, and pixel-exact seamless settling. WebGL or floating-point target failures fail the suite explicitly.
 
-export default function CollisionCheck() {
-  const output = useRef<HTMLPreElement>(null);
-  useEffect(() => {
-    const renderer = new WebGLRenderer();
-    try {
-      output.current!.textContent = checkOrbitCollision(renderer);
-    } catch (error) {
-      output.current!.textContent = String(error);
-    } finally {
-      renderer.dispose();
-    }
-  }, []);
-  return <pre ref={output}>Running GPU collision checks</pre>;
-}
-```
+The layout contract runs across ten viewport sizes and all Bio variants, with estimated metrics in `npm test` and loaded browser fonts in this suite. It checks section clearance, model interludes, Bio separation and complete scroll extents. Scene DOM mirror measurements are a separate integration check.
 
-Open `/collision-check` and verify `PASS`. Delete the temporary route after running the check; it must not be included in the production build. CPU geometry and transform regressions run through `npm test`.
-
-For entrance momentum, use the same temporary page with `checkSkullEntrance` imported from `../../../scripts/check-skull-entrance-browser` and call it instead of `checkOrbitCollision`. This runs the actual fragment simulation through the configured entrance easing at 30/60/120 FPS, verifies residual velocity and return to rest, checks collisions, and confirms reduced motion and mounting at full scale produce no entrance impulse.
-
-For seamless settling, use `checkSkullSeams` from `../../../scripts/check-skull-seams-browser`. It compares the resting and near-rest fragment surface against the original mesh pixel for pixel, then verifies displaced fragments still separate. The normal material exposes both gaps and shading discontinuities.
+The automated browser uses SwiftShader for reproducible shader correctness. Its timing does not represent a physical GPU or mobile device. Production performance must be measured on hardware separately.

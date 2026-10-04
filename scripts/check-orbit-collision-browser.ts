@@ -34,7 +34,7 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
     const uniforms = {
       dt: { value: dt }, radius: { value: radius }, home: { value: home }, spring: { value: spring },
       orbitActive: { value: active ? 1 : 0 }, orbitScale: { value: 1 },
-      orbitReveal: { value: reveal }, orbitPhase: { value: 0 },
+      orbitReveal: { value: reveal }, orbitPhase: { value: 0 }, orbitCurvature: { value: 1 },
       orbitShape: { value: projectOrbitCollisionShape() },
       orbitStart: { value: new Matrix4() }, orbitEnd: { value: new Matrix4() },
       simulationFromOrbit: { value: new Matrix4() },
@@ -76,7 +76,8 @@ export function checkOrbitCollision(renderer: WebGLRenderer) {
   assert(tiny.p.length() > 1.3, "Small fragment should pass through a gap");
   const medium = run("fragment through tolerant gap", radial(pitch / 2, 0.6), radial(pitch / 2, 100), 0.045);
   assert(medium.p.length() > 1.3, "Side tolerance should allow ordinary fragments through a visual gap");
-  const large = run("large fragment at gap", radial(pitch / 2, 0.6), radial(pitch / 2, 100), 0.08);
+  const blockedRadius = pitch / 2 - projectOrbitCollisionShape().y + CONFIG.projectOrbitCollision.SKIN * 2;
+  const large = run("large fragment at gap", radial(pitch / 2, 0.6), radial(pitch / 2, 100), blockedRadius);
   assert(large.p.length() < 1, "Large fragment must not fit through narrow gap");
   const top = run("over card", new Vector3(0, 0.35, 0.6), new Vector3(0, 0, 100), 0.03);
   assert(top.p.z > 1.3, "Open space above cards must remain open");
