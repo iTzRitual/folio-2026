@@ -9,6 +9,7 @@ import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
 import { LevitatingLamp } from "./LevitatingLamp";
 import { DeskCollectionProps } from "./WorkstationDeskProps";
+import { WorkstationController } from "./WorkstationController";
 import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
 export { Block } from "./WorkstationPrimitives";
 
@@ -49,16 +50,7 @@ export function DesktopProxies({ supportY, worldScale }: { supportY: number; wor
       <Cylinder radius={0.007} height={0.006} rotation={[0, 0, Math.PI / 2]} position={[0, 0.036, -0.017]} />
       <Block size={[0.001, 0.001, 0.025]} position={[0, 0.037, -0.019]} color={charcoal} />
     </group>
-    <group name="Controller" position={xyz(w.controllerPosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.controller), 0]}>
-      <Ellipsoid size={[0.062, 0.02, 0.028]} position={[0, 0.025, -0.008]} color={charcoal} />
-      {[-1, 1].map(side => <group key={side}>
-        <Ellipsoid size={[0.027, 0.024, 0.05]} position={[side * 0.05, 0.024, 0.015]} rotation={[0, side * -0.3, 0]} color={charcoal} />
-        <Cylinder radius={0.011} height={0.008} position={[side * 0.025, 0.047, 0.009]} color="#797c73" />
-      </group>)}
-      <Block size={[0.023, 0.004, 0.007]} position={[-0.046, 0.045, -0.018]} color={bone} />
-      <Block size={[0.007, 0.004, 0.023]} position={[-0.046, 0.046, -0.018]} color={bone} />
-      {[[0.04, -0.025], [0.054, -0.013], [0.028, -0.013], [0.04, 0]].map(([x, z], i) => <Cylinder key={i} radius={0.004} height={0.004} position={[x, 0.045, z]} color={bone} />)}
-    </group>
+    <WorkstationController supportY={supportY} />
     <LevitatingLamp supportY={supportY} worldScale={worldScale} />
   </group>;
 }
