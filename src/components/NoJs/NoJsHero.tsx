@@ -1,6 +1,6 @@
-import { heroContent } from "@/data/content";
+import { heroContent, fallbackContent } from "@/data/content";
 
-export function NoJsHero() {
+export function NoJsHero({ rendererFailed = false }: { rendererFailed?: boolean }) {
     return (
         <div className="flex flex-col gap-16 min-h-screen items-center justify-center">
             <div className="flex flex-col gap-4">
@@ -16,13 +16,15 @@ export function NoJsHero() {
                     !
                 </div>
                 <div className="text-left uppercase font-karla font-normal text-lg">
-                    This website relies heavily on JavaScript. For the full
-                    interactive experience, please{" "}
-                    <span className="bg-(--border) rounded-sm px-1">
-                        enable JavaScript
-                    </span>{" "}
-                    and refresh the page. Otherwise, simply scroll down to view
-                    the most essential information.
+                    {rendererFailed ? fallbackContent.renderer : (
+                        <>
+                            {fallbackContent.noJavaScriptBefore}{" "}
+                            <span className="bg-(--border) rounded-sm px-1">
+                                {fallbackContent.noJavaScriptAction}
+                            </span>{" "}
+                            {fallbackContent.noJavaScriptAfter}
+                        </>
+                    )}
                 </div>
             </div>
         </div>

@@ -14,6 +14,8 @@ import { useFontsReady } from "@/hooks/useFontsReady";
 import { usePageScrollRuntime } from "@/hooks/usePageScrollRuntime";
 import { pageScrollEasing } from "@/lib/pageScrollMotion";
 import { useTheme } from "@/context/ThemeContext";
+import { useSceneRecovery } from "@/hooks/useSceneRecovery";
+import { SceneBoundary } from "@/components/SceneBoundary";
 import {
     DEBUG_DEFAULTS,
     type DebugSettings,
@@ -47,11 +49,14 @@ export default function Home() {
     const isDebug = pathname === "/debug";
     const fontsReady = useFontsReady();
     const themeContext = useTheme();
+    const { status, fail, ready } = useSceneRecovery();
+    const rendererFailed = status === "failed";
 
     const [debugSettings, setDebugSettings] =
         useState<DebugSettings>(DEBUG_DEFAULTS);
     const bioVariant = debugSettings.bio.variant;
     const { lenisRef, overflowViewports } = usePageScrollRuntime({
+        enabled: !rendererFailed,
         bioVariant,
         fontsReady,
         removeLoader,
@@ -60,45 +65,53 @@ export default function Home() {
 
     return (
         <>
-            <NoJsContent />
-            <div className="js-only-app">
-                {isDebug && <DynamicDebugPanel onChange={setDebugSettings} />}
-                {removeLoader && !prefersReducedMotion && inputMode === "fine" && (
-                    <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
-                )}
-
-                <div className="relative w-full min-h-screen overflow-x-hidden bg-(--bg)">
-                    <div className="fixed inset-0 z-0 pointer-events-none">
-                        {!removeLoader && (
-                            <Loader
-                                onExitStart={() => setStartScene(true)}
-                                onComplete={() => setRemoveLoader(true)}
-                            />
+            <NoJsContent rendererFailed={rendererFailed} />
+            <div className="js-only-app" data-renderer-status={status}>
+                {!rendererFailed && (
+                    <>
+                        {isDebug && <DynamicDebugPanel onChange={setDebugSettings} />}
+                        {removeLoader && !prefersReducedMotion && inputMode === "fine" && (
+                            <ReactLenis root ref={lenisRef} options={LENIS_OPTIONS} />
                         )}
-                        <div className="w-full h-full pointer-events-auto">
-                            <DynamicScene
-                                startAnimation={startScene}
-                                inputMode={inputMode}
-                                detailsOverflowViewports={overflowViewports}
-                                isDebug={isDebug}
-                                bioVariant={bioVariant}
-                                themeContext={themeContext}
-                                debugSettings={debugSettings}
+
+                        <div className="relative w-full min-h-screen overflow-x-hidden bg-(--bg)">
+                            <div className="fixed inset-0 z-0 pointer-events-none">
+                                {!removeLoader && (
+                                    <Loader
+                                        onExitStart={() => setStartScene(true)}
+                                        onComplete={() => setRemoveLoader(true)}
+                                    />
+                                )}
+                                <div className="w-full h-full pointer-events-auto">
+                                    <SceneBoundary onFailure={fail}>
+                                        <DynamicScene
+                                            startAnimation={startScene}
+                                            inputMode={inputMode}
+                                            detailsOverflowViewports={overflowViewports}
+                                            isDebug={isDebug}
+                                            bioVariant={bioVariant}
+                                            themeContext={themeContext}
+                                            debugSettings={debugSettings}
+                                            onFailure={fail}
+                                            onReady={ready}
+                                        />
+                                    </SceneBoundary>
+                                </div>
+                            </div>
+
+                            <main
+                                className="relative z-10 w-full pointer-events-none"
+                                style={{
+                                    height: `${(
+                                        TIMELINE_VIEWPORTS +
+                                        overflowViewports +
+                                        CONFIG.workstation.REVEAL_VIEWPORTS
+                                    ) * 100}dvh`,
+                                }}
                             />
                         </div>
-                    </div>
-
-                    <main
-                        className="relative z-10 w-full pointer-events-none"
-                        style={{
-                            height: `${(
-                                TIMELINE_VIEWPORTS +
-                                overflowViewports +
-                                CONFIG.workstation.REVEAL_VIEWPORTS
-                            ) * 100}dvh`,
-                        }}
-                    />
-                </div>
+                    </>
+                )}
             </div>
         </>
     );

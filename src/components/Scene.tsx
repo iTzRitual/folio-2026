@@ -1,7 +1,8 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { WebGLRenderer, type WebGLRendererParameters } from "three";
 import Model from "./Model";
 import { HeroText } from "./HeroText";
 import { Header } from "./Header";
@@ -31,16 +32,23 @@ import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
 import { OrbitSignalContext, useOrbitSignal } from "@/context/OrbitSignalContext";
 
+function SceneReady({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]);
+  return null;
+}
+
 function SceneContent({
   isDebug,
   startAnimation,
   bioVariant,
   detailsOverflowViewports,
+  onReady,
 }: {
   isDebug: boolean;
   startAnimation: boolean;
   bioVariant: BioVariant;
   detailsOverflowViewports: number;
+  onReady: () => void;
 }) {
   useStableSceneViewport();
 
@@ -66,6 +74,7 @@ function SceneContent({
                   <CurlEdgeFade />
                   <ProjectPreviewOverlay />
                   <CaseStudyScene />
+                  <SceneReady onReady={onReady} />
                 </WorkstationScene>
               </Suspense>
               <PortfolioEffects />
@@ -85,6 +94,8 @@ export default function Scene({
   bioVariant,
   themeContext,
   debugSettings,
+  onFailure,
+  onReady,
 }: {
   startAnimation: boolean;
   inputMode: SceneInputMode;
@@ -93,9 +104,34 @@ export default function Scene({
   bioVariant: BioVariant;
   themeContext: ThemeContextValue;
   debugSettings: DebugSettings;
+  onFailure: (error: unknown) => void;
+  onReady: () => void;
 }) {
   const eventWrapperRef = useRef<HTMLDivElement>(null!);
   const orbitSignal = useOrbitSignal();
+  const createRenderer = useCallback((parameters: WebGLRendererParameters) => {
+    try {
+      return new WebGLRenderer({
+        ...parameters,
+        // EffectComposer renders into its own targets, so MSAA on the default
+        // framebuffer is paid for and then discarded.
+        antialias: false,
+        powerPreference: "high-performance",
+      });
+    } catch (error) {
+      onFailure(error);
+      throw error;
+    }
+  }, [onFailure]);
+  useEffect(() => {
+    const container = eventWrapperRef.current;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      onFailure(new Error("Portfolio WebGL context lost"));
+    };
+    container.addEventListener("webglcontextlost", onContextLost, { capture: true });
+    return () => container.removeEventListener("webglcontextlost", onContextLost, { capture: true });
+  }, [onFailure]);
 
   const [dpr, setDpr] = useState(1);
   const [qualityTier, setQualityTier] = useState<SceneQualityTier>("balanced");
@@ -149,12 +185,7 @@ export default function Scene({
           fov: CONFIG.scene.CAMERA_FOV,
           position: [0, 0, CONFIG.scene.CAMERA_REST_Z],
         }}
-        gl={{
-          // EffectComposer renders into its own targets, so MSAA on the default
-          // framebuffer is paid for and then discarded.
-          antialias: false,
-          powerPreference: "high-performance",
-        }}
+        gl={createRenderer}
         onCreated={(state) => {
           state.gl.localClippingEnabled = true;
         }}
@@ -191,6 +222,7 @@ export default function Scene({
                   startAnimation={startAnimation}
                   bioVariant={bioVariant}
                   detailsOverflowViewports={detailsOverflowViewports}
+                  onReady={onReady}
                 />
               </OrbitSignalContext.Provider>
             </DebugSettingsBridge>

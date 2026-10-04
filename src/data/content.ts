@@ -1,3 +1,11 @@
+export const fallbackContent = {
+    label: "Portfolio",
+    renderer: "The interactive view couldn't load. Scroll down to explore the portfolio, or get in touch using the contact link above.",
+    noJavaScriptBefore: "This website relies heavily on JavaScript. For the full interactive experience, please",
+    noJavaScriptAction: "enable JavaScript",
+    noJavaScriptAfter: "and refresh the page. Otherwise, simply scroll down to view the most essential information.",
+} as const;
+
 export const heroContent = {
     title: "Natan Mokrzycki",
     subtitle:

@@ -18,6 +18,7 @@ gsap.registerPlugin(ScrollTrigger);
 const RESIZE_DEBOUNCE_MS = 150;
 
 interface PageScrollRuntimeOptions {
+  enabled?: boolean;
   bioVariant: BioVariant;
   fontsReady: boolean;
   removeLoader: boolean;
@@ -25,6 +26,7 @@ interface PageScrollRuntimeOptions {
 }
 
 export function usePageScrollRuntime({
+  enabled = true,
   bioVariant,
   fontsReady,
   removeLoader,
@@ -35,6 +37,7 @@ export function usePageScrollRuntime({
   const [overflowViewports, setOverflowViewports] = useState(0);
 
   useEffect(() => {
+    if (!enabled) return;
     const update = () =>
       setOverflowViewports(
         calculateDetailsOverflowViewports({
@@ -58,7 +61,7 @@ export function usePageScrollRuntime({
       window.clearTimeout(debounce);
       window.removeEventListener("resize", onResize);
     };
-  }, [bioVariant, fontsReady]);
+  }, [enabled, bioVariant, fontsReady]);
 
   useEffect(() => {
     ScrollTrigger.refresh();
@@ -80,7 +83,7 @@ export function usePageScrollRuntime({
   }, []);
 
   useEffect(() => {
-    if (!removeLoader || prefersReducedMotion) return;
+    if (!enabled || !removeLoader || prefersReducedMotion) return;
 
     let wasLocked = false;
     let activeInstance: { start: () => void } | null = null;
@@ -130,7 +133,7 @@ export function usePageScrollRuntime({
       if (wasLocked) activeInstance?.start();
       gsap.ticker.remove(update);
     };
-  }, [removeLoader, prefersReducedMotion]);
+  }, [enabled, removeLoader, prefersReducedMotion]);
 
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
@@ -140,7 +143,7 @@ export function usePageScrollRuntime({
   }, []);
 
   useEffect(() => {
-    if (!removeLoader) {
+    if (enabled && !removeLoader) {
       loaderScrollLeaseRef.current = acquireRootScrollLock(0, {
         preventNativeScroll: true,
       });
@@ -151,7 +154,7 @@ export function usePageScrollRuntime({
       loaderScrollLeaseRef.current?.release();
       loaderScrollLeaseRef.current = null;
     };
-  }, [removeLoader]);
+  }, [enabled, removeLoader]);
 
   return { lenisRef, overflowViewports };
 }

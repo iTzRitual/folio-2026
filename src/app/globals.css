@@ -101,7 +101,8 @@ p .block-line-wrapper {
     display: none;
 }
 
-.no-js .no-js-fallback {
+.no-js .no-js-fallback,
+.no-js-fallback[data-renderer-fallback="true"] {
     display: flex;
 }
 
