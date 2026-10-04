@@ -34,7 +34,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   });
   const heroLayout = useHeroLayout();
   const { responsiveScale } = heroLayout;
-  const { layoutMode } = useSceneCapabilities();
+  const { layoutMode, qualityTier } = useSceneCapabilities();
   const modelDepth = useMemo(() => new Vector3(0, 0, CONFIG.model.DEPTH_Z), []);
   const { progressRef, revealProgressRef } = useHeroTransition();
   const { startTrigger } = useAnimationContext();
@@ -116,7 +116,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   }, [texture, hudTexture, radius, layout]);
 
   useEffect(() => {
-    if (reducedMotion || !project.loop) return;
+    if (reducedMotion || qualityTier === "low" || !project.loop) return;
     const video = document.createElement("video");
     video.muted = true;
     video.loop = true;
@@ -162,7 +162,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       material.uniforms.uCover.value.set(Math.max(1, PROJECT_ORBIT_ASPECT / aspect), Math.max(1, aspect / PROJECT_ORBIT_ASPECT));
       videoTexture.dispose();
     };
-  }, [material, texture, reducedMotion]);
+  }, [material, texture, reducedMotion, qualityTier]);
 
   useEffect(() => () => geometries.forEach((geometry) => geometry.dispose()), [geometries]);
   useEffect(() => () => material.dispose(), [material]);
@@ -184,7 +184,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     currentMaterial.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
     currentMaterial.uniforms.uGlitch.value = reducedMotion ? 0 : settings.glitch;
     currentMaterial.uniforms.uGlitchMediaOnly.value = settings.glitchScope === "media" ? 1 : 0;
-    const videoActive = present && exit < 1 && !reducedMotion && !document.hidden;
+    const videoActive = present && exit < 1 && qualityTier !== "low" && !reducedMotion && !document.hidden;
     const currentPlayback = playback.current;
     if (currentPlayback && currentPlayback.active !== videoActive) {
       currentPlayback.active = videoActive;

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
@@ -37,16 +37,17 @@ export function SkullParticles({
   const { progressRef, revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
   const { particles: settings } = useDebugSettings();
+  const [initialLowQuality] = useState(lowQuality);
   const fragmentGeometry = useMemo(() => {
     if (!fragments || !(source instanceof THREE.Mesh)) return null;
-    return createSkullFragments(source.geometry, lowQuality ? CONFIG.model.FRAGMENTS.CELLS_LOW : CONFIG.model.FRAGMENTS.CELLS);
-  }, [fragments, source, lowQuality]);
+    return createSkullFragments(source.geometry, initialLowQuality ? CONFIG.model.FRAGMENTS.CELLS_LOW : CONFIG.model.FRAGMENTS.CELLS);
+  }, [fragments, source, initialLowQuality]);
   const fragmentUniforms = useMemo(() => ({
     positions: new THREE.Uniform<THREE.Texture | null>(null),
     restPosition: new THREE.Uniform<THREE.Texture | null>(null),
   }), []);
   useEffect(() => () => fragmentGeometry?.geometry.dispose(), [fragmentGeometry]);
-  const count = fragmentGeometry?.count ?? (lowQuality
+  const count = fragmentGeometry?.count ?? (initialLowQuality
     ? Math.min(settings.count, CONFIG.model.PARTICLE_COUNT_LOW)
     : settings.count);
   const pointer = useRef({
