@@ -19,6 +19,12 @@ import { useSceneMotion } from "@/context/SceneMotionContext";
 import { useTheme } from "@/context/ThemeContext";
 import { createWorkstationScrollbarController } from "@/lib/workstationScrollbar";
 import {
+  WorkstationDesktop,
+  type DesktopPresentation,
+  type DesktopReturn,
+  type WindowAppId,
+} from "@/lib/workstationDesktop";
+import {
   captureVSCodeSession,
   createVSCodeRenderer,
   handleVSCodeClick,
@@ -91,25 +97,6 @@ import {
 } from "@/lib/virtualDesktop";
 
 
-type WindowAppId = "safari" | "vscode";
-
-type WindowAnimation = {
-  from: number;
-  to: number;
-  elapsed: number;
-  duration: number;
-};
-
-type WindowState = "open" | "closed" | "minimized" | "animating";
-
-type WindowRuntime = {
-  state: WindowState;
-  amount: number;
-  animation: WindowAnimation | null;
-};
-
-type WindowRuntimeSnapshot = WindowRuntime;
-
 type ReturnBridgeAutoScroll = {
   elapsed: number;
   duration: number;
@@ -117,16 +104,7 @@ type ReturnBridgeAutoScroll = {
   targetY: number;
 };
 
-type ReturnBridge = {
-  sourceApp: Exclude<WindowAppId, "safari"> | null;
-  sourceAmount: number;
-  safariStartAmount: number;
-  safariVisible: boolean;
-  vscodeVisible: boolean;
-  safariRuntime: WindowRuntimeSnapshot;
-  vscodeRuntime: WindowRuntimeSnapshot;
-  activeApp: WindowAppId | null;
-  pendingApp: WindowAppId | null;
+type ReturnBridge = DesktopReturn & {
   idleElapsed: number;
   lastScrollY: number;
   autoScroll: ReturnBridgeAutoScroll | null;
@@ -196,12 +174,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   const htmlOverlayHiddenRef = useRef(false);
   const pageUvBoundsRef = useRef<PageUvBounds | null>(null);
   const browserLayoutRef = useRef<ReturnType<typeof getBrowserLayout> | null>(null);
-  const windowRuntimesRef = useRef<Record<WindowAppId, WindowRuntime>>({
-    safari: { state: "open", amount: 0, animation: null },
-    vscode: { state: "closed", amount: 0, animation: null },
-  });
-  const activeAppRef = useRef<WindowAppId | null>("safari");
-  const pendingAppRef = useRef<WindowAppId | null>(null);
+  const desktopController = useMemo(() => new WorkstationDesktop(), []);
   const returnBridgeRef = useRef<ReturnBridge | null>(null);
   const previousRevealRef = useRef<number | null>(null);
   const sourceLoadStartedRef = useRef(false);
@@ -220,8 +193,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     if (scrollbarController.pointerId === null) return;
     if (
       !monitorHasSignal(monitorState) || isCaseStudyActive() ||
-      returnBridgeRef.current !== null || activeAppRef.current !== "vscode" ||
-      windowRuntimesRef.current.vscode.state !== "open"
+      returnBridgeRef.current !== null || desktopController.activeApp !== "vscode" ||
+      desktopController.runtimes.vscode.state !== "open"
     ) scrollbarController.cancel();
   });
   const returnScrollLeaseRef = useRef<RootScrollLockLease | null>(null);
@@ -542,8 +515,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         !interactionMesh ||
         !capturedRef.current ||
         returnBridgeRef.current !== null ||
-        activeAppRef.current !== "vscode" ||
-        windowRuntimesRef.current.vscode.state !== "open"
+        desktopController.activeApp !== "vscode" ||
+        desktopController.runtimes.vscode.state !== "open"
       ) {
         return;
       }
@@ -612,7 +585,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         capture: true,
       });
     };
-  }, [camera, gl, mapContentUv, monitorState]);
+  }, [camera, desktopController, gl, mapContentUv, monitorState]);
 
   const getWindowGroup = (appId: WindowAppId) =>
     appId === "safari" ? windowGroupRef.current : vscodeWindowGroupRef.current;
@@ -653,207 +626,58 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       size.height *
       CONFIG.workstation.REVEAL_VIEWPORTS;
 
+  const desktopPresentation: DesktopPresentation = {
+    canPresent: (appId) => Boolean(
+      browserLayoutRef.current && dockRendererRef.current && getWindowGroup(appId),
+    ),
+    isVisible: (appId) => getWindowGroup(appId)?.visible === true,
+    prepareAnimation: (appId) => {
+      const layout = browserLayoutRef.current;
+      const dock = dockRendererRef.current;
+      if (!layout || !dock) return;
+      configureGenieGeometry(
+        getWindowGenie(appId),
+        layout,
+        dock,
+        planeWidth,
+        planeHeight,
+        getWindowDockIndex(appId),
+      );
+    },
+    present: (appId, amount, visible, reducedMotion) => {
+      setGeniePresentation(getWindowGenie(appId), amount, reducedMotion);
+      const group = getWindowGroup(appId);
+      if (group) group.visible = visible;
+    },
+  };
+
   const beginReturnBridge = () => {
-    const safariRuntime = windowRuntimesRef.current.safari;
-    const vscodeRuntime = windowRuntimesRef.current.vscode;
-    const vscodeIsVisible =
-      vscodeWindowGroupRef.current?.visible === true &&
-      vscodeRuntime.state !== "closed" &&
-      vscodeRuntime.state !== "minimized";
-    const activeApp = vscodeIsVisible ? "vscode" : activeAppRef.current;
-    const safariIsReady =
-      activeApp === "safari" &&
-      safariRuntime.state === "open" &&
-      windowGroupRef.current?.visible === true;
-
-    if (safariIsReady) return false;
-
-    const browserLayout = browserLayoutRef.current;
-    const dockRenderer = dockRendererRef.current;
-    if (browserLayout && dockRenderer) {
-      updateDockRenderer(
-        dockRenderer,
-        desktop.dockMagnification,
-        null,
-        false,
-        1,
-      );
-      configureGenieGeometry(
-        genieUniforms,
-        browserLayout,
-        dockRenderer,
-        planeWidth,
-        planeHeight,
-        SAFARI_DOCK_INDEX,
-      );
-      configureGenieGeometry(
-        vscodeGenieUniforms,
-        browserLayout,
-        dockRenderer,
-        planeWidth,
-        planeHeight,
-        VSCODE_DOCK_INDEX,
-      );
+    const logicalBridge = desktopController.beginReturn(prefersReducedMotion, desktopPresentation);
+    if (!logicalBridge) return false;
+    const layout = browserLayoutRef.current;
+    const dock = dockRendererRef.current;
+    if (layout && dock) {
+      updateDockRenderer(dock, desktop.dockMagnification, null, false, 1);
+      desktopPresentation.prepareAnimation("safari");
+      desktopPresentation.prepareAnimation("vscode");
     }
-
-    const sourceApp = activeApp === "vscode" ? activeApp : null;
-    const sourceAmount = sourceApp
-      ? windowRuntimesRef.current[sourceApp].amount
-      : 1;
-    const safariStartAmount = activeApp === "safari" ? safariRuntime.amount : 1;
-    const bridge: ReturnBridge = {
-      sourceApp,
-      sourceAmount,
-      safariStartAmount,
-      safariVisible: windowGroupRef.current?.visible === true,
-      vscodeVisible: vscodeWindowGroupRef.current?.visible === true,
-      safariRuntime: {
-        ...safariRuntime,
-        animation: safariRuntime.animation
-          ? { ...safariRuntime.animation }
-          : null,
-      },
-      vscodeRuntime: {
-        ...vscodeRuntime,
-        animation: vscodeRuntime.animation
-          ? { ...vscodeRuntime.animation }
-          : null,
-      },
-      activeApp: activeAppRef.current,
-      pendingApp: pendingAppRef.current,
+    returnBridgeRef.current = {
+      ...logicalBridge,
       idleElapsed: 0,
       lastScrollY: window.scrollY,
       autoScroll: null,
     };
-    returnBridgeRef.current = bridge;
-
-    safariRuntime.animation = null;
-    if (sourceApp) {
-      const sourceRuntime = windowRuntimesRef.current[sourceApp];
-      sourceRuntime.animation = null;
-      sourceRuntime.state = "open";
-    }
-
-    if (windowGroupRef.current) windowGroupRef.current.visible = true;
-    setGeniePresentation(genieUniforms, safariStartAmount, prefersReducedMotion);
     return true;
   };
 
-  const restoreReturnBridge = (bridge: ReturnBridge) => {
-    windowRuntimesRef.current.safari = {
-      ...bridge.safariRuntime,
-      animation: bridge.safariRuntime.animation
-        ? { ...bridge.safariRuntime.animation }
-        : null,
-    };
-    windowRuntimesRef.current.vscode = {
-      ...bridge.vscodeRuntime,
-      animation: bridge.vscodeRuntime.animation
-        ? { ...bridge.vscodeRuntime.animation }
-        : null,
-    };
-    activeAppRef.current = bridge.activeApp;
-    pendingAppRef.current = bridge.pendingApp;
+  const restoreReturnBridge = (bridge: ReturnBridge) =>
+    desktopController.restore(bridge.snapshot, prefersReducedMotion, desktopPresentation);
 
-    setGeniePresentation(
-      genieUniforms,
-      bridge.safariRuntime.amount,
-      prefersReducedMotion,
-    );
-    setGeniePresentation(
-      vscodeGenieUniforms,
-      bridge.vscodeRuntime.amount,
-      prefersReducedMotion,
-    );
-    if (windowGroupRef.current) {
-      windowGroupRef.current.visible = bridge.safariVisible;
-    }
-    if (vscodeWindowGroupRef.current) {
-      vscodeWindowGroupRef.current.visible = bridge.vscodeVisible;
-    }
-  };
+  const commitReturnBridge = (bridge: ReturnBridge) =>
+    desktopController.commitReturn(bridge.sourceApp, prefersReducedMotion, desktopPresentation);
 
-  const commitReturnBridge = (bridge: ReturnBridge) => {
-    const safariRuntime = windowRuntimesRef.current.safari;
-
-    safariRuntime.animation = null;
-    safariRuntime.amount = 0;
-    safariRuntime.state = "open";
-    activeAppRef.current = "safari";
-    pendingAppRef.current = null;
-    setGeniePresentation(genieUniforms, 0, prefersReducedMotion);
-    if (windowGroupRef.current) windowGroupRef.current.visible = true;
-
-    if (!bridge.sourceApp) return;
-
-    const sourceRuntime = windowRuntimesRef.current[bridge.sourceApp];
-    sourceRuntime.animation = null;
-    sourceRuntime.amount = 1;
-    sourceRuntime.state = "minimized";
-    setGeniePresentation(
-      getWindowGenie(bridge.sourceApp),
-      1,
-      prefersReducedMotion,
-    );
-    const sourceGroup = getWindowGroup(bridge.sourceApp);
-    if (sourceGroup) sourceGroup.visible = false;
-  };
-
-  const animateWindowTo = (appId: WindowAppId, target: 0 | 1) => {
-    const browserLayout = browserLayoutRef.current;
-    const dockRenderer = dockRendererRef.current;
-    const group = getWindowGroup(appId);
-    const genie = getWindowGenie(appId);
-    const runtime = windowRuntimesRef.current[appId];
-
-    if (!browserLayout || !dockRenderer || !group) return;
-
-    configureGenieGeometry(
-      genie,
-      browserLayout,
-      dockRenderer,
-      planeWidth,
-      planeHeight,
-      getWindowDockIndex(appId),
-    );
-    group.visible = true;
-    runtime.state = "animating";
-    const distance = Math.abs(target - runtime.amount);
-    const baseDuration = prefersReducedMotion
-      ? CONFIG.workstation.GENIE_REDUCED_DURATION
-      : target === 1
-        ? CONFIG.workstation.GENIE_DURATION
-        : CONFIG.workstation.GENIE_RESTORE_DURATION;
-    runtime.animation = {
-      from: runtime.amount,
-      to: target,
-      elapsed: 0,
-      duration: Math.max(0.08, baseDuration * distance),
-    };
-  };
-
-  const showWindow = (appId: WindowAppId) => {
-    const group = getWindowGroup(appId);
-    if (!group) return;
-    const runtime = windowRuntimesRef.current[appId];
-    activeAppRef.current = appId;
-
-    if (appId === "vscode") startSourceLoad();
-
-    if (
-      runtime.state === "minimized" ||
-      (runtime.state === "animating" && runtime.animation?.to === 1)
-    ) {
-      animateWindowTo(appId, 0);
-      return;
-    }
-
-    runtime.animation = null;
-    runtime.amount = 0;
-    runtime.state = "open";
-    setGeniePresentation(getWindowGenie(appId), 0, false);
-    group.visible = true;
-  };
+  const animateWindowTo = (appId: WindowAppId, target: 0 | 1) =>
+    desktopController.animateTo(appId, target, prefersReducedMotion, desktopPresentation);
 
   const switchToApp = (appId: WindowAppId) => {
     const dockRenderer = dockRendererRef.current;
@@ -866,92 +690,15 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
     if (appId === "vscode") startSourceLoad();
 
-    const activeApp = activeAppRef.current;
-    if (activeApp === appId) {
-      const runtime = windowRuntimesRef.current[appId];
-      if (runtime.state === "animating" && runtime.animation?.to === 1) {
-        pendingAppRef.current = null;
-        animateWindowTo(appId, 0);
-      }
-      return;
-    }
-
-    if (activeApp) {
-      const activeRuntime = windowRuntimesRef.current[activeApp];
-      const activeGroup = getWindowGroup(activeApp);
-
-      if (
-        activeGroup?.visible &&
-        activeRuntime.state !== "closed" &&
-        activeRuntime.state !== "minimized"
-      ) {
-        pendingAppRef.current = appId;
-        animateWindowTo(activeApp, 1);
-        return;
-      }
-    }
-
-    showWindow(appId);
+    desktopController.switchTo(appId, prefersReducedMotion, desktopPresentation);
   };
 
-  const closeWindow = (appId: WindowAppId) => {
-    const runtime = windowRuntimesRef.current[appId];
-    runtime.animation = null;
-    runtime.amount = 0;
-    runtime.state = "closed";
-    setGeniePresentation(getWindowGenie(appId), 0, false);
-    const group = getWindowGroup(appId);
-    if (group) group.visible = false;
-    if (activeAppRef.current === appId) activeAppRef.current = null;
-  };
+  const closeWindow = (appId: WindowAppId) =>
+    desktopController.close(appId, desktopPresentation);
 
   useFrame((_, delta) => {
     if (returnBridgeRef.current || isCaseStudyActive()) return;
-
-    for (const appId of ["safari", "vscode"] as const) {
-      const runtime = windowRuntimesRef.current[appId];
-      const animation = runtime.animation;
-
-      if (!animation) continue;
-
-      animation.elapsed += delta;
-      const time = THREE.MathUtils.clamp(
-        animation.elapsed / animation.duration,
-        0,
-        1,
-      );
-      const amount = THREE.MathUtils.lerp(
-        animation.from,
-        animation.to,
-        easeInOutQuint(time),
-      );
-      runtime.amount = amount;
-      setGeniePresentation(
-        getWindowGenie(appId),
-        amount,
-        prefersReducedMotion,
-      );
-
-      if (time < 1) continue;
-
-      runtime.animation = null;
-
-      if (animation.to === 1) {
-        runtime.state = "minimized";
-        const group = getWindowGroup(appId);
-        if (group) group.visible = false;
-        if (activeAppRef.current === appId) activeAppRef.current = null;
-
-        const pendingApp = pendingAppRef.current;
-        if (pendingApp) {
-          pendingAppRef.current = null;
-          showWindow(pendingApp);
-        }
-      } else {
-        runtime.state = "open";
-        activeAppRef.current = appId;
-      }
-    }
+    desktopController.update(delta, prefersReducedMotion, desktopPresentation);
   });
 
   useFrame((_, delta) => {
@@ -1211,8 +958,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     if (vscodeRenderer) {
       updateVSCodeHover(
         vscodeRenderer,
-        activeAppRef.current === "vscode" ? pointerX : null,
-        activeAppRef.current === "vscode" ? pointerY : null,
+        desktopController.activeApp === "vscode" ? pointerX : null,
+        desktopController.activeApp === "vscode" ? pointerY : null,
       );
     }
     const pointerInsideDockContainer =
@@ -1332,7 +1079,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       capturedRef.current &&
       (!monitorHasSignal(monitorState) ||
         windowGroupRef.current?.visible !== true ||
-        windowRuntimesRef.current.safari.state === "minimized")
+        desktopController.runtimes.safari.state === "minimized")
     ) {
       return;
     }
@@ -1626,7 +1373,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     }
 
     const browserLayout = browserLayoutRef.current;
-    const activeApp = activeAppRef.current;
+    const activeApp = desktopController.activeApp;
     const activeGroup = activeApp ? getWindowGroup(activeApp) : null;
     const windowIsVisible = activeGroup?.visible === true;
 
@@ -1648,14 +1395,14 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       if (browserControl === "minimize") {
         event.stopPropagation();
 
-        if (windowRuntimesRef.current[activeApp].animation?.to !== 1) {
+        if (desktopController.runtimes[activeApp].animation?.to !== 1) {
           animateWindowTo(activeApp, 1);
         }
         return;
       }
     }
 
-    if (!activeApp || windowRuntimesRef.current[activeApp].state !== "open") {
+    if (!activeApp || desktopController.runtimes[activeApp].state !== "open") {
       return;
     }
 
@@ -1695,8 +1442,8 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
     if (!monitorHasSignal(monitorState)) return;
     if (
       returnBridgeRef.current !== null ||
-      activeAppRef.current !== "vscode" ||
-      windowRuntimesRef.current.vscode.state !== "open"
+      desktopController.activeApp !== "vscode" ||
+      desktopController.runtimes.vscode.state !== "open"
     ) {
       return;
     }

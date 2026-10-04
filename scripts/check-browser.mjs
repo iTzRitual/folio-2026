@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { checkPortfolioBrowser } from "./check-portfolio-browser.mjs";
 import { checkScrollbarBrowser } from "./check-scrollbar-browser.mjs";
 import { checkRecoveryBrowser } from "./check-recovery-browser.mjs";
+import { checkDesktopBrowser } from "./check-desktop-browser.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const timeout = 120_000;
@@ -114,6 +115,7 @@ try {
   const portfolio = process.argv.includes("--portfolio");
   const scrollbar = process.argv.includes("--scrollbar");
   const recovery = process.argv.includes("--recovery");
+  const desktop = process.argv.includes("--desktop");
   let base = urlIndex < 0 ? process.argv.slice(2).find(argument => !argument.startsWith("--")) : process.argv[urlIndex + 1];
   if (urlIndex >= 0 && !base) throw new Error("--url requires the development server URL");
   if (!base) {
@@ -150,9 +152,11 @@ try {
     socket.addEventListener("error", reject, { once: true });
   });
   const devtools = new DevTools(socket);
-  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery ? "about:blank" : url });
+  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop ? "about:blank" : url });
   const { sessionId } = await devtools.send("Target.attachToTarget", { targetId, flatten: true });
-  if (recovery) {
+  if (desktop) {
+    console.log(await checkDesktopBrowser(devtools, sessionId, base));
+  } else if (recovery) {
     console.log(await checkRecoveryBrowser(devtools, sessionId, base, path.join(root, "plans/browser-regressions")));
   } else if (scrollbar) {
     console.log(await checkScrollbarBrowser(devtools, sessionId, base));

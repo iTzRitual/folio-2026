@@ -13,7 +13,8 @@
     "test:portfolio": "node scripts/check-browser.mjs --portfolio",
     "test:scrollbar": "node scripts/check-browser.mjs --scrollbar",
     "test:recovery": "node scripts/check-browser.mjs --recovery",
-    "test": "node scripts/check-import-boundaries.mjs && node scripts/check-monitor.mjs && node scripts/check-monitor.mjs scripts/check-root-scroll-lock.ts && node scripts/check-monitor.mjs scripts/check-source-manifest.ts && node scripts/check-monitor.mjs scripts/check-details-layout.ts && node scripts/check-source-publication.mjs && node scripts/check-workstation.mjs && node scripts/check-monitor.mjs scripts/check-workstation-scrollbar.ts && node scripts/check-monitor.mjs scripts/check-skull-particles.ts && node scripts/check-monitor.mjs scripts/check-skull-fragments.ts && node scripts/check-monitor.mjs scripts/check-project-orbit.ts && node scripts/check-monitor.mjs scripts/check-pointer-camera.ts",
+    "test:desktop": "node scripts/check-browser.mjs --desktop",
+    "test": "node scripts/check-import-boundaries.mjs && node scripts/check-monitor.mjs && node scripts/check-monitor.mjs scripts/check-root-scroll-lock.ts && node scripts/check-monitor.mjs scripts/check-source-manifest.ts && node scripts/check-monitor.mjs scripts/check-details-layout.ts && node scripts/check-source-publication.mjs && node scripts/check-workstation.mjs && node scripts/check-monitor.mjs scripts/check-workstation-desktop.ts && node scripts/check-monitor.mjs scripts/check-workstation-scrollbar.ts && node scripts/check-monitor.mjs scripts/check-skull-particles.ts && node scripts/check-monitor.mjs scripts/check-skull-fragments.ts && node scripts/check-monitor.mjs scripts/check-project-orbit.ts && node scripts/check-monitor.mjs scripts/check-pointer-camera.ts",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
