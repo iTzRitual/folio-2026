@@ -49,7 +49,8 @@ export const projectOrbitVertexShader = `
   vec3 ribbonPoint(float angle, float height) {
     float curvature = 1.0 - uRibbon.w;
     if (curvature < 0.0001) return vec3(angle, height, 1.0) * uRibbon.x;
-    return vec3(sin(angle * curvature) / curvature, height, 1.0 - 2.0 * pow(sin(angle * curvature * 0.5), 2.0) / curvature) * uRibbon.x;
+    float halfAngleSin = sin(angle * curvature * 0.5);
+    return vec3(sin(angle * curvature) / curvature, height, 1.0 - 2.0 * halfAngleSin * halfAngleSin / curvature) * uRibbon.x;
   }
   void main() {
     vUv = uv;

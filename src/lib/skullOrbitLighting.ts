@@ -63,7 +63,8 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
           float theta = angle + skullOrbitPhase;
           float edgeVisibility = 1.0 - (1.0 - skullOrbitCurvature) * smoothstep(${CONFIG.heroAssembly.EDGE_FADE_START * Math.PI}, ${Math.PI}, abs(theta));
           emerged *= edgeVisibility;
-          vec2 ribbonPoint = skullOrbitCurvature < 0.0001 ? vec2(theta, 1.0) : vec2(sin(theta * skullOrbitCurvature) / skullOrbitCurvature, 1.0 - 2.0 * pow(sin(theta * skullOrbitCurvature * 0.5), 2.0) / skullOrbitCurvature);
+          float halfAngleSin = sin(theta * skullOrbitCurvature * 0.5);
+          vec2 ribbonPoint = skullOrbitCurvature < 0.0001 ? vec2(theta, 1.0) : vec2(sin(theta * skullOrbitCurvature) / skullOrbitCurvature, 1.0 - 2.0 * halfAngleSin * halfAngleSin / skullOrbitCurvature);
           vec3 cardPoint = vec3(phaseCos * ribbonPoint.x - phaseSin * ribbonPoint.y, clamp(vSkullOrbitPosition.y, -orbitHalfHeight, orbitHalfHeight), phaseSin * ribbonPoint.x + phaseCos * ribbonPoint.y);
           vec3 toCard = cardPoint - vSkullOrbitPosition;
           float facing = max(dot(orbitNormal, normalize(toCard + vec3(0.00001))), 0.0);
@@ -85,7 +86,7 @@ export function applySkullOrbitLighting(material: Material, uniforms: ReturnType
       #include <opaque_fragment>
     `);
   };
-  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-orbit-light-v4`;
+  material.customProgramCacheKey = () => `${cacheKey.call(material)}:skull-orbit-light-v5`;
   material.needsUpdate = true;
   return () => {
     material.onBeforeCompile = compile;
