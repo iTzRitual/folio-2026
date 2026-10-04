@@ -39,6 +39,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   const { progressRef, revealProgressRef } = useHeroTransition();
   const { startTrigger } = useAnimationContext();
   const reducedMotion = usePrefersReducedMotion();
+  const videoAllowed = !reducedMotion && qualityTier !== "low";
   const signal = useOrbitSignal();
   const skullBounds = useMemo(() => {
     skullGeometry.computeBoundingBox();
@@ -116,7 +117,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
   }, [texture, hudTexture, radius, layout]);
 
   useEffect(() => {
-    if (reducedMotion || qualityTier === "low" || !project.loop) return;
+    if (!videoAllowed || !project.loop) return;
     const video = document.createElement("video");
     video.muted = true;
     video.loop = true;
@@ -162,7 +163,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       material.uniforms.uCover.value.set(Math.max(1, PROJECT_ORBIT_ASPECT / aspect), Math.max(1, aspect / PROJECT_ORBIT_ASPECT));
       videoTexture.dispose();
     };
-  }, [material, texture, reducedMotion, qualityTier]);
+  }, [material, texture, videoAllowed]);
 
   useEffect(() => () => geometries.forEach((geometry) => geometry.dispose()), [geometries]);
   useEffect(() => () => material.dispose(), [material]);
@@ -233,7 +234,8 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
       group.current.rotation.z = MathUtils.degToRad(settings.tiltZ) * (1 - assembly.unfold);
       group.current.visible = currentMaterial.uniforms.uOpacity.value > 0.001 && exit < 1;
       group.current.getWorldPosition(currentMaterial.uniforms.uOrbitCenter.value);
-      group.current.getWorldScale(worldScale);
+      group.current.updateWorldMatrix(true, false);
+      worldScale.setFromMatrixScale(group.current.matrixWorld);
       currentMaterial.uniforms.uOrbitRadius.value = radius * worldScale.x;
       currentMaterial.uniforms.uOrbitWorld.value.copy(group.current.matrixWorld);
       if (group.current.visible && skullRef.current) {

@@ -1,7 +1,7 @@
 import { MeshTransmissionMaterial } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
-import { DataTexture, Material, Vector3, type BufferGeometry, type Mesh, type Plane, type Texture } from "three";
+import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { DataTexture, Material, Vector3, type BufferGeometry, type Mesh, type MeshPhysicalMaterial, type Plane, type Texture } from "three";
 import { CONFIG } from "@/config/constants";
 import { applySkullFragmentShader } from "@/lib/skullFragments";
 import type { SkullSimulationUniforms } from "@/lib/skullParticles";
@@ -11,6 +11,8 @@ import { useOrbitSignal } from "@/context/OrbitSignalContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { heroAssemblyAt } from "@/lib/heroAssembly";
+
+type SkullTransmissionMaterial = MeshPhysicalMaterial & { buffer?: Texture };
 
 export function SkullGlass({
   geometry,
@@ -25,13 +27,13 @@ export function SkullGlass({
   clippingPlanes: Plane[];
   fragments?: SkullSimulationUniforms;
 }) {
-  const mesh = useRef<Mesh>(null);
+  const mesh = useRef<Mesh<BufferGeometry, SkullTransmissionMaterial>>(null);
   const { config } = useOrbitSignal();
   const { progressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
   const exitDissolve = useRef({ value: 0 });
   const orbitLighting = useRef(createSkullOrbitLightingUniforms());
-  const material = useRef<ComponentRef<typeof MeshTransmissionMaterial>>(null);
+  const material = useRef<SkullTransmissionMaterial>(null);
   const refractionBuffer = useRef<Texture | null>(null);
   const scale = useMemo(() => new Vector3(), []);
   const blankBuffer = useMemo(() => {
@@ -43,12 +45,15 @@ export function SkullGlass({
   useEffect(() => () => blankBuffer.dispose(), [blankBuffer]);
 
   useLayoutEffect(() => {
-    if (!(material.current instanceof Material)) return;
-    const restoreFragments = fragments ? applySkullFragmentShader(material.current, fragments, exitDissolve.current) : undefined;
-    const restoreLighting = applySkullOrbitLighting(material.current, orbitLighting.current);
+    const current = mesh.current?.material;
+    if (!(current instanceof Material)) return;
+    material.current = current;
+    const restoreFragments = fragments ? applySkullFragmentShader(current, fragments, exitDissolve.current) : undefined;
+    const restoreLighting = applySkullOrbitLighting(current, orbitLighting.current);
     return () => {
       restoreLighting();
       restoreFragments?.();
+      if (material.current === current) material.current = null;
     };
   }, [fragments, lowQuality]);
 
@@ -71,7 +76,8 @@ export function SkullGlass({
     }
     const current = material.current.buffer;
     if (current && current !== blankBuffer) refractionBuffer.current = current;
-    mesh.current.getWorldScale(scale);
+    mesh.current.updateWorldMatrix(true, false);
+    scale.setFromMatrixScale(mesh.current.matrixWorld);
     let visible = scale.x > CONFIG.model.TRANSMISSION_MIN_SCALE;
     mesh.current.traverseAncestors((parent) => { visible = visible && parent.visible; });
     material.current.buffer = visible
@@ -82,7 +88,6 @@ export function SkullGlass({
   return (
     <mesh ref={mesh} geometry={geometry} frustumCulled={!fragments} raycast={() => null}>
       <MeshTransmissionMaterial
-        ref={material}
         {...CONFIG.model.GLASS}
         transparent
         clippingPlanes={clippingPlanes}

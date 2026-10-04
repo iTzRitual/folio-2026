@@ -120,7 +120,8 @@ export function SkullParticles({
     const assembly = heroAssemblyAt(progressRef.current, reducedMotion);
     if (inDetails && !previousDetails.current) particles.reset();
     previousDetails.current = inDetails;
-    object.getWorldScale(worldScale);
+    object.updateWorldMatrix(true, false);
+    worldScale.setFromMatrixScale(object.matrixWorld);
     let visible = worldScale.x !== 0 && worldScale.y !== 0 && worldScale.z !== 0;
     object.traverseAncestors(parent => { visible = visible && parent.visible; });
     const running = visible && object.visible && !document.hidden && settings.scale > 0
