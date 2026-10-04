@@ -1378,7 +1378,7 @@ export function setHtmlOverlayVisibility(
   if (!container) return;
 
   for (const child of container.children) {
-    if (child instanceof HTMLElement && !child.contains(canvas)) {
+    if (child instanceof HTMLElement && !child.contains(canvas) && !child.classList.contains("workstation-control-overlay")) {
       child.classList.toggle("workstation-html-overlay-hidden", hidden);
     }
   }

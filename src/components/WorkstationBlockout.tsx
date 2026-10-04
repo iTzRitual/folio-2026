@@ -7,6 +7,7 @@ import { useGLTF, useTexture } from "@react-three/drei";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
+import { LevitatingLamp } from "./LevitatingLamp";
 import { DeskCollectionProps } from "./WorkstationDeskProps";
 import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
 export { Block } from "./WorkstationPrimitives";
@@ -39,8 +40,8 @@ function FramedArtwork({ name, position, size, rotation, texture }: {
   </group>;
 }
 
-export function DesktopProxies({ supportY }: { supportY: number }) {
-  const { workstation: w, lighting } = useDebugSettings();
+export function DesktopProxies({ supportY, worldScale }: { supportY: number; worldScale: number }) {
+  const { workstation: w } = useDebugSettings();
   return <group name="DesktopAccessories">
     <DeskCollectionProps supportY={supportY} />
     <group name="Mouse" position={xyz(w.mousePosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.mouse), 0]}>
@@ -58,21 +59,7 @@ export function DesktopProxies({ supportY }: { supportY: number }) {
       <Block size={[0.007, 0.004, 0.023]} position={[-0.046, 0.046, -0.018]} color={bone} />
       {[[0.04, -0.025], [0.054, -0.013], [0.028, -0.013], [0.04, 0]].map(([x, z], i) => <Cylinder key={i} radius={0.004} height={0.004} position={[x, 0.045, z]} color={bone} />)}
     </group>
-    <group name="DeskLamp" position={xyz(w.lampPosition, supportY)} scale={CONFIG.workstation.LAMP_SCALE}>
-      <Cylinder radius={0.073} height={0.018} position={[0, 0.009, 0]} />
-      <Cylinder radius={0.009} height={0.25} position={[0.025, 0.13, 0]} rotation={[0, 0, -0.2]} />
-      <Cylinder radius={0.009} height={0.23} position={[0.012, 0.358, 0]} rotation={[0, 0, 0.34]} />
-      <group position={[-0.03, 0.49, 0.015]} rotation={[0.2, 0, -0.25]}>
-        <mesh raycast={noRaycast}>
-          <coneGeometry args={[0.075, 0.09, 24, 1, true]} />
-          <meshStandardMaterial color="#6b7765" side={2} roughness={0.7} />
-        </mesh>
-        <mesh position={[0, -0.035, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={noRaycast}>
-          <circleGeometry args={[0.061, 20]} />
-          <meshBasicMaterial color={lighting.mode === "night" ? "#ffd28d" : "#b8ac90"} side={2} />
-        </mesh>
-      </group>
-    </group>
+    <LevitatingLamp supportY={supportY} worldScale={worldScale} />
   </group>;
 }
 

@@ -85,7 +85,7 @@ export function WorkstationEnvironment({ width }: { width: number }) {
       <primitive object={resources.deskModel} position={[w.deskPosition.x, supportY, w.deskPosition.z]} scale={[w.deskScale.x, w.deskScale.y, w.deskScale.z]} />
       {[-1, 1].flatMap(x => [-1, 1].map(z => <Block key={`${x}:${z}`} size={[0.038, 0.68, 0.038]} position={[w.deskPosition.x + x * (deskWidth / 2 - 0.065), supportY - 0.38, w.deskPosition.z + z * (deskDepth / 2 - 0.08)]} color="#353a37" />))}
       <primitive object={resources.keyboardModel} position={[w.keyboardPosition.x, supportY + w.keyboardPosition.y, w.keyboardPosition.z]} rotation={degrees(w.keyboardRotation)} scale={w.keyboardScale} />
-      <group ref={accessories}><DesktopProxies supportY={supportY} /></group>
+      <group ref={accessories}><DesktopProxies supportY={supportY} worldScale={scale} /></group>
       <mesh name="DeskContactShadow" position={[w.deskPosition.x, supportY + CONFIG.workstation.CONTACT_SHADOW_OFFSET, w.deskPosition.z]} rotation={[Math.PI / 2, 0, 0]} material={shadows[0].material} raycast={() => null}>
         <planeGeometry args={[deskWidth, deskDepth]} />
       </mesh>
@@ -100,6 +100,5 @@ export function WorkstationEnvironment({ width }: { width: number }) {
     <Block name="Floor" size={[CONFIG.workstation.WALL_SIZE.x, 0.04, 6]} position={[0, supportY - 0.74, 0]} color="#51554f" />
     <ambientLight intensity={lighting.fillLight * (night ? CONFIG.workstation.LIGHT_NIGHT_FILL_MULT : 1)} color={night ? "#a8b9db" : "#e1dfd0"} />
     <pointLight name="WindowLight" position={[w.windowPosition.x, supportY + w.windowPosition.y, w.windowPosition.z + CONFIG.workstation.LIGHT_WINDOW_OFFSET_Z]} intensity={lighting.windowLight * (night ? CONFIG.workstation.LIGHT_NIGHT_WINDOW_MULT : 1) * scale * scale} distance={3 * scale} decay={2} color={night ? "#6c94ce" : "#d9eceb"} />
-    <pointLight name="LampLight" position={[w.lampPosition.x + CONFIG.workstation.LIGHT_LAMP_OFFSET.x * CONFIG.workstation.LAMP_SCALE, supportY + w.lampPosition.y + CONFIG.workstation.LIGHT_LAMP_OFFSET.y * CONFIG.workstation.LAMP_SCALE, w.lampPosition.z + CONFIG.workstation.LIGHT_LAMP_OFFSET.z * CONFIG.workstation.LAMP_SCALE]} intensity={lighting.lampLight * (night ? 1 : CONFIG.workstation.LIGHT_DAY_LAMP_MULT) * scale * scale * CONFIG.workstation.LIGHT_LAMP_POWER_MULT} distance={1.2 * scale} decay={2} color="#ffd096" />
   </group>;
 }
