@@ -10,7 +10,9 @@ The cabinet is a 2x2 LP unit with four 40.5 cm square openings, 24 mm panels, an
 
 The featured sleeve follows the cabinet's right side in depth, with a 90-degree yaw and an 8-degree lean toward the side panel. Its entire bottom edge rests on the desk; its back contacts the side panel's upper rim. Its placement is checked against the cabinet volume and tabletop bounds. The horizontal skateboard remains 80.5 by 20.32 cm.
 
-The window opening, exterior, sill plant, books, lamp, Monster Energy can, compact speakers, polaroids, framed prints, skateboard, and record storage remain low-resolution blockouts. The framed prints use crops from the supplied artwork reference image. No new asset downloads or dependencies were added.
+The window opening, exterior, sill plant, books, lamp, Monster Energy can, compact speakers, polaroids, framed prints, and record storage were low-resolution blockouts in this pass. The framed prints use crops from the supplied artwork reference image. No new asset downloads or dependencies were added.
+
+The skateboard has since been replaced with the [finished Nervous deck](../skateboard/README.md): curved maple geometry, layered edges, mounting holes and the owner's photographed graphic. Trucks and wheels are omitted until their own detail pass.
 
 The speakers use simple wood-sided boxes with exposed driver discs inspired by the Edifier R1280DB, angled inward by 12 degrees. The left speaker sits 12 cm farther left than in the initial refinement. The can remains over 23 cm from the mouse. Both framed prints clear the skateboard and room corner. A perpendicular side wall joins the back wall; a lighter neutral material makes the corner visible. Camera settings, CRT placement, desk accessories, window, and lamp placement are unchanged in this right-side pass.
 

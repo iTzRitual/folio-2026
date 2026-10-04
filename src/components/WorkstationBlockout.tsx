@@ -8,6 +8,7 @@ import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
 import { LevitatingLamp } from "./LevitatingLamp";
+import { SkateboardDeck } from "./SkateboardDeck";
 import { DeskCollectionProps } from "./WorkstationDeskProps";
 import { WorkstationController } from "./WorkstationController";
 import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
@@ -132,13 +133,7 @@ export function WallProxies({ supportY }: { supportY: number }) {
       texture={ronaldoArtwork}
     />
     <group name="WallSkateboard" position={xyz(w.skateboardPosition, supportY)} rotation={[0, 0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.skateboard)]}>
-      <Block size={[CONFIG.workstation.SKATEBOARD_SIZE.width, CONFIG.workstation.SKATEBOARD_SIZE.length - CONFIG.workstation.SKATEBOARD_SIZE.width, CONFIG.workstation.SKATEBOARD_SIZE.thickness]} color="#514d40" />
-      {[-1, 1].map(side => <group key={side}>
-        <Ellipsoid size={[CONFIG.workstation.SKATEBOARD_SIZE.width / 2, CONFIG.workstation.SKATEBOARD_SIZE.width / 2, CONFIG.workstation.SKATEBOARD_SIZE.thickness / 2]} position={[0, side * (CONFIG.workstation.SKATEBOARD_SIZE.length - CONFIG.workstation.SKATEBOARD_SIZE.width) / 2, 0]} color="#514d40" />
-        <Block size={[0.14, 0.025, 0.035]} position={[0, side * 0.245, 0.04]} color="#a5aaa5" />
-        {[-1, 1].map(x => <Cylinder key={x} radius={0.028} height={0.024} position={[x * 0.082, side * 0.245, 0.06]} rotation={[0, 0, Math.PI / 2]} color={bone} />)}
-      </group>)}
-      <Block size={[0.165, 0.27, 0.003]} position={[0, 0, 0.012]} color="#838779" />
+      <SkateboardDeck />
     </group>
     <group name="WindowsillPlant" position={xyz(w.plantPosition, supportY)}>
       <mesh position={[0, 0.047, 0]} raycast={noRaycast}>
