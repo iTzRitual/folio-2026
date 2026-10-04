@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "width_m": 0.20319999754428864,
+  "length_m": 0.8050000071525574,
+  "reference_width_px": 251.0,
+  "compared_rows": 993,
+  "silhouette_width_rmse_px": 0.7076798899299876,
+  "silhouette_width_max_error_px": 2.4027937323351694
+}

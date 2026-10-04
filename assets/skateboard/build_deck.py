@@ -12,8 +12,23 @@ PROJECT = OUT.parents[1]
 WIDTH, LENGTH, THICKNESS = .2032, .805, .008
 ROWS, COLUMNS = 112, 24
 EDGE_SEGMENTS = 14
+EDGE_RADIUS = .00065
+FACE_SCALE_X = (WIDTH - 2 * EDGE_RADIUS) / WIDTH
+FACE_SCALE_Y = (LENGTH - 2 * EDGE_RADIUS) / LENGTH
 PHOTO_EDGE_INSET = 8
 PHOTO_WIDTH, PHOTO_HEIGHT = 1824, 1368
+SHAPE_PROFILE = json.loads((OUT / 'shape-profile.json').read_text())
+SHAPE_SAMPLES = np.array(SHAPE_PROFILE['samples'])
+SHAPE_INTERVALS = np.diff(SHAPE_SAMPLES[:, 0])
+SHAPE_SECANTS = np.diff(SHAPE_SAMPLES[:, 1]) / SHAPE_INTERVALS
+SHAPE_SLOPES = np.zeros(len(SHAPE_SAMPLES))
+SHAPE_SLOPES[0], SHAPE_SLOPES[-1] = SHAPE_SECANTS[0], SHAPE_SECANTS[-1]
+for i in range(1, len(SHAPE_SAMPLES) - 1):
+    left, right = SHAPE_SECANTS[i - 1:i + 1]
+    if left * right > 0:
+        a = 2 * SHAPE_INTERVALS[i] + SHAPE_INTERVALS[i - 1]
+        b = SHAPE_INTERVALS[i] + 2 * SHAPE_INTERVALS[i - 1]
+        SHAPE_SLOPES[i] = (a + b) / (a / left + b / right)
 OUTLINE = np.array([
     [144, 680, 680], [153, 626, 751], [180, 553, 819],
     [230, 510, 855], [300, 491, 875], [400, 490, 882],
@@ -57,16 +72,24 @@ ply.node_tree.links.new(edge_attribute.outputs['Color'], ply.node_tree.nodes.get
 
 
 def half_width(y):
-    t = min(1, abs(y) / (LENGTH / 2))
-    exponent = 7 if y < 0 else 6.5
-    return WIDTH / 2 * math.sqrt(max(0, 1 - t ** exponent))
+    along = min(1, max(0, .5 - y / LENGTH))
+    i = min(len(SHAPE_INTERVALS) - 1, max(0, np.searchsorted(SHAPE_SAMPLES[:, 0], along) - 1))
+    span = SHAPE_INTERVALS[i]
+    t = (along - SHAPE_SAMPLES[i, 0]) / span
+    squared = ((2 * t ** 3 - 3 * t ** 2 + 1) * SHAPE_SAMPLES[i, 1]
+               + (t ** 3 - 2 * t ** 2 + t) * span * SHAPE_SLOPES[i]
+               + (-2 * t ** 3 + 3 * t ** 2) * SHAPE_SAMPLES[i + 1, 1]
+               + (t ** 3 - t ** 2) * span * SHAPE_SLOPES[i + 1])
+    return WIDTH / 2 * math.sqrt(max(0, squared))
 
 
 def profile(x, y):
-    t = abs(y) / (LENGTH / 2)
-    kick = max(0, (t - .57) / .43)
-    lift = (.035 if y < 0 else .043) * kick ** 1.65
-    concave = .007 * (x / (WIDTH / 2)) ** 2
+    bend_start, bend_length = .215, .045
+    distance = max(0, abs(y) - bend_start)
+    bend = min(1, distance / bend_length)
+    slope = math.tan(math.radians(13 if y < 0 else 15))
+    lift = slope * (bend_length * (bend ** 3 - .5 * bend ** 4) + max(0, distance - bend_length))
+    concave = .006 * (x / (WIDTH / 2)) ** 2
     return -lift - concave
 
 
@@ -86,7 +109,7 @@ for side in [1, -1]:
     for y in ys:
         for c in range(COLUMNS + 1):
             x = half_width(y) * (c / COLUMNS * 2 - 1)
-            vertices.append((x, y, profile(x, y) + side * THICKNESS / 2))
+            vertices.append((x * FACE_SCALE_X, y * FACE_SCALE_Y, profile(x, y) + side * THICKNESS / 2))
 surface_count = (ROWS + 1) * (COLUMNS + 1)
 for side in range(2):
     for r in range(ROWS):
@@ -105,10 +128,10 @@ for layer in range(1, EDGE_SEGMENTS):
     ring = []
     for index in boundary:
         x, y, z = vertices[index]
-        bevel = .00065 * math.sin(math.pi * fraction)
-        normal = Vector((x / (WIDTH / 2) ** 2, y / (LENGTH / 2) ** 2, 0)).normalized()
+        bevel = math.sin(math.pi * fraction)
         ring.append(len(vertices))
-        vertices.append((x + normal.x * bevel, y + normal.y * bevel, z - THICKNESS * fraction))
+        vertices.append((x * (1 + (1 / FACE_SCALE_X - 1) * bevel),
+                         y * (1 + (1 / FACE_SCALE_Y - 1) * bevel), z - THICKNESS * fraction))
     rings.append(ring)
 rings.append([i + surface_count for i in boundary])
 for r in range(len(rings) - 1):
@@ -223,6 +246,11 @@ assert all(edge.is_manifold for edge in bm.edges), 'Deck must be watertight, inc
 bmesh.ops.triangulate(bm, faces=list(bm.faces))
 bm.to_mesh(deck.data)
 bm.free()
+extent_x = max(abs(vertex.co.x) for vertex in deck.data.vertices)
+extent_y = max(abs(vertex.co.y) for vertex in deck.data.vertices)
+for vertex in deck.data.vertices:
+    vertex.co.x *= WIDTH / (2 * extent_x)
+    vertex.co.y *= LENGTH / (2 * extent_y)
 deck['dimensions_m'] = [WIDTH, LENGTH, THICKNESS]
 deck['construction'] = 'Seven-ply maple, asymmetric kicks, transverse concave, eight open mounting holes'
 deck['texture_source'] = 'Owner photograph IMG_7519.HEIC, projected and baked without generated artwork'
@@ -275,6 +303,18 @@ def render(name, location):
 
 render('preview.png', (0, 0, 1.5))
 render('profile.png', (.25, -.85, .75))
+blank = material('Shape inspection | unprinted maple', (.48, .31, .16), .72)
+deck.data.materials[0] = blank
+deck.rotation_euler.z = 0
+scene.render.resolution_x = 440
+scene.render.resolution_y = 1400
+camera.data.ortho_scale = .88
+render('shape-check.png', (0, 0, 1.5))
+deck.data.materials[0] = graphic
+deck.rotation_euler.z = -math.pi / 2
+scene.render.resolution_x = 1600
+scene.render.resolution_y = 620
+camera.data.ortho_scale = .94
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT / 'skateboard-deck.blend'))
 report = {
     'nominal_dimensions_m': [WIDTH, LENGTH, THICKNESS],
