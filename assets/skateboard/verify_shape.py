@@ -24,7 +24,8 @@ def accessor(index):
 
 
 triangles = []
-for primitive in document['meshes'][0]['primitives']:
+deck_node = next(node for node in document['nodes'] if node.get('name') == 'Skateboard_Deck')
+for primitive in document['meshes'][deck_node['mesh']]['primitives']:
     positions = accessor(primitive['attributes']['POSITION'])
     indices = accessor(primitive['indices']).reshape(-1, 3)
     triangles.append(positions[indices])

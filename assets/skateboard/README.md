@@ -1,12 +1,14 @@
-# Nervous skateboard deck
+# Nervous skateboard
 
-Finished deck replacing the wall skateboard blockout. The existing wall position and -90° rotation remain in `CONFIG.workstation`. Trucks and wheels are omitted for this pass.
+Finished skateboard replacing the wall blockout. The existing wall position and -90° rotation remain in `CONFIG.workstation`.
 
 The deck is 80.5 × 20.32 cm with an 8 mm maple shell, transverse concave, asymmetric nose/tail kicks, rounded seven-ply edges, a dark grip surface and eight open mounting holes. The outline is measured from the left deck in the owner's `shape-reference.png`, with raster noise smoothed before interpolation. This preserves the long parallel sides and distinct rounded ends of that reference. The 8-inch width includes the rounded edge. The nose/tail bend blends into straight kicks at 15°/13°; side curvature is a modeling approximation because the supplied shape reference is frontal.
 
 The [Skate Warehouse 8-inch blank](https://www.skatewarehouse.com/Skate_Warehouse_Premium_Blank_Deck/descpage-SW80DK.html) was checked as a dimensional reference for the popsicle category. No third-party model was imported. Each veneer band has a uniform edge color; photographed wear stays on the printed face.
 
 `reference.jpg` is a JPEG conversion of the owner's `IMG_7519.HEIC`. The builder uses one affine photo projection with constant scale across the deck and a global skew correction measured between the truck mounts. The graphic is clipped by the silhouette instead of stretched to follow its width. The mounting holes form parallel rectangular patterns aligned with the photographed marks. Only the visible underside is baked into `deck-albedo.jpg` (2048 × 512), preserving the Nervous graphic, Vans/DC stickers, scratches, mounting marks and white circular pads. No replacement artwork was generated. Some lighting and wear from the photograph remain in the base color.
+
+`build_hardware.py` adds two satin-black cast trucks with white photographic branding, orange bushings, steel axles, washers, mounting screws and locknuts. The owner's `truck-front-reference.png` and `truck-detail-reference.png` supply the shape and finish references. Both assemblies align with the existing deck mounting patterns, with kingpins facing inward. Four rounded urethane wheels have recessed bearings and a plain lime-green base color (`#8bd600`), without graphics or texture maps. Their 54 mm diameter and 32 mm width are modeling estimates from the owner's photograph, not measured product specifications.
 
 Run from the project root with Blender 4.2 or later:
 
@@ -18,6 +20,6 @@ python assets/skateboard/verify_shape.py
 
 The tracing script requires Pillow; the shape validator requires Pillow and NumPy. The Blender builder reads the saved `shape-profile.json` and needs only Blender's bundled modules. `verify_shape.py` compares horizontal slices of the exported GLB against the supplied silhouette and verifies the final width and length. `shape-check.png` renders the deck vertically without the printed graphic so its outline can be inspected directly.
 
-The builder verifies that the mesh is watertight, exports `public/glbs/skateboard-deck.glb` with three materials and one embedded JPEG, and saves an editable packed `skateboard-deck.blend`, front/profile renders and `asset-report.json`. Blender source coordinates match Three.js: X across the deck, Y along its length, +Z toward the printed underside. The Blender preview applies the wall rotation after export.
+The builder verifies that the deck mesh is watertight, exports `public/glbs/skateboard-deck.glb` with nine materials and two embedded images, and saves an editable packed `skateboard-deck.blend`, front/profile renders and `asset-report.json`. The `Skateboard_Assembly` root contains the deck and two truck groups. Hardware is consolidated into fourteen meshes, including four separate wheels. Blender source coordinates match Three.js: X across the deck, Y along its length, +Z toward the printed underside. The Blender preview applies the wall rotation after export.
 
-`npm test` checks the exported dimensions, kick depth, orientation and wall clearance alongside the workstation's existing checks.
+`npm test` checks the exported deck dimensions, kick depth, orientation, wall clearance, truck presence, wheel count, diameter and deck clearance alongside the workstation's existing checks.

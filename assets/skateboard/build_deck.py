@@ -1,5 +1,6 @@
 import json
 import math
+import sys
 from pathlib import Path
 
 import bmesh
@@ -9,6 +10,9 @@ from mathutils import Matrix, Vector
 
 OUT = Path(__file__).resolve().parent
 PROJECT = OUT.parents[1]
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(OUT))
+from build_hardware import build_hardware
 WIDTH, LENGTH, THICKNESS = .2032, .805, .008
 ROWS, COLUMNS = 112, 24
 EDGE_SEGMENTS = 14
@@ -251,8 +255,20 @@ for vertex in deck.data.vertices:
 deck['dimensions_m'] = [WIDTH, LENGTH, THICKNESS]
 deck['construction'] = 'Seven-ply maple, asymmetric kicks, transverse concave, eight open mounting holes'
 deck['texture_source'] = 'Owner photograph IMG_7519.HEIC, projected and baked without generated artwork'
+mount_positions = [mounting_position(*hole) for hole in HOLES]
+assembly, hardware = build_hardware(
+    deck,
+    [sum(y for _, y in mount_positions[i:i + 4]) / 4 for i in (0, 4)],
+    (abs(mount_positions[0][0] - mount_positions[2][0]), abs(mount_positions[0][1] - mount_positions[1][1])),
+    lambda x, y: profile(x, y) + THICKNESS / 2,
+)
 bpy.ops.object.select_all(action='DESELECT')
 deck.select_set(True)
+assembly.select_set(True)
+for truck in assembly.children:
+    truck.select_set(True)
+for obj in hardware:
+    obj.select_set(True)
 bpy.context.view_layer.objects.active = deck
 target = PROJECT / 'public/glbs/skateboard-deck.glb'
 bpy.ops.export_scene.gltf(filepath=str(target), export_format='GLB', export_yup=False,
@@ -264,12 +280,13 @@ for img in list(bpy.data.images):
     elif img.source == 'FILE':
         img.pack()
 
-deck.rotation_euler.z = -math.pi / 2
+assembly.rotation_euler.z = -math.pi / 2
 scene.world.color = (.22, .22, .22)
 scene.render.engine = 'CYCLES'
 scene.cycles.samples = 32
 scene.cycles.use_denoising = True
 scene.view_settings.view_transform = 'AgX'
+scene.view_settings.exposure = -1
 for location, energy, size in [((-.3, .7, 1.2), 55, 1.1), ((.5, -.4, .8), 22, .8)]:
     bpy.ops.object.light_add(type='AREA', location=location)
     light = bpy.context.object
@@ -302,13 +319,17 @@ render('preview.png', (0, 0, 1.5))
 render('profile.png', (.25, -.85, .75))
 blank = material('Shape inspection | unprinted maple', (.48, .31, .16), .72)
 deck.data.materials[0] = blank
-deck.rotation_euler.z = 0
+assembly.rotation_euler.z = 0
+for obj in hardware:
+    obj.hide_render = True
 scene.render.resolution_x = 440
 scene.render.resolution_y = 1400
 camera.data.ortho_scale = .88
 render('shape-check.png', (0, 0, 1.5))
 deck.data.materials[0] = graphic
-deck.rotation_euler.z = -math.pi / 2
+assembly.rotation_euler.z = -math.pi / 2
+for obj in hardware:
+    obj.hide_render = False
 scene.render.resolution_x = 1600
 scene.render.resolution_y = 620
 camera.data.ortho_scale = .94
@@ -322,6 +343,9 @@ report = {
     'watertight': True,
     'texture_px': [2048, 512],
     'glb_bytes': target.stat().st_size,
+    'hardware_meshes': len(hardware),
+    'wheel_diameter_m': .054,
+    'hardware_triangles': sum(sum(len(p.vertices) - 2 for p in obj.data.polygons) for obj in hardware),
 }
 (OUT / 'asset-report.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report))

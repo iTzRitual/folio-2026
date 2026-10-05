@@ -64,13 +64,22 @@ const frame = getCRTReferenceFrame(crt);
 const C = CONFIG.workstation;
 const skateboard = boundsModel(`public${C.SKATEBOARD_MODEL_URL}`);
 assert(skateboard.getObjectByName("Skateboard_Deck"), "Wall skateboard loads the finished deck");
-const deckBounds = new THREE.Box3().setFromObject(skateboard);
+const deckBounds = new THREE.Box3().setFromObject(skateboard.getObjectByName("Skateboard_Deck"));
 const deckSize = deckBounds.getSize(new THREE.Vector3());
 assert(Math.abs(deckSize.x - C.SKATEBOARD_SIZE.width) < 0.0015, "Deck preserves its eight-inch width including the rounded edge");
 assert(Math.abs(deckSize.y - C.SKATEBOARD_SIZE.length) < 0.0015, "Deck preserves its wall placement envelope");
 assert(deckSize.z > 0.04 && deckSize.z < 0.06, "Deck includes raised nose and tail");
 assert(deckBounds.max.z < 0.006, "Graphic faces the room with kicks curving toward the wall");
 assert(C.SKATEBOARD_POSITION.z + deckBounds.min.z > C.WINDOW_POSITION.z - 0.01, "Deck clears the rear wall");
+const wheels = [];
+skateboard.traverse(object => { if (object.name.startsWith("Wheel_")) wheels.push(object); });
+assert(wheels.length === 4, "Skateboard has four wheels");
+for (const wheel of wheels) {
+  const box = new THREE.Box3().setFromObject(wheel, true);
+  assert(box.min.z > deckBounds.max.z + 0.01, "Wheel clears the printed deck surface");
+  assert(Math.abs(box.getSize(new THREE.Vector3()).z - 0.054) < 0.002, "Wheels retain their 54 mm diameter");
+}
+assert(skateboard.getObjectByName("Truck_Tail") && skateboard.getObjectByName("Truck_Nose"), "Both truck assemblies are present");
 const musicCabinet = boundsModel(`public${C.CABINET_MODEL_URL}`);
 const cabinetWood = musicCabinet.getObjectByName("Reference walnut veneer");
 assert(cabinetWood, "Cabinet contains the walnut shell");
