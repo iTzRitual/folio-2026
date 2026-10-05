@@ -13,8 +13,8 @@
     2048,
     512
   ],
-  "glb_bytes": 1743112,
-  "hardware_meshes": 14,
+  "glb_bytes": 1835296,
+  "hardware_meshes": 12,
   "wheel_diameter_m": 0.054,
-  "hardware_triangles": 31352
+  "hardware_triangles": 43080
 }

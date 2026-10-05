@@ -1,6 +1,5 @@
 import math
-from pathlib import Path
-
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -29,18 +28,13 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
         bsdf.inputs['Metallic'].default_value = metallic
         return mat
 
-    black = material('Truck | satin black cast aluminum', '#23262a', .39, .32)
-    steel = material('Hardware | brushed steel', '#989c97', .28, .88)
+    black = material('Truck | matte black coating', '#232529', .72)
+    steel = material('Hardware | brushed steel', '#989c97', .42, .88)
     rubber = material('Pivot cups and bearing shields', '#171a1b', .75)
-    orange = material('Bushings | orange urethane', '#ed9b31', .43)
-    green = material('Wheels | plain lime urethane', '#8bd600', .43)
-    print_mat = material('Hanger | photographic white branding', '#ffffff', .46)
-    image = bpy.data.images.load(str(Path(__file__).with_name('truck-front-reference.png')))
-    texture = print_mat.node_tree.nodes.new('ShaderNodeTexImage')
-    texture.image = image
-    print_mat.node_tree.links.new(texture.outputs['Color'], print_mat.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
+    orange = material('Bushings | orange urethane', '#c48a3d', .68)
+    green = material('Wheels | plain lime urethane', '#80ad36', .78)
 
-    def finish(obj, name, mat, parent, bevel=0):
+    def finish(obj, name, mat, parent, bevel=0, weighted_normals=True):
         obj.name = name
         obj.parent = parent
         obj.data.materials.append(mat)
@@ -53,9 +47,10 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
             bpy.ops.object.modifier_apply(modifier=modifier.name)
         for polygon in obj.data.polygons:
             polygon.use_smooth = True
-        modifier = obj.modifiers.new('Machined face normals', 'WEIGHTED_NORMAL')
-        modifier.keep_sharp = True
-        bpy.ops.object.modifier_apply(modifier=modifier.name)
+        if weighted_normals:
+            modifier = obj.modifiers.new('Machined face normals', 'WEIGHTED_NORMAL')
+            modifier.keep_sharp = True
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
         hardware.append(obj)
         return obj
 
@@ -84,7 +79,7 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
         bpy.context.collection.objects.link(obj)
         return finish(obj, name, mat, parent, bevel)
 
-    def lathe(name, profile, position, mat, parent, segments=64):
+    def lathe(name, profile, position, mat, parent, segments=64, profile_normals=False):
         vertices = []
         for x, radius in profile:
             for i in range(segments):
@@ -101,13 +96,33 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
         mesh.update()
         obj = bpy.data.objects.new(name, mesh)
         bpy.context.collection.objects.link(obj)
-        obj = finish(obj, name, mat, parent)
-        bpy.context.view_layer.objects.active = obj
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=False)
-        bpy.ops.object.mode_set(mode='OBJECT')
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        bm.to_mesh(mesh)
+        bm.free()
+        obj = finish(obj, name, mat, parent, weighted_normals=not profile_normals)
+        if profile_normals:
+            normals = []
+            for row, point in enumerate(profile):
+                incoming = (Vector(point) - Vector(profile[row - 1])).normalized()
+                outgoing = (Vector(profile[(row + 1) % len(profile)]) - Vector(point)).normalized()
+                tangent = (incoming + outgoing).normalized()
+                for i in range(segments):
+                    angle = i * math.tau / segments
+                    normals.append((-tangent.y, tangent.x * math.cos(angle), tangent.x * math.sin(angle)))
+            mesh.normals_split_custom_set_from_vertices(normals)
         return obj
+
+    wheel_profile = [(-.013, .011), (-WHEEL_WIDTH / 2, .013)]
+    shoulder_radius = .008
+    for i in range(9):
+        angle = math.pi - i * math.pi / 16
+        wheel_profile.append((-.008 + shoulder_radius * math.cos(angle), WHEEL_RADIUS - shoulder_radius + shoulder_radius * math.sin(angle)))
+    for i in range(9):
+        angle = math.pi / 2 - i * math.pi / 16
+        wheel_profile.append((.008 + shoulder_radius * math.cos(angle), WHEEL_RADIUS - shoulder_radius + shoulder_radius * math.sin(angle)))
+    wheel_profile.extend([(WHEEL_WIDTH / 2, .013), (.013, .011)])
 
     for number, center_y in enumerate(mount_centers):
         truck = bpy.data.objects.new('Truck_Tail' if number == 0 else 'Truck_Nose', None)
@@ -139,28 +154,9 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
         cylinder('Orange top bushing', .0082, .007, (0, .0245, .044), orange, truck, axis=kingpin_axis, bevel=.0013)
         cylinder('Upper bushing washer', .0093, .0015, (0, .026, .049), steel, truck, axis=kingpin_axis)
         cylinder('Kingpin nut', .0066, .005, (0, .027, .052), steel, truck, axis=kingpin_axis, segments=6)
-        mesh = bpy.data.meshes.new('Hanger print')
-        print_vertices = []
-        print_uvs = []
-        for row in range(13):
-            y = -.015 + row / 12 * .012
-            z = AXLE_HEIGHT + math.sqrt(.0092 ** 2 - (y - AXLE_Y) ** 2) + .00018
-            for side, u in [(-1, 134 / 387), (1, 258 / 387)]:
-                print_vertices.append((side * .036, y, z))
-                print_uvs.append((u, 1 - (106 - row / 12 * 25) / 516))
-        mesh.from_pydata(print_vertices, [], [(i * 2, i * 2 + 1, i * 2 + 3, i * 2 + 2) for i in range(12)])
-        uv = mesh.uv_layers.new()
-        for polygon in mesh.polygons:
-            for index in polygon.loop_indices:
-                uv.data[index].uv = print_uvs[mesh.loops[index].vertex_index]
-        label = bpy.data.objects.new('Hanger branding', mesh)
-        bpy.context.collection.objects.link(label)
-        finish(label, 'Hanger branding', print_mat, truck)
         for side in [-1, 1]:
             position = (side * WHEEL_CENTER_X, AXLE_Y, AXLE_HEIGHT)
-            lathe(f'Wheel_{number}_{side}', [(-.013, .011), (-.016, .017), (-.0155, .021),
-                                           (-.012, .0255), (-.008, WHEEL_RADIUS), (.008, WHEEL_RADIUS),
-                                           (.012, .0255), (.0155, .021), (.016, .017), (.013, .011)], position, green, truck)
+            lathe(f'Wheel_{number}_{side}', wheel_profile, position, green, truck, segments=96, profile_normals=True)
             for face in [-1, 1]:
                 bearing_x = side * WHEEL_CENTER_X + face * .0128
                 lathe('Bearing steel race', [(-.002, .0041), (-.002, .011), (.002, .011), (.002, .0041)],
@@ -177,7 +173,7 @@ def build_hardware(deck, mount_centers, hole_spacing, surface_height):
             low = min((obj.matrix_world @ vertex.co).z for vertex in obj.data.vertices)
             assert low > .015, 'Wheels must clear the deck'
     for truck in [child for child in root.children if child != deck]:
-        for mat, suffix in [(black, 'Casting'), (steel, 'Metal'), (rubber, 'Rubber'), (orange, 'Bushings'), (print_mat, 'Branding')]:
+        for mat, suffix in [(black, 'Casting'), (steel, 'Metal'), (rubber, 'Rubber'), (orange, 'Bushings')]:
             objects = [obj for obj in truck.children if obj.data.materials[0] == mat]
             bpy.ops.object.select_all(action='DESELECT')
             for obj in objects:

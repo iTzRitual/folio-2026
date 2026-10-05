@@ -56,9 +56,9 @@ def material(name, color, roughness):
     return mat
 
 
-graphic = material('Nervous | photographed worn graphic', (1, 1, 1), .71)
-grip = material('Charcoal griptape', (.025, .027, .028), .94)
-ply = material('Seven-ply maple | exposed edge', (.5, .3, .13), .73)
+graphic = material('Nervous | photographed worn graphic', (1, 1, 1), .88)
+grip = material('Charcoal griptape', (.012, .013, .014), .94)
+ply = material('Seven-ply maple | exposed edge', (.5, .3, .13), .86)
 photo = bpy.data.images.load(str(OUT / 'reference.jpg'))
 photo_node = graphic.node_tree.nodes.new('ShaderNodeTexImage')
 photo_node.image = photo
@@ -204,7 +204,13 @@ for mat in [graphic, grip, ply]:
             mat.node_tree.nodes.remove(node)
 albedo_node = graphic.node_tree.nodes.new('ShaderNodeTexImage')
 albedo_node.image = bpy.data.images.load(str(OUT / 'deck-albedo.jpg'))
-graphic.node_tree.links.new(albedo_node.outputs['Color'], graphic.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
+albedo_factor = graphic.node_tree.nodes.new('ShaderNodeMix')
+albedo_factor.data_type = 'RGBA'
+albedo_factor.blend_type = 'MULTIPLY'
+albedo_factor.inputs[0].default_value = 1
+albedo_factor.inputs[7].default_value = (.78, .78, .78, 1)
+graphic.node_tree.links.new(albedo_node.outputs['Color'], albedo_factor.inputs[6])
+graphic.node_tree.links.new(albedo_factor.outputs[2], graphic.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
 mesh.uv_layers.remove(mesh.uv_layers['Photo projection'])
 
 cutters = []

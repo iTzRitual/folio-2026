@@ -300,7 +300,7 @@ export const CONFIG = {
     CAMERA_TARGET: { x: -0.02, y: 0.27, z: -0.14 },
     SKATEBOARD_SIZE: { width: 0.2032, length: 0.805, thickness: 0.008 },
     SKATEBOARD_MODEL_URL: "/glbs/skateboard-deck.glb",
-    SKATEBOARD_ENV_INTENSITY: { day: 0.4, night: 0.12 },
+    SKATEBOARD_ENV_INTENSITY: { day: 0.28, night: 0.09 },
     POLAROIDS_POSITION: { x: -0.43, y: 0.63, z: -0.615 },
     ENERGY_CAN_POSITION: { x: 0.50, y: 0, z: -0.20 },
     LEFT_SPEAKER_POSITION: { x: -0.47, y: 0, z: -0.59 },
