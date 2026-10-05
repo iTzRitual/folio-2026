@@ -6,7 +6,7 @@ The deck is 80.5 × 20.32 cm with an 8 mm maple shell, transverse concave, asymm
 
 The [Skate Warehouse 8-inch blank](https://www.skatewarehouse.com/Skate_Warehouse_Premium_Blank_Deck/descpage-SW80DK.html) was checked as a dimensional reference for the popsicle category. No third-party model was imported. Each veneer band has a uniform edge color; photographed wear stays on the printed face.
 
-`reference.jpg` is a JPEG conversion of the owner's `IMG_7519.HEIC`. The builder projects that photograph onto the deck using a traced silhouette, then bakes only its visible underside into `deck-albedo.jpg` (2048 × 512). It preserves the Nervous graphic, Vans/DC stickers, scratches, mounting marks and white circular pads. No replacement artwork was generated. Some lighting and wear from the photograph remain in the base color.
+`reference.jpg` is a JPEG conversion of the owner's `IMG_7519.HEIC`. The builder uses one affine photo projection with constant scale across the deck and a global skew correction measured between the truck mounts. The graphic is clipped by the silhouette instead of stretched to follow its width. The mounting holes form parallel rectangular patterns aligned with the photographed marks. Only the visible underside is baked into `deck-albedo.jpg` (2048 × 512), preserving the Nervous graphic, Vans/DC stickers, scratches, mounting marks and white circular pads. No replacement artwork was generated. Some lighting and wear from the photograph remain in the base color.
 
 Run from the project root with Blender 4.2 or later:
 

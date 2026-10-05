@@ -4,8 +4,8 @@
     0.805,
     0.008
   ],
-  "triangles": 17658,
-  "vertices": 8815,
+  "triangles": 17648,
+  "vertices": 8810,
   "materials": 3,
   "mounting_holes": 8,
   "watertight": true,
@@ -13,5 +13,5 @@
     2048,
     512
   ],
-  "glb_bytes": 881288
+  "glb_bytes": 880152
 }

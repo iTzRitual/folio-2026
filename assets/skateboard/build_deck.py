@@ -15,8 +15,11 @@ EDGE_SEGMENTS = 14
 EDGE_RADIUS = .00065
 FACE_SCALE_X = (WIDTH - 2 * EDGE_RADIUS) / WIDTH
 FACE_SCALE_Y = (LENGTH - 2 * EDGE_RADIUS) / LENGTH
-PHOTO_EDGE_INSET = 8
 PHOTO_WIDTH, PHOTO_HEIGHT = 1824, 1368
+PHOTO_LENGTH_BOUNDS = (152, 1640)
+PHOTO_CROSS_SPAN = 384
+PHOTO_MOUNT_ORIGIN = (488, 685)
+PHOTO_SKEW = 4 / 845
 SHAPE_PROFILE = json.loads((OUT / 'shape-profile.json').read_text())
 SHAPE_SAMPLES = np.array(SHAPE_PROFILE['samples'])
 SHAPE_INTERVALS = np.diff(SHAPE_SAMPLES[:, 0])
@@ -29,13 +32,6 @@ for i in range(1, len(SHAPE_SAMPLES) - 1):
         a = 2 * SHAPE_INTERVALS[i] + SHAPE_INTERVALS[i - 1]
         b = SHAPE_INTERVALS[i] + 2 * SHAPE_INTERVALS[i - 1]
         SHAPE_SLOPES[i] = (a + b) / (a / left + b / right)
-OUTLINE = np.array([
-    [144, 680, 680], [153, 626, 751], [180, 553, 819],
-    [230, 510, 855], [300, 491, 875], [400, 490, 882],
-    [560, 491, 883], [900, 492, 885], [1242, 495, 886],
-    [1420, 496, 883], [1500, 506, 875], [1570, 531, 850],
-    [1612, 571, 811], [1640, 626, 759], [1648, 689, 689],
-], dtype=float)
 HOLES = [(433, 643), (543, 643), (433, 727), (543, 727),
          (1278, 647), (1388, 647), (1278, 731), (1388, 731)]
 
@@ -95,12 +91,16 @@ def profile(x, y):
 
 def photo_coordinates(x, y):
     u = y / LENGTH + .5
-    px = OUTLINE[0, 0] + u * (OUTLINE[-1, 0] - OUTLINE[0, 0])
-    top = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 1])
-    bottom = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 2])
-    across = x / max(half_width(y), .000001)
-    py = (top + bottom) / 2 + across * max(0, (bottom - top) / 2 - PHOTO_EDGE_INSET)
+    px = PHOTO_LENGTH_BOUNDS[0] + u * (PHOTO_LENGTH_BOUNDS[1] - PHOTO_LENGTH_BOUNDS[0])
+    center = PHOTO_MOUNT_ORIGIN[1] + (px - PHOTO_MOUNT_ORIGIN[0]) * PHOTO_SKEW
+    py = center + x / WIDTH * PHOTO_CROSS_SPAN
     return px / PHOTO_WIDTH, 1 - py / PHOTO_HEIGHT
+
+
+def mounting_position(px, py):
+    y = ((px - PHOTO_LENGTH_BOUNDS[0]) / (PHOTO_LENGTH_BOUNDS[1] - PHOTO_LENGTH_BOUNDS[0]) - .5) * LENGTH
+    x = math.copysign(42 / PHOTO_CROSS_SPAN * WIDTH, py - PHOTO_MOUNT_ORIGIN[1])
+    return x, y
 
 
 vertices, faces, slots = [], [], []
@@ -205,10 +205,7 @@ mesh.uv_layers.remove(mesh.uv_layers['Photo projection'])
 
 cutters = []
 for px, py in HOLES:
-    y = ((px - OUTLINE[0, 0]) / (OUTLINE[-1, 0] - OUTLINE[0, 0]) - .5) * LENGTH
-    top = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 1])
-    bottom = np.interp(px, OUTLINE[:, 0], OUTLINE[:, 2])
-    x = (py - (top + bottom) / 2) / ((bottom - top) / 2 - PHOTO_EDGE_INSET) * half_width(y)
+    x, y = mounting_position(px, py)
     bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=.0027, depth=.12, location=(x, y, 0))
     cutter = bpy.context.object
     for mat in [graphic, grip, ply]:
