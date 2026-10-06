@@ -1,6 +1,6 @@
 # Workstation reference blockout
 
-The current pass follows the supplied workstation reference: window and music cabinet on the left, CRT at the center, horizontal skateboard above, taped photos between window and monitor, and two casually offset framed prints on the right. The continuous desk surface extends to the right wall, leaving that side open and usable. The desk stays frontal. The settled lens is 42 degrees, with a close crop of the desktop and partial legs.
+The current pass follows the supplied workstation reference: window and music cabinet on the left, CRT at the center, horizontal skateboard above, taped photos between window and monitor, and two upright portrait prints on the right. The frames share a top edge, with a 2 cm gap between them and 3 cm clearance from the room corner. Frame proportions follow the artwork after allowing for the borders. The continuous desk surface extends to the right wall, leaving that side open and usable. The desk stays frontal. The settled lens is 42 degrees, with a close crop of the desktop and partial legs.
 
 The existing CRT, keyboard, and open-lid turntable GLBs are unchanged. The existing mouse and controller proxies are reused. The desk slab is reused at a 1.90 by 0.82 m footprint. The monitor remains 5.5 cm right of the original desk center with a -6 degree yaw.
 

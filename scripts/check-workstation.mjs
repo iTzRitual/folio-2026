@@ -181,7 +181,7 @@ for (const [position, size, rotation] of artworks) {
   assert(position.x - halfWidth > boardRightX, "Framed artworks clear the skateboard");
   assert(position.x + halfWidth < C.RIGHT_WALL_X, "Framed artworks stay clear of the room corner");
 }
-assert(C.ARTWORK_ROTATION.portrait * C.ARTWORK_ROTATION.ronaldo < 0, "Framed artworks retain a casual opposing tilt");
+assert(artworks.every(([, size, rotation]) => rotation === 0 && size.y > size.x), "Framed artworks hang upright in portrait orientation");
 assert.equal(workstationCameraProgress(1, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT, "Maximum zoom out caps the displayed camera path");
 assert.equal(workstationCameraProgress(0.5, C.CAMERA_MAX_ZOOM_OUT), C.CAMERA_MAX_ZOOM_OUT / 2, "Zoom-out control preserves the full scroll range");
 for (const [width, height] of [[1440, 900], [1920, 1080], [390, 844]]) {
