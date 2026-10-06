@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
+import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEnvironment, useGLTF } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { Mesh, MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial, PMREMGenerator } from "three";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 
@@ -11,6 +11,8 @@ export function SkateboardDeck() {
   const { scene } = useGLTF(CONFIG.workstation.SKATEBOARD_MODEL_URL);
   const { lighting } = useDebugSettings();
   const anisotropy = useThree(state => Math.min(8, state.gl.capabilities.getMaxAnisotropy()));
+  const gl = useThree(state => state.gl);
+  const environment = useEnvironment({ files: CONFIG.workstation.SKATEBOARD_ENVIRONMENT_URL });
   const model = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse(object => {
@@ -26,6 +28,28 @@ export function SkateboardDeck() {
       if (object instanceof Mesh) (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => material.dispose());
     });
   }, [model]);
+  useLayoutEffect(() => {
+    const generator = new PMREMGenerator(gl);
+    const target = generator.fromEquirectangular(environment);
+    generator.dispose();
+    model.traverse(object => {
+      if (!(object instanceof Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (!(material instanceof MeshStandardMaterial)) continue;
+        material.envMap = target.texture;
+        material.needsUpdate = true;
+      }
+    });
+    return () => {
+      model.traverse(object => {
+        if (!(object instanceof Mesh)) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+          if (material instanceof MeshStandardMaterial) material.envMap = null;
+        }
+      });
+      target.dispose();
+    };
+  }, [model, gl, environment]);
   useEffect(() => {
     model.traverse(object => {
       if (!(object instanceof Mesh)) return;
