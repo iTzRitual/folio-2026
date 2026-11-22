@@ -8,14 +8,13 @@ import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
 import { LevitatingLamp } from "./LevitatingLamp";
-import { SkateboardDeck } from "./SkateboardDeck";
+import { WorkstationAsset } from "./WorkstationAsset";
 import { DeskCollectionProps } from "./WorkstationDeskProps";
 import { WorkstationController } from "./WorkstationController";
-import { Block, Cylinder, Ellipsoid } from "./WorkstationPrimitives";
+import { Block, Ellipsoid } from "./WorkstationPrimitives";
 export { Block } from "./WorkstationPrimitives";
 
 type Point = { x: number; y: number; z: number };
-const charcoal = "#282d30";
 const bone = "#b9b4a7";
 const noRaycast = () => null;
 const configureArtworkTextures = (textures: Texture[]) => {
@@ -46,10 +45,15 @@ export function DesktopProxies({ supportY, worldScale }: { supportY: number; wor
   const { workstation: w } = useDebugSettings();
   return <group name="DesktopAccessories">
     <DeskCollectionProps supportY={supportY} />
-    <group name="Mouse" position={xyz(w.mousePosition, supportY)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.mouse), 0]}>
-      <Ellipsoid size={[0.032, 0.019, 0.054]} position={[0, 0.019, 0]} />
-      <Cylinder radius={0.007} height={0.006} rotation={[0, 0, Math.PI / 2]} position={[0, 0.036, -0.017]} />
-      <Block size={[0.001, 0.001, 0.025]} position={[0, 0.037, -0.019]} color={charcoal} />
+    <group name="MousePad" position={[
+      CONFIG.workstation.MOUSE_PAD_CENTER.x,
+      supportY,
+      CONFIG.workstation.MOUSE_PAD_CENTER.z,
+    ]}>
+      <WorkstationAsset url={CONFIG.workstation.MOUSE_PAD_MODEL_URL} intensity={CONFIG.workstation.MOUSE_ENV_INTENSITY} />
+    </group>
+    <group name="Mouse" position={xyz(w.mousePosition, supportY + CONFIG.workstation.MOUSE_PAD_THICKNESS)} rotation={[0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.mouse), 0]}>
+      <WorkstationAsset url={CONFIG.workstation.MOUSE_MODEL_URL} intensity={CONFIG.workstation.MOUSE_ENV_INTENSITY} />
     </group>
     <WorkstationController supportY={supportY} />
     <LevitatingLamp supportY={supportY} worldScale={worldScale} />
@@ -133,7 +137,7 @@ export function WallProxies({ supportY }: { supportY: number }) {
       texture={ronaldoArtwork}
     />
     <group name="WallSkateboard" position={xyz(w.skateboardPosition, supportY)} rotation={[0, 0, MathUtils.degToRad(CONFIG.workstation.PROXY_YAW.skateboard)]}>
-      <SkateboardDeck />
+      <WorkstationAsset url={CONFIG.workstation.SKATEBOARD_MODEL_URL} intensity={CONFIG.workstation.SKATEBOARD_ENV_INTENSITY} />
     </group>
     <group name="WindowsillPlant" position={xyz(w.plantPosition, supportY)}>
       <mesh position={[0, 0.047, 0]} raycast={noRaycast}>

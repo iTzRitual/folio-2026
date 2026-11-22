@@ -141,6 +141,25 @@ const speakerBounds = [C.LEFT_SPEAKER_POSITION, C.RIGHT_SPEAKER_POSITION].map((p
   return box;
 });
 assert(!speakerBounds[0].intersectsBox(speakerBounds[1]), "Speakers remain separate");
+const pad = boundsModel(`public${C.MOUSE_PAD_MODEL_URL}`);
+pad.position.set(C.MOUSE_PAD_CENTER.x, db.max.y, C.MOUSE_PAD_CENTER.z);
+const padBounds = bounds(pad);
+assert(Math.abs(padBounds.min.y - db.max.y) < 1e-6, "QcK backing rests on the desk");
+const mouse = boundsModel(`public${C.MOUSE_MODEL_URL}`);
+mouse.position.set(C.MOUSE_POSITION.x, db.max.y + C.MOUSE_POSITION.y + C.MOUSE_PAD_THICKNESS, C.MOUSE_POSITION.z);
+mouse.rotation.y = THREE.MathUtils.degToRad(C.PROXY_YAW.mouse);
+const mouseBounds = bounds(mouse);
+assert(Math.abs(mouseBounds.min.y - padBounds.max.y) < 0.00005, "G Pro skates rest on the QcK surface");
+for (const axis of ["x", "z"]) {
+  assert(padBounds.min[axis] > db.min[axis] && padBounds.max[axis] < db.max[axis], "Entire pad fits on the desk");
+  assert(mouseBounds.min[axis] > padBounds.min[axis] && mouseBounds.max[axis] < padBounds.max[axis], "Entire mouse fits on the pad");
+}
+assert(!padBounds.intersectsBox(kb) && !padBounds.intersectsBox(bounds(crt.getObjectByName("CRT_Stand"))), "Pad clears the keyboard and monitor stand");
+const can = boundsModel(`public${C.ENERGY_CAN_MODEL_URL}`);
+can.position.copy(point(C.ENERGY_CAN_POSITION));
+can.position.y += db.max.y;
+can.rotation.y = C.ENERGY_CAN_YAW;
+assert(!padBounds.intersectsBox(new THREE.Box3().setFromObject(can, true)), "Pad clears the energy can");
 assert(Math.hypot(C.ENERGY_CAN_POSITION.x - C.MOUSE_POSITION.x, C.ENERGY_CAN_POSITION.z - C.MOUSE_POSITION.z) > 0.2, "Can leaves mouse working space");
 const cubbyWidth = (C.CABINET_SIZE.x - C.CABINET_PANEL * 3) / 2;
 const cubbyHeight = (C.CABINET_SIZE.y - C.CABINET_PLINTH - C.CABINET_PANEL * 3) / 2;
