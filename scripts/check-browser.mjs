@@ -114,6 +114,7 @@ const profileRoot = path.resolve(tmpdir());
 const profile = await mkdtemp(path.join(profileRoot, "folio-browser-check-"));
 try {
   const urlIndex = process.argv.indexOf("--url");
+  const loading = process.argv.includes("--loading");
   const portfolio = process.argv.includes("--portfolio");
   const scrollbar = process.argv.includes("--scrollbar");
   const recovery = process.argv.includes("--recovery");
@@ -133,7 +134,7 @@ try {
     server.stdout.on("data", record);
     server.stderr.on("data", record);
   }
-  const url = new URL(profiling ? "/" : "/lab/regression", base).href;
+  const url = new URL(profiling || loading ? "/" : "/lab/regression", base).href;
   await waitForServer(url, server);
   browser = spawn(binary, [
     "--headless=new", "--no-first-run", "--no-default-browser-check",
@@ -157,11 +158,14 @@ try {
     socket.addEventListener("error", reject, { once: true });
   });
   const devtools = new DevTools(socket);
-  const { targetId } = await devtools.send("Target.createTarget", { url: portfolio || scrollbar || recovery || desktop || model || layout || profiling ? "about:blank" : url });
+  const { targetId } = await devtools.send("Target.createTarget", { url: loading || portfolio || scrollbar || recovery || desktop || model || layout || profiling ? "about:blank" : url });
   const { sessionId } = await devtools.send("Target.attachToTarget", { targetId, flatten: true });
   if (profiling) {
     const { profilePortfolioBrowser } = await import("./profile-portfolio-browser.mjs");
     console.log(await profilePortfolioBrowser(devtools, sessionId, base, path.join(root, "plans/production-profile"), root));
+  } else if (loading) {
+    const { checkLoadingBrowser } = await import("./check-loading-browser.mjs");
+    console.log(await checkLoadingBrowser(devtools, sessionId, base));
   } else if (layout) {
     console.log(await checkLayoutBrowser(devtools, sessionId, base));
   } else if (model) {

@@ -23,14 +23,17 @@ uniform float monitorPowerFlash;
 float monitorHash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453);
 }
+vec3 sampleDesktop(vec2 uv) {
+  return texture2D(desktop, clamp(uv, 0.5 * texel, 1.0 - 0.5 * texel) * desktopScale).rgb;
+}
 vec3 monitorSample(vec2 uv) {
-  vec3 c = texture2D(desktop, uv).rgb;
+  vec3 c = sampleDesktop(uv);
   if (monitorNoSignal > 0.5) {
     float snow = monitorHash(floor(uv / texel) + floor(monitorTime * ${CONFIG.monitor.NO_SIGNAL_HZ.toFixed(8)}));
     return vec3(${CONFIG.monitor.NO_SIGNAL_FLOOR.toFixed(8)} + snow * ${CONFIG.monitor.NO_SIGNAL_NOISE.toFixed(8)});
   }
   if (monitorInput == 2.0) {
-    vec3 adjacent = texture2D(desktop, uv + vec2(texel.x, 0.0)).rgb;
+    vec3 adjacent = sampleDesktop(uv + vec2(texel.x, 0.0));
     float luminance = dot(c, vec3(0.299,0.587,0.114));
     c = mix(c, adjacent, ${CONFIG.monitor.COMPONENT_BLEED.toFixed(8)});
     c += luminance - dot(c, vec3(0.299,0.587,0.114));

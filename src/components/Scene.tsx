@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { WebGLRenderer, type WebGLRendererParameters } from "three";
 import Model from "./Model";
@@ -8,7 +8,7 @@ import { HeroText } from "./HeroText";
 import { Header } from "./Header";
 import { HeroLayoutProvider } from "../context/HeroLayoutProvider";
 import { PortfolioEffects } from "./Effects/PortfolioEffects";
-import { Environment, Stats, PerformanceMonitor } from "@react-three/drei";
+import { Environment, Stats, PerformanceMonitor, useEnvironment, useGLTF } from "@react-three/drei";
 import { Details } from "./Details";
 import { CurlEdgeFade } from "./DetailsScene/CurlEdgeFade";
 import { ProjectPreviewOverlay } from "./DetailsScene/ProjectPreviewOverlay";
@@ -32,39 +32,59 @@ import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
 import { OrbitSignalContext, useOrbitSignal } from "@/context/OrbitSignalContext";
 
+if (typeof window !== "undefined") {
+  useGLTF.preload(CONFIG.model.MODEL_URL);
+  useGLTF.preload(CONFIG.workstation.CRT_MODEL_URL);
+  useEnvironment.preload({ files: CONFIG.workstation.ENVIRONMENT_URL });
+}
+
 function SceneReady({ onReady }: { onReady: () => void }) {
-  useEffect(onReady, [onReady]);
+  const reported = useRef(false);
+  useFrame(() => {
+    if (!reported.current) {
+      reported.current = true;
+      onReady();
+    }
+  }, 2);
   return null;
 }
 
 function SceneContent({
   isDebug,
   startAnimation,
+  prepareWorkstation,
+  onWorkstationProgress,
   bioVariant,
   detailsOverflowViewports,
   onReady,
+  onFailure,
 }: {
   isDebug: boolean;
   startAnimation: boolean;
+  prepareWorkstation: boolean;
+  onWorkstationProgress?: (progress: number) => void;
   bioVariant: BioVariant;
   detailsOverflowViewports: number;
   onReady: () => void;
+  onFailure: (error: unknown) => void;
 }) {
   useStableSceneViewport();
+  const workstationReady = useRef(false);
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
       <HeroTransitionProvider
+        workstationReady={workstationReady}
         detailsOverflowViewports={detailsOverflowViewports}
       >
         <SceneMotionProvider>
           <ProjectHoverProvider>
             <CaseStudyProvider>
               <ThemeSweep />
-              <Environment files="/hdri/city.hdr" />
+              <Environment files={CONFIG.workstation.ENVIRONMENT_URL} />
 
               <Suspense fallback={null}>
-                <WorkstationScene>
+                <WorkstationScene prepare={prepareWorkstation} readyRef={workstationReady} onProgress={onWorkstationProgress} onFailure={onFailure}>
                   <directionalLight intensity={3} position={[0, 3, 2]} />
                   <Model isDebug={isDebug} />
 
@@ -88,6 +108,9 @@ function SceneContent({
 
 export default function Scene({
   startAnimation,
+  prepareWorkstation = true,
+  onWorkstationProgress,
+  onCanvasReady,
   inputMode,
   detailsOverflowViewports,
   isDebug,
@@ -98,6 +121,9 @@ export default function Scene({
   onReady,
 }: {
   startAnimation: boolean;
+  prepareWorkstation?: boolean;
+  onWorkstationProgress?: (progress: number) => void;
+  onCanvasReady?: () => void;
   inputMode: SceneInputMode;
   detailsOverflowViewports: number;
   isDebug: boolean;
@@ -178,6 +204,7 @@ export default function Scene({
       <Canvas
         className="bg-transparent"
         key="main-canvas"
+        frameloop={startAnimation ? "always" : "demand"}
         eventSource={eventWrapperRef}
         eventPrefix="client"
         dpr={dpr}
@@ -188,6 +215,7 @@ export default function Scene({
         gl={createRenderer}
         onCreated={(state) => {
           state.gl.localClippingEnabled = true;
+          onCanvasReady?.();
         }}
       >
         <PerformanceMonitor
@@ -220,9 +248,12 @@ export default function Scene({
                 <SceneContent
                   isDebug={isDebug}
                   startAnimation={startAnimation}
+                  prepareWorkstation={prepareWorkstation}
+                  onWorkstationProgress={onWorkstationProgress}
                   bioVariant={bioVariant}
                   detailsOverflowViewports={detailsOverflowViewports}
                   onReady={onReady}
+                  onFailure={onFailure}
                 />
               </OrbitSignalContext.Provider>
             </DebugSettingsBridge>

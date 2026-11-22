@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactLenis } from "lenis/react";
@@ -41,6 +41,10 @@ const LENIS_OPTIONS = {
 } as const;
 
 export default function Home() {
+    const [workstationProgress, setWorkstationProgress] = useState(0);
+    const advanceWorkstation = useCallback((value: number) => setWorkstationProgress(current => Math.max(current, value)), []);
+    const [canvasReady, setCanvasReady] = useState(false);
+    const canvasCreated = useCallback(() => setCanvasReady(true), []);
     const [startScene, setStartScene] = useState(false);
     const [removeLoader, setRemoveLoader] = useState(false);
     const inputMode = useInputMode();
@@ -78,6 +82,9 @@ export default function Home() {
                             <div className="fixed inset-0 z-0 pointer-events-none">
                                 {!removeLoader && (
                                     <Loader
+                                        canvasReady={canvasReady}
+                                        workstationProgress={workstationProgress}
+                                        ready={status === "ready" && fontsReady}
                                         onExitStart={() => setStartScene(true)}
                                         onComplete={() => setRemoveLoader(true)}
                                     />
@@ -86,6 +93,9 @@ export default function Home() {
                                     <SceneBoundary onFailure={fail}>
                                         <DynamicScene
                                             startAnimation={startScene}
+                                            prepareWorkstation={status === "ready"}
+                                            onWorkstationProgress={advanceWorkstation}
+                                            onCanvasReady={canvasCreated}
                                             inputMode={inputMode}
                                             detailsOverflowViewports={overflowViewports}
                                             isDebug={isDebug}

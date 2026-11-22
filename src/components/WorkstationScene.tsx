@@ -2,7 +2,7 @@
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject, type ReactNode } from "react";
 import * as THREE from "three";
 import { CONFIG } from "@/config/constants";
 import { useHeroLayout } from "@/context/HeroLayoutContext";
@@ -44,6 +44,7 @@ import {
   workstationCameraProgress,
 } from "@/lib/workstationFrame";
 import { applyPointerCamera, bindPointerCameraInput, createPointerCameraRuntime } from "@/lib/pointerCamera";
+import { scheduleWork, warmWorkstation } from "./Workstation/prepareWorkstation";
 import { PortfolioCapture } from "./Workstation/PortfolioCapture";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
@@ -95,7 +96,21 @@ type ReturnBridge = DesktopReturn & {
   autoScroll: ReturnBridgeAutoScroll | null;
 };
 
-export function WorkstationScene({ children }: { children: ReactNode }) {
+const W = CONFIG.workstation;
+const roomModels = [
+  W.KEYBOARD_MODEL_URL, W.DESK_MODEL_URL, W.TURNTABLE_MODEL_URL, W.SPEAKER_MODEL_URL,
+  W.CABINET_MODEL_URL, W.ENERGY_CAN_MODEL_URL, W.CONTROLLER_MODEL_URL, W.SKATEBOARD_MODEL_URL,
+  W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL,
+];
+
+export function WorkstationScene({ children, prepare, readyRef, onProgress, onFailure }: {
+  children: ReactNode;
+  prepare: boolean;
+  readyRef: RefObject<boolean>;
+  onProgress?: (progress: number) => void;
+  onFailure: (error: unknown) => void;
+}) {
+  const roomRef = useRef<THREE.Group>(null);
   const monitorState = useMemo(createMonitorState, []);
   const { scene: crtModel } = useGLTF(CONFIG.workstation.CRT_MODEL_URL);
   const crtFrame = useMemo(() => getCRTReferenceFrame(crtModel), [crtModel]);
@@ -107,7 +122,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   } = useHeroLayout();
   const { revealProgressRef } = useHeroTransition();
   const { scrollVelocityRef, scrollSpeedRef } = useSceneMotion();
-  const { camera, events, gl, scene, size } = useThree();
+  const { camera, events, gl, scene, size, invalidate } = useThree();
   if (!(camera instanceof THREE.PerspectiveCamera)) {
     throw new Error("The workstation scene requires a perspective camera");
   }
@@ -120,6 +135,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   const surfaceGroupRef = useRef<THREE.Group>(null);
   const windowGroupRef = useRef<THREE.Group>(null);
   const vscodeWindowGroupRef = useRef<THREE.Group>(null);
+  const wallpaperSettled = useRef(false);
   const wallpaperMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
   const chromeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const vscodeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
@@ -268,9 +284,11 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   }, [pageAberrationMaterial]);
 
   useEffect(() => {
+    if (!prepare) return;
     let wallpaperTexture: THREE.Texture | null = null;
     let cancelled = false;
 
+    wallpaperSettled.current = false;
     new THREE.TextureLoader().load(WORKSTATION_WALLPAPER_SRC, (texture) => {
       if (cancelled) {
         texture.dispose();
@@ -292,18 +310,19 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       texture.generateMipmaps = false;
       texture.needsUpdate = true;
       wallpaperTexture = texture;
+      wallpaperSettled.current = true;
 
       if (wallpaperMaterialRef.current) {
         wallpaperMaterialRef.current.map = texture;
         wallpaperMaterialRef.current.needsUpdate = true;
       }
-    });
+    }, undefined, () => { if (!cancelled) wallpaperSettled.current = true; });
 
     return () => {
       cancelled = true;
       wallpaperTexture?.dispose();
     };
-  }, []);
+  }, [prepare]);
 
   useEffect(() => {
     chromeMaterialRef.current = windowChromeMaterial;
@@ -377,16 +396,48 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
-    const prepare = () => {
-      if (!capture.ready) capturePendingRef.current = true;
+    if (!prepare) return;
+    let next = 0;
+    let cancel: () => void;
+    const preload = () => {
+      useGLTF.preload(roomModels[next++]);
+      if (next < roomModels.length) cancel = scheduleWork(preload);
     };
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(prepare, { timeout: 1000 });
-      return () => window.cancelIdleCallback(idleId);
-    }
-    const timeoutId = globalThis.setTimeout(prepare, 200);
-    return () => globalThis.clearTimeout(timeoutId);
-  }, [capture, size.height, size.width]);
+    cancel = scheduleWork(preload);
+    return () => cancel();
+  }, [prepare]);
+
+  useEffect(() => {
+    if (!prepare) return;
+    let cancel: () => void;
+    const begin = () => {
+      const surface = surfaceGroupRef.current;
+      const crt = crtScreenRef.current;
+      if (!capture.ready) {
+        capturePendingRef.current = true;
+        invalidate();
+      }
+      if (!roomRef.current || !capture.ready || !wallpaperSettled.current || !surface || !crt) {
+        cancel = scheduleWork(begin);
+        return;
+      }
+      const finish = () => {
+        crt.prepareFrame(() => {
+          readyRef.current = true;
+          onProgress?.(1);
+        });
+        invalidate();
+      };
+      onProgress?.(0.3);
+      cancel = warmWorkstation({
+        gl, camera, world: scene, surface: readyRef.current ? null : surface, desktop: crt.desktopScene,
+        progress: fraction => onProgress?.(0.3 + fraction * 0.65),
+        complete: finish, fail: onFailure,
+      });
+    };
+    cancel = scheduleWork(begin);
+    return () => { cancel(); };
+  }, [prepare, capture, gl, camera, scene, readyRef, size.height, size.width, desktop, onProgress, onFailure, invalidate]);
 
   useEffect(() => {
     return () => {
@@ -1002,7 +1053,7 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
 
   useFrame(() => {
     if (
-      isCaseStudyActive() ||
+      (isCaseStudyActive() && !capturePendingRef.current) ||
       (!capturePendingRef.current && !capture.ready) ||
       (capture.ready &&
         revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) ||
@@ -1030,7 +1081,10 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       !dockMaterialRef.current || !toolbarMaterialRef.current
     ) return;
     const textures = capture.createDesktop(desktop, { width: planeWidth, height: planeHeight }, sourceManifestRef.current);
-    if (!textures) return;
+    if (!textures) {
+      onFailure(new Error("Could not create workstation desktop textures"));
+      return;
+    }
     const {
       chrome: chromeTexture,
       dock: dockRenderer,
@@ -1041,10 +1095,6 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
       bounds,
       transform,
     } = textures;
-    gl.initTexture(chromeTexture);
-    gl.initTexture(dockRenderer.texture);
-    gl.initTexture(toolbarRenderer.texture);
-    gl.initTexture(pageMask);
     chromeMaterialRef.current.uniforms.u_texture.value = chromeTexture;
     vscodeMaterialRef.current.uniforms.u_texture.value = vscodeRenderer.texture;
     dockMaterialRef.current.map = dockRenderer.texture;
@@ -1281,14 +1331,16 @@ export function WorkstationScene({ children }: { children: ReactNode }) {
         position={[0, 0, CONFIG.workstation.PLANE_Z]}
         visible={false}
       >
-        <Suspense fallback={null}>
-          <CRTMonitor
-            width={planeWidth}
-            monitorState={monitorState}
-            onButtonPress={syncPlayStationSignal}
-          />
-          <WorkstationEnvironment width={planeWidth} />
-        </Suspense>
+        {prepare && <Suspense fallback={null}>
+          <group ref={roomRef}>
+            <CRTMonitor
+              width={planeWidth}
+              monitorState={monitorState}
+              onButtonPress={syncPlayStationSignal}
+            />
+            <WorkstationEnvironment width={planeWidth} />
+          </group>
+        </Suspense>}
         <CRTDisplay ref={crtScreenRef} monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <group ref={desktopSignalGroupRef}>
         <mesh

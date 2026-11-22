@@ -46,6 +46,7 @@ const fragmentShader = `
 varying float vEdge;
 uniform sampler2D desktop;
 uniform vec2 texel;
+uniform vec2 desktopScale;
 uniform float amount;
 uniform float vignette;
 uniform float scanlines;
@@ -116,6 +117,8 @@ void main() {
 `;
 
 export type CRTDisplayHandle = {
+  desktopScene: THREE.Scene;
+  prepareFrame(onRendered: () => void): void;
   mapContentUv(source: THREE.Vector2, target: THREE.Vector2): boolean;
 };
 
@@ -140,17 +143,8 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
     () => [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
     [],
   );
-  const targetQualityRef = useRef(qualityTier);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      mapContentUv: (source, target) =>
-        mapMonitorScreenUv(source, target, monitorUniforms),
-    }),
-    [monitorUniforms],
-  );
-
+  const warmFrame = useRef<(() => void) | null>(null);
   const resources = useMemo(() => {
     const tuning = CONFIG.workstation;
     const target = new THREE.WebGLRenderTarget(tuning.CRT_TARGET_MAX_SIZE,
@@ -166,6 +160,7 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
         ...monitorUniforms,
         amount: { value: 0 },
         desktop: { value: target.texture },
+        desktopScale: { value: new THREE.Vector2(1, 1) },
         texel: { value: new THREE.Vector2(1 / target.width, 1 / target.height) },
         vignette: { value: tuning.CRT_VIGNETTE },
         scanlines: { value: tuning.CRT_SCANLINES },
@@ -185,6 +180,17 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
     return { scene, camera, material, marginMaterial, target };
   }, [monitorUniforms]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      desktopScene: resources.scene,
+      prepareFrame: onRendered => { warmFrame.current = onRendered; },
+      mapContentUv: (source, target) =>
+        mapMonitorScreenUv(source, target, monitorUniforms),
+    }),
+    [monitorUniforms, resources],
+  );
+
   useEffect(() => () => {
     resources.target.dispose();
     resources.material.dispose();
@@ -193,7 +199,10 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
 
   useFrame(({ camera: mainCamera, gl, size }, delta) => {
     monitorRuntime.update(monitorUniforms, monitorState, delta, reducedMotion);
-    if (!meshRef.current?.parent?.visible || revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START) return;
+    if (!meshRef.current) return;
+    if (!warmFrame.current && (!meshRef.current.parent?.visible || revealProgressRef.current < CONFIG.workstation.BROWSER_REVEAL_START)) return;
+    const onRendered = warmFrame.current;
+    warmFrame.current = null;
     const { target, scene, camera: screenCamera, material } = resources;
     const cameraLeft = -width / 2;
     const cameraRight = width / 2;
@@ -229,20 +238,21 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
         gl.getPixelRatio() *
         CONFIG.workstation.CRT_TARGET_PROJECTED_SCALE,
     );
-    const targetWidth = Math.max(
-      CONFIG.workstation.CRT_TARGET_MIN_SIZE,
-      Math.min(qualityMax, desiredWidth),
-    );
-    const targetHeight = Math.round(targetWidth / CONFIG.workstation.PLANE_ASPECT);
-    const qualityChanged = targetQualityRef.current !== qualityTier;
-    const resizeRatio = Math.abs(target.width - targetWidth) / target.width;
-    if (
-      qualityChanged ||
-      resizeRatio >= CONFIG.workstation.TARGET_RESIZE_THRESHOLD
-    ) {
-      target.setSize(targetWidth, targetHeight);
+    const minWidth = CONFIG.workstation.CRT_TARGET_MIN_SIZE;
+    const aspect = CONFIG.workstation.PLANE_ASPECT;
+    const capacity = THREE.MathUtils.clamp(Math.ceil(Math.max(size.width, size.height * aspect) *
+      gl.getPixelRatio() * CONFIG.workstation.CRT_TARGET_PROJECTED_SCALE), minWidth, qualityMax);
+    const resized = target.width !== capacity;
+    if (resized) target.setSize(capacity, Math.round(capacity / aspect));
+    const targetWidth = THREE.MathUtils.clamp(desiredWidth, minWidth, capacity);
+    const resizeRatio = Math.abs(target.viewport.z - targetWidth) / target.viewport.z;
+    if (resized || resizeRatio >= CONFIG.workstation.TARGET_RESIZE_THRESHOLD) {
+      const targetHeight = Math.round(targetWidth / aspect);
+      target.viewport.set(0, 0, targetWidth, targetHeight);
+      target.scissor.copy(target.viewport);
+      target.scissorTest = true;
       material.uniforms.texel.value.set(1 / targetWidth, 1 / targetHeight);
-      targetQualityRef.current = qualityTier;
+      material.uniforms.desktopScale.value.set(targetWidth / target.width, targetHeight / target.height);
     }
     const previousTarget = gl.getRenderTarget();
     const autoClear = gl.autoClear;
@@ -254,6 +264,7 @@ export const CRTDisplay = forwardRef<CRTDisplayHandle, {
       gl.setRenderTarget(previousTarget);
       gl.autoClear = autoClear;
     }
+    onRendered?.();
   }, 0.75);
 
   return <>

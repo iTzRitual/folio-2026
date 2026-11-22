@@ -37,7 +37,7 @@ export default function Model({ isDebug }: { isDebug: boolean }) {
   const skullSurfaceRef = useRef<THREE.Group>(null);
   const orbitCollider = useRef<ProjectOrbitCollider>({ object: null, radius: 1, active: false });
   const entranceProgressRef = useRef({ progress: 0, orbitElapsed: 0 });
-  const { nodes } = useGLTF("/glbs/czaszka2draco.glb");
+  const { nodes } = useGLTF(CONFIG.model.MODEL_URL);
   const surface = useMemo(() => {
     const source = nodes.Sphere;
     return source instanceof THREE.Mesh ? source.geometry.clone().center() : null;

@@ -1,174 +1,87 @@
 "use client";
 
-import { useRef } from "react";
-import { useProgress } from "@react-three/drei";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { CONFIG } from "../config/constants";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { CONFIG } from "@/config/constants";
 import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
 interface LoaderProps {
+  canvasReady: boolean;
+  ready: boolean;
+  workstationProgress: number;
   onExitStart: () => void;
   onComplete: () => void;
 }
 
-export function Loader({ onExitStart, onComplete }: LoaderProps) {
-  const { progress } = useProgress();
+const digits = Array.from({ length: 101 }, (_, n) => String(n).padStart(3, "0"));
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const unitsRef = useRef<HTMLDivElement>(null);
-  const tensRef = useRef<HTMLDivElement>(null);
-  const hundredsRef = useRef<HTMLDivElement>(null);
-
-  const odometerWrapperRef = useRef<HTMLDivElement>(null);
+export function Loader({ canvasReady, ready, workstationProgress, onExitStart, onComplete }: LoaderProps) {
+  const counterRef = useRef<HTMLDivElement>(null);
   const blockRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const wake = useRef<(() => void) | null>(null);
+  const target = useEffectEvent(() => ready ? 60 + Math.floor(40 * workstationProgress) : canvasReady ? 45 : 20);
+  const startHero = useEffectEvent(onExitStart);
+  const finish = useEffectEvent(onComplete);
 
-  const progressProxy = useRef({ value: 0 });
+  useEffect(() => {
+    const counter = counterRef.current!;
+    const block = blockRef.current!;
+    const viewport = windowRef.current!;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const countTime = 1000 * (IS_REPEAT_VISIT ? CONFIG.loader.ODOMETER_DURATION_REPEAT : CONFIG.loader.ODOMETER_DURATION);
+    let cancelled = false;
+    let animation: Animation | undefined;
 
-  const isRevealed = useRef(false);
-  const isExiting = useRef(false);
-
-  const odometerTween = useRef<gsap.core.Tween | null>(null);
-
-  const triggerExit = () => {
-    if (isExiting.current) return;
-    isExiting.current = true;
-
-    const tl = gsap.timeline({
-      delay: 0,
-      onComplete: onComplete,
-    });
-
-    tl.set(blockRef.current, { transformOrigin: "left center" });
-
-    tl.to(blockRef.current, {
-      scaleX: 1,
-      duration: CONFIG.loader.REVEAL_DURATION,
-      ease: "power4.inOut",
-    });
-
-    tl.set(odometerWrapperRef.current, { opacity: 0 });
-
-    tl.call(() => onExitStart());
-
-    tl.set(blockRef.current, { transformOrigin: "right center" });
-    tl.to(blockRef.current, {
-      scaleX: 0,
-      duration: CONFIG.loader.REVEAL_DURATION,
-      ease: "power4.inOut",
-    });
-  };
-
-  useGSAP(
-    () => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          isRevealed.current = true;
-
-          if (odometerTween.current) {
-            odometerTween.current.play();
-          }
-
-          if (progress === 100 && progressProxy.current.value >= 99.9) {
-            triggerExit();
-          }
-        },
-      });
-
-      tl.set(blockRef.current, { transformOrigin: "right center", scaleX: 0 });
-      tl.to(blockRef.current, {
-        scaleX: 1,
-        duration: CONFIG.loader.REVEAL_DURATION,
-        ease: "power4.inOut",
-      });
-      tl.set(odometerWrapperRef.current, { opacity: 1 });
-      tl.set(blockRef.current, { transformOrigin: "left center" });
-      tl.to(blockRef.current, {
-        scaleX: 0,
-        duration: CONFIG.loader.REVEAL_DURATION,
-        ease: "power4.inOut",
-      });
-    },
-    { scope: containerRef },
-  );
-
-  useGSAP(
-    () => {
-      const targetProgress = Math.max(progress, 31);
-      odometerTween.current = gsap.to(progressProxy.current, {
-        value: targetProgress,
-        duration: IS_REPEAT_VISIT
-          ? CONFIG.loader.ODOMETER_DURATION_REPEAT
-          : CONFIG.loader.ODOMETER_DURATION,
-        ease: "power2.out",
-        paused: !isRevealed.current,
-        onUpdate: () => {
-          const val = Math.floor(progressProxy.current.value);
-
-          const units = val % 10;
-          const tens = Math.floor(val / 10) % 10;
-          const hundreds = Math.floor(val / 100) % 10;
-
-          if (unitsRef.current)
-            gsap.set(unitsRef.current, { yPercent: -units * 10 });
-          if (tensRef.current)
-            gsap.set(tensRef.current, { yPercent: -tens * 10 });
-          if (hundredsRef.current)
-            gsap.set(hundredsRef.current, { yPercent: -hundreds * 50 });
-        },
-        onComplete: () => {
-          if (progress === 100 && progressProxy.current.value >= 99.9) {
-            if (isRevealed.current) {
-              triggerExit();
-            }
-          }
-        },
-      });
-    },
-    { dependencies: [progress], scope: containerRef },
-  );
-
-  const renderDigits = (isHundreds = false) => {
-    const digits = isHundreds ? [0, 1] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    return digits.map((num) => (
-      <div key={num} className="h-[1em] flex items-center justify-center">
-        {num}
-      </div>
-    ));
-  };
+    const move = async (el: HTMLElement, from: string, to: string, duration: number, easing: string) => {
+      animation = el.animate([{ transform: from }, { transform: to }], { duration: reduced ? 0 : duration, easing, fill: "both" });
+      await animation.finished;
+      el.style.transform = to;
+      animation.cancel();
+    };
+    const wipe = (origin: string, from: number, to: number) => {
+      block.style.transformOrigin = origin;
+      return move(block, `scaleX(${from})`, `scaleX(${to})`, CONFIG.loader.REVEAL_DURATION * 1000, "cubic-bezier(.76,0,.24,1)");
+    };
+    const count = (from: number, to: number) =>
+      move(counter, `translateY(-${from}em)`, `translateY(-${to}em)`, countTime * (to - from) / 100, `steps(${to - from}, end)`);
+    const run = async () => {
+      await wipe("right", 0, 1);
+      viewport.style.opacity = "1";
+      await wipe("left", 1, 0);
+      let shown = 0;
+      while (!cancelled && shown < 100) {
+        const next = target();
+        if (next > shown) {
+          await count(shown, next);
+          shown = next;
+        } else {
+          await new Promise<void>(resolve => { wake.current = resolve; });
+        }
+      }
+      if (cancelled) return;
+      await wipe("left", 0, 1);
+      viewport.style.opacity = "0";
+      startHero();
+      await wipe("right", 1, 0);
+      finish();
+    };
+    void run().catch(error => { if (!cancelled) throw error; });
+    return () => {
+      cancelled = true;
+      animation?.cancel();
+      wake.current?.();
+      wake.current = null;
+    };
+  }, []);
+  useEffect(() => { wake.current?.(); }, [canvasReady, ready, workstationProgress]);
 
   return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center text-(--text-primary) font-karla font-extrabold text-6xl pointer-events-none"
-    >
-      <div className="block-line-wrapper">
-        <div
-          ref={blockRef}
-          className="block-revealer bg-(--text-primary)"
-          style={{ transform: "scaleX(0)", height: "100%" }}
-        />
-
-        <div
-          ref={odometerWrapperRef}
-          className="flex space-x-1 overflow-hidden h-[1em] leading-none opacity-0 px-4"
-        >
-          <div className="relative">
-            <div ref={hundredsRef} className="flex flex-col">
-              {renderDigits(true)}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div ref={tensRef} className="flex flex-col">
-              {renderDigits()}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div ref={unitsRef} className="flex flex-col">
-              {renderDigits()}
-            </div>
+    <div role="status" aria-label="Loading portfolio" className="fixed inset-0 z-50 flex items-center justify-center text-(--text-primary) font-karla font-extrabold text-6xl pointer-events-none">
+      <div className="block-line-wrapper" aria-hidden="true">
+        <div ref={blockRef} className="block-revealer bg-(--text-primary)" style={{ transform: "scaleX(0)", height: "100%" }} />
+        <div ref={windowRef} className="h-[1em] overflow-hidden leading-none opacity-0 px-4 tabular-nums">
+          <div ref={counterRef} data-loader-count="" className="text-center">
+            {digits.map(value => <div key={value} className="h-[1em]">{value}</div>)}
           </div>
         </div>
       </div>

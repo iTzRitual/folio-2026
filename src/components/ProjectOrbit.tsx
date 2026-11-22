@@ -122,7 +122,7 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
-    video.preload = "auto";
+    video.preload = "none";
     const videoTexture = new VideoTexture(video);
     videoTexture.colorSpace = SRGBColorSpace;
     const current = { video, active: false };
@@ -147,7 +147,6 @@ export function ProjectOrbit({ colliderRef, entranceProgressRef, skullGeometry, 
     document.addEventListener("pointerdown", play);
     document.addEventListener("visibilitychange", visibility);
     video.src = project.loop;
-    video.load();
     return () => {
       playback.current = null;
       video.removeEventListener("playing", ready);

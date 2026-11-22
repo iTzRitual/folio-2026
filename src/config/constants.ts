@@ -231,6 +231,8 @@ export const CONFIG = {
     SETTLE_EPSILON: 0.00001,
   },
   workstation: {
+    WARMUP_BATCH_SIZE: 24,
+    REVEAL_CATCH_UP_SECONDS: 0.45,
     CRT_MODEL_URL: "/glbs/crt-monitor.glb?v=bvm-8044qd-closed-badge",
     KEYBOARD_MODEL_URL: "/glbs/keyboard.glb",
     ENERGY_CAN_MODEL_URL: "/glbs/monster-mango-loco.glb",
@@ -437,6 +439,7 @@ export const CONFIG = {
     ODOMETER_DURATION_REPEAT: 0.5,
   },
   model: {
+    MODEL_URL: "/glbs/czaszka2draco.glb",
     TRANSMISSION_MIN_SCALE: 0.02,
     PARTICLE_MIN_INTERACTION_SCALE: 0.001,
     TRANSMISSION_RESOLUTION: 256,
