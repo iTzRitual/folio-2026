@@ -43,6 +43,10 @@ export function DesktopProxies({ supportY, worldScale }: { supportY: number; wor
   const { workstation: w } = useDebugSettings();
   return <group name="DesktopAccessories">
     <DeskCollectionProps supportY={supportY} />
+    <group name="StudioHeadphones" position={xyz(CONFIG.workstation.HEADPHONES_POSITION, supportY)}
+      rotation={[0, MathUtils.degToRad(CONFIG.workstation.HEADPHONES_YAW), 0]}>
+      <WorkstationAsset url={CONFIG.workstation.HEADPHONES_MODEL_URL} intensity={CONFIG.workstation.MOUSE_ENV_INTENSITY} />
+    </group>
     <group name="MousePad" position={[
       CONFIG.workstation.MOUSE_PAD_CENTER.x,
       supportY,
