@@ -13,19 +13,17 @@ export function scheduleWork(callback: () => void) {
 export type WorkstationPreview = (draw: () => void) => void;
 
 interface WarmupOptions {
-  page: Group;
-  portrait: Object3D;
+  portfolio?: { page: Group; portrait: Object3D; desktop: Scene };
   gl: WebGLRenderer;
   camera: Camera;
   world: Scene;
   surface: Group | null;
-  desktop: Scene;
   progress: (fraction: number) => void;
   complete: () => void;
   fail: (error: unknown) => void;
 }
 
-export function warmWorkstation({ gl, camera, world, surface, desktop, page, portrait, progress, complete, fail }: WarmupOptions) {
+export function warmWorkstation({ gl, camera, world, surface, portfolio, progress, complete, fail }: WarmupOptions) {
   const target = new WebGLRenderTarget(4, 4);
   const batches: Scene[] = [];
   const collect = (roots: readonly Object3D[], environment: Scene) => {
@@ -48,14 +46,19 @@ export function warmWorkstation({ gl, camera, world, surface, desktop, page, por
       batches.push(batch);
     }
   };
-  const pageLights: Light[] = [];
-  page.traverseVisible(object => { if (object instanceof Light) pageLights.push(object); });
-  collect([portrait, ...pageLights], world);
   if (surface) collect(surface.children, world);
-  collect(desktop.children, desktop);
+  if (portfolio) {
+    const { page, portrait, desktop } = portfolio;
+    const pageLights: Light[] = [];
+    for (const child of page.children) {
+      child.traverseVisible(object => { if (object instanceof Light) pageLights.push(object); });
+    }
+    collect([portrait, ...pageLights], world);
+    collect(desktop.children, desktop);
+  }
   let index = 0;
-  let compiled = false;
-  let cancel: () => void;
+  let primed = false;
+  let timer: number;
   const step = () => {
     const previous = gl.getRenderTarget();
     const face = gl.getActiveCubeFace();
@@ -63,8 +66,9 @@ export function warmWorkstation({ gl, camera, world, surface, desktop, page, por
     try {
       gl.setRenderTarget(target);
       const batch = batches[index];
-      if (!compiled) {
+      if (!primed) {
         gl.compile(batch, camera);
+        primed = true;
       } else {
         const culled = batch.children.filter(object => object instanceof Mesh && object.frustumCulled);
         for (const object of culled) object.frustumCulled = false;
@@ -75,21 +79,21 @@ export function warmWorkstation({ gl, camera, world, surface, desktop, page, por
         }
         index++;
         progress(index / batches.length);
+        if (index < batches.length) gl.compile(batches[index], camera);
       }
-      compiled = !compiled;
     } catch (error) {
       fail(error);
       return;
     } finally {
       gl.setRenderTarget(previous, face, mip);
     }
-    if (index < batches.length) cancel = scheduleWork(step);
+    if (index < batches.length) timer = window.setTimeout(step, 0);
     else {
       target.dispose();
       batches.length = 0;
       complete();
     }
   };
-  cancel = scheduleWork(step);
-  return () => { cancel(); target.dispose(); };
+  timer = window.setTimeout(step, 0);
+  return () => { window.clearTimeout(timer); target.dispose(); };
 }

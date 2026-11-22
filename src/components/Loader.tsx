@@ -1,27 +1,38 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from "react";
 import { CONFIG } from "@/config/constants";
 import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 
+export interface LoaderHandle {
+  advanceWorkstation(progress: number): void;
+}
+
 interface LoaderProps {
+  ref: Ref<LoaderHandle>;
   canvasReady: boolean;
   ready: boolean;
-  workstationProgress: number;
   onExitStart: () => void;
   onComplete: () => void;
 }
 
 const digits = Array.from({ length: 101 }, (_, n) => String(n).padStart(3, "0"));
 
-export function Loader({ canvasReady, ready, workstationProgress, onExitStart, onComplete }: LoaderProps) {
+export function Loader({ ref, canvasReady, ready, onExitStart, onComplete }: LoaderProps) {
   const counterRef = useRef<HTMLDivElement>(null);
   const blockRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const wake = useRef<(() => void) | null>(null);
+  const workstationProgress = useRef(0);
+  useImperativeHandle(ref, () => ({
+    advanceWorkstation(value) {
+      workstationProgress.current = Math.max(workstationProgress.current, value);
+      wake.current?.();
+    },
+  }), []);
   const target = useEffectEvent(() => {
     if (!ready) return canvasReady ? 45 : 20;
-    return IS_REPEAT_VISIT ? 100 : 60 + Math.floor(40 * workstationProgress);
+    return 60 + Math.floor(40 * workstationProgress.current);
   });
   const startHero = useEffectEvent(onExitStart);
   const finish = useEffectEvent(onComplete);
@@ -61,11 +72,23 @@ export function Loader({ canvasReady, ready, workstationProgress, onExitStart, o
           await new Promise<void>(resolve => { wake.current = resolve; });
         }
       }
+      if (reduced) {
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      }
       if (cancelled) return;
-      await wipe("left", 0, 1);
-      viewport.style.opacity = "0";
-      startHero();
-      await wipe("right", 1, 0);
+      if (IS_REPEAT_VISIT) {
+        startHero();
+        animation = viewport.animate([{ opacity: 1 }, { opacity: 0 }], {
+          duration: reduced ? 0 : CONFIG.loader.REVEAL_DURATION_REPEAT * 1000,
+          fill: "forwards",
+        });
+        await animation.finished;
+      } else {
+        await wipe("left", 0, 1);
+        viewport.style.opacity = "0";
+        startHero();
+        await wipe("right", 1, 0);
+      }
       finish();
     };
     void run().catch(error => { if (!cancelled) throw error; });
@@ -76,7 +99,7 @@ export function Loader({ canvasReady, ready, workstationProgress, onExitStart, o
       wake.current = null;
     };
   }, []);
-  useEffect(() => { wake.current?.(); }, [canvasReady, ready, workstationProgress]);
+  useEffect(() => { wake.current?.(); }, [canvasReady, ready]);
 
   return (
     <div role="status" aria-label="Loading portfolio" className="fixed inset-0 z-50 flex items-center justify-center text-(--text-primary) font-karla font-extrabold text-6xl pointer-events-none">

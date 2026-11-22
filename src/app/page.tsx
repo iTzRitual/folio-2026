@@ -1,12 +1,11 @@
 // src/app/page.tsx
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactLenis } from "lenis/react";
-import { IS_REPEAT_VISIT } from "@/lib/visitSession";
-import { Loader } from "@/components/Loader";
+import { Loader, type LoaderHandle } from "@/components/Loader";
 import { useInputMode } from "@/hooks/useInputMode";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { NoJsContent } from "@/components/NoJs/NoJsContent";
@@ -42,8 +41,8 @@ const LENIS_OPTIONS = {
 } as const;
 
 export default function Home() {
-    const [workstationProgress, setWorkstationProgress] = useState(0);
-    const advanceWorkstation = useCallback((value: number) => setWorkstationProgress(current => Math.max(current, value)), []);
+    const loaderRef = useRef<LoaderHandle>(null);
+    const advanceWorkstation = useCallback((value: number) => loaderRef.current?.advanceWorkstation(value), []);
     const [canvasReady, setCanvasReady] = useState(false);
     const canvasCreated = useCallback(() => setCanvasReady(true), []);
     const [startScene, setStartScene] = useState(false);
@@ -84,7 +83,7 @@ export default function Home() {
                                 {!removeLoader && (
                                     <Loader
                                         canvasReady={canvasReady}
-                                        workstationProgress={workstationProgress}
+                                        ref={loaderRef}
                                         ready={status === "ready" && fontsReady}
                                         onExitStart={() => setStartScene(true)}
                                         onComplete={() => setRemoveLoader(true)}
@@ -94,8 +93,7 @@ export default function Home() {
                                     <SceneBoundary onFailure={fail}>
                                         <DynamicScene
                                             startAnimation={startScene}
-                                            prepareWorkstation={status === "ready"}
-                                            onWorkstationProgress={IS_REPEAT_VISIT ? undefined : advanceWorkstation}
+                                            onWorkstationProgress={advanceWorkstation}
                                             onCanvasReady={canvasCreated}
                                             inputMode={inputMode}
                                             detailsOverflowViewports={overflowViewports}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { WebGLRenderer, type WebGLRendererParameters } from "three";
 import Model from "./Model";
@@ -26,6 +26,7 @@ import type {
   SceneInputMode,
   SceneQualityTier,
 } from "@/lib/responsiveScene";
+import { WorkstationTextureLoader } from "./Workstation/WorkstationTextureLoader";
 import type { WorkstationPreview } from "./Workstation/prepareWorkstation";
 import { WorkstationScene } from "./WorkstationScene";
 import { CONFIG } from "@/config/constants";
@@ -33,10 +34,21 @@ import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
 import { SceneMotionProvider } from "@/context/SceneMotionContext";
 import { OrbitSignalContext, useOrbitSignal } from "@/context/OrbitSignalContext";
 
+const W = CONFIG.workstation;
+const roomModels = [
+  W.KEYBOARD_MODEL_URL, W.DESK_MODEL_URL, W.TURNTABLE_MODEL_URL, W.SPEAKER_MODEL_URL,
+  W.CABINET_MODEL_URL, W.ENERGY_CAN_MODEL_URL, W.CONTROLLER_MODEL_URL, W.SKATEBOARD_MODEL_URL,
+  W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL,
+];
+
 if (typeof window !== "undefined") {
   useGLTF.preload(CONFIG.model.MODEL_URL);
   useGLTF.preload(CONFIG.workstation.CRT_MODEL_URL);
   useEnvironment.preload({ files: CONFIG.workstation.ENVIRONMENT_URL });
+  for (const url of roomModels) useGLTF.preload(url);
+  useLoader.preload(WorkstationTextureLoader, [W.ARTWORK_PORTRAIT_URL, W.ARTWORK_RONALDO_URL]);
+  useLoader.preload(WorkstationTextureLoader, W.RECORD_COVER_URL);
+  useLoader.preload(WorkstationTextureLoader, W.LEVITATING_LAMP.WOOD_URL);
 }
 
 function SceneReady({ onReady }: { onReady: () => void }) {
@@ -53,7 +65,6 @@ function SceneReady({ onReady }: { onReady: () => void }) {
 function SceneContent({
   isDebug,
   startAnimation,
-  prepareWorkstation,
   onWorkstationProgress,
   bioVariant,
   detailsOverflowViewports,
@@ -62,7 +73,6 @@ function SceneContent({
 }: {
   isDebug: boolean;
   startAnimation: boolean;
-  prepareWorkstation: boolean;
   onWorkstationProgress?: (progress: number) => void;
   bioVariant: BioVariant;
   detailsOverflowViewports: number;
@@ -86,7 +96,7 @@ function SceneContent({
               <Environment files={CONFIG.workstation.ENVIRONMENT_URL} />
 
               <Suspense fallback={null}>
-                <WorkstationScene prepare={prepareWorkstation} readyRef={workstationReady} previewRef={workstationPreview} onProgress={onWorkstationProgress} onFailure={onFailure}>
+                <WorkstationScene readyRef={workstationReady} previewRef={workstationPreview} onProgress={onWorkstationProgress} onFailure={onFailure}>
                   <directionalLight intensity={3} position={[0, 3, 2]} />
                   <Model isDebug={isDebug} />
 
@@ -110,7 +120,6 @@ function SceneContent({
 
 export default function Scene({
   startAnimation,
-  prepareWorkstation = true,
   onWorkstationProgress,
   onCanvasReady,
   inputMode,
@@ -123,7 +132,6 @@ export default function Scene({
   onReady,
 }: {
   startAnimation: boolean;
-  prepareWorkstation?: boolean;
   onWorkstationProgress?: (progress: number) => void;
   onCanvasReady?: () => void;
   inputMode: SceneInputMode;
@@ -250,7 +258,6 @@ export default function Scene({
                 <SceneContent
                   isDebug={isDebug}
                   startAnimation={startAnimation}
-                  prepareWorkstation={prepareWorkstation}
                   onWorkstationProgress={onWorkstationProgress}
                   bioVariant={bioVariant}
                   detailsOverflowViewports={detailsOverflowViewports}

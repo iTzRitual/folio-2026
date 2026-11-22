@@ -97,16 +97,8 @@ type ReturnBridge = DesktopReturn & {
   autoScroll: ReturnBridgeAutoScroll | null;
 };
 
-const W = CONFIG.workstation;
-const roomModels = [
-  W.KEYBOARD_MODEL_URL, W.DESK_MODEL_URL, W.TURNTABLE_MODEL_URL, W.SPEAKER_MODEL_URL,
-  W.CABINET_MODEL_URL, W.ENERGY_CAN_MODEL_URL, W.CONTROLLER_MODEL_URL, W.SKATEBOARD_MODEL_URL,
-  W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL,
-];
-
-export function WorkstationScene({ children, prepare, readyRef, previewRef, onProgress, onFailure }: {
+export function WorkstationScene({ children, readyRef, previewRef, onProgress, onFailure }: {
   children: ReactNode;
-  prepare: boolean;
   readyRef: RefObject<boolean>;
   previewRef: RefObject<WorkstationPreview | null>;
   onProgress?: (progress: number) => void;
@@ -286,7 +278,6 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
   }, [pageAberrationMaterial]);
 
   useEffect(() => {
-    if (!prepare) return;
     let wallpaperTexture: THREE.Texture | null = null;
     let cancelled = false;
 
@@ -323,7 +314,7 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
       cancelled = true;
       wallpaperTexture?.dispose();
     };
-  }, [prepare]);
+  }, []);
 
   useEffect(() => {
     chromeMaterialRef.current = windowChromeMaterial;
@@ -397,32 +388,19 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
   ]);
 
   useEffect(() => {
-    if (!prepare) return;
-    let next = 0;
-    let cancel: () => void;
-    const preload = () => {
-      useGLTF.preload(roomModels[next++]);
-      if (next < roomModels.length) cancel = scheduleWork(preload);
-    };
-    cancel = scheduleWork(preload);
-    return () => cancel();
-  }, [prepare]);
-
-  useEffect(() => {
-    if (!prepare) return;
     let cancel: () => void;
     let cancelled = false;
-    const begin = () => {
+    const prepareDesktop = () => {
       const surface = surfaceGroupRef.current;
       const crt = crtScreenRef.current;
       const page = pageGroupRef.current;
       const portrait = page?.getObjectByName("BioPortrait");
-      if (!capture.ready) {
+      if (portrait && !capture.ready) {
         capturePendingRef.current = true;
         invalidate();
       }
-      if (!roomRef.current || !capture.ready || !wallpaperSettled.current || !surface || !crt || !page || !portrait) {
-        cancel = scheduleWork(begin);
+      if (!capture.ready || !wallpaperSettled.current || !surface || !crt || !page || !portrait) {
+        cancel = scheduleWork(prepareDesktop);
         return;
       }
       const finish = () => {
@@ -461,20 +439,35 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
         });
         invalidate();
       };
-      onProgress?.(0.3);
       cancel = warmWorkstation({
-        gl, camera, world: scene, surface: readyRef.current ? null : surface, desktop: crt.desktopScene, page, portrait,
-        progress: fraction => onProgress?.(0.3 + fraction * 0.65),
+        gl, camera, world: scene, surface: null, portfolio: { desktop: crt.desktopScene, page, portrait },
+        progress: fraction => onProgress?.(0.85 + fraction * 0.1),
         complete: finish, fail: onFailure,
       });
     };
-    cancel = scheduleWork(begin);
+    const prepareRoom = () => {
+      const surface = surfaceGroupRef.current;
+      if (!roomRef.current || !surface) {
+        cancel = scheduleWork(prepareRoom);
+        return;
+      }
+      if (readyRef.current) {
+        prepareDesktop();
+        return;
+      }
+      cancel = warmWorkstation({
+        gl, camera, world: scene, surface,
+        progress: fraction => onProgress?.(fraction * 0.85),
+        complete: prepareDesktop, fail: onFailure,
+      });
+    };
+    cancel = scheduleWork(prepareRoom);
     return () => {
       cancelled = true;
       cancel();
       previewRef.current = null;
     };
-  }, [prepare, capture, gl, camera, scene, readyRef, previewRef, cameraPath, cameraTarget, settings.sceneFraming.maxZoomOut, size.height, size.width, desktop, onProgress, onFailure, invalidate]);
+  }, [capture, gl, camera, scene, readyRef, previewRef, cameraPath, cameraTarget, settings.sceneFraming.maxZoomOut, size.height, size.width, desktop, onProgress, onFailure, invalidate]);
 
   useEffect(() => {
     return () => {
@@ -1089,6 +1082,7 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
   });
 
   useFrame(() => {
+    if (!capture.ready && pageGroupRef.current?.getObjectByName("BioPortrait")) capturePendingRef.current = true;
     if (
       (isCaseStudyActive() && !capturePendingRef.current) ||
       (!capturePendingRef.current && !capture.ready) ||
@@ -1361,14 +1355,14 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
 
   return (
     <group>
-      <group ref={pageGroupRef}>{children}</group>
+      <group ref={pageGroupRef}><Suspense fallback={null}>{children}</Suspense></group>
 
       <group
         ref={surfaceGroupRef}
         position={[0, 0, CONFIG.workstation.PLANE_Z]}
         visible={false}
       >
-        {prepare && <Suspense fallback={null}>
+        <Suspense fallback={null}>
           <group ref={roomRef}>
             <CRTMonitor
               width={planeWidth}
@@ -1377,7 +1371,7 @@ export function WorkstationScene({ children, prepare, readyRef, previewRef, onPr
             />
             <WorkstationEnvironment width={planeWidth} />
           </group>
-        </Suspense>}
+        </Suspense>
         <CRTDisplay ref={crtScreenRef} monitorState={monitorState} width={planeWidth} height={planeHeight} geometry={planeGeometry} borderGeometry={borderGeometry}>
         <group ref={desktopSignalGroupRef}>
         <mesh

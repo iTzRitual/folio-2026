@@ -435,9 +435,9 @@ export const CONFIG = {
   },
   loader: {
     REVEAL_DURATION: 0.5,
-    REVEAL_DURATION_REPEAT: 0.18,
+    REVEAL_DURATION_REPEAT: 0.12,
     ODOMETER_DURATION: 2,
-    ODOMETER_DURATION_REPEAT: 0.5,
+    ODOMETER_DURATION_REPEAT: 0.32,
   },
   model: {
     MODEL_URL: "/glbs/czaszka2draco.glb",

@@ -54,22 +54,25 @@ export async function checkLoadingBrowser(devtools, sessionId, base) {
       await send("Page.addScriptToEvaluateOnNewDocument", { source: `(${holdRoomModel.toString()})()` });
     }
     await send("Page.navigate", { url: new URL("/", base).href });
+    if (reduced) {
+      await wait(`typeof window.releaseRoomModel === 'function' && !!document.querySelector('[data-renderer-status="ready"]')`);
+      await wait("window.loadingSample.values.some(value => value >= 60)");
+      await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+      assert(await evaluate("window.loadingSample.values.at(-1) < 100"), "A held model keeps progress below 100");
+      assert.equal(await evaluate("window.loadingSample.exit"), 0, "A pending room model keeps the repeat loader open");
+      await evaluate("window.releaseRoomModel()");
+    }
     await wait("window.loadingSample?.exit > 0");
     const { values, exit, revealShaders } = await evaluate("window.loadingSample");
-    assert.equal(values.at(-1), 100, "Loader finishes at 100");
+    assert.equal(values.at(-1), 100, `Loader finishes at 100 (reduced motion: ${reduced})`);
     assert(values.length > 1 && values.every((value, i) => !i || value > values[i - 1]), `Counter reversed: ${values}`);
     await evaluate("window.scrollTo(0, document.documentElement.scrollHeight)");
     const lampVisible = `document.querySelector('button[aria-label="Desk lamp"]')?.hidden === false`;
-    if (reduced) {
-      await wait("typeof window.releaseRoomModel === 'function'");
-      assert.equal(await evaluate(lampVisible), false, "An early scroll waits for the room");
-      await evaluate("window.releaseRoomModel()");
-    }
     await wait(lampVisible);
     const assets = await evaluate(`performance.getEntriesByType("resource").filter(r => new URL(r.name).pathname.startsWith("/glbs/")).map(r => ({name: r.name, end: r.responseEnd}))`);
     assert(assets.some(r => r.name.includes("/qck-hard.glb")), "Room accessories loaded");
+    assert(assets.every(r => r.end <= exit), "Every visit prepares all models before exit");
     if (!reduced) {
-      assert(assets.every(r => r.end <= exit), "Cold loader prepares all models before exit");
       assert(revealShaders > 0, "Bio reveal shader prepared");
       await evaluate("new Promise(resolve => setTimeout(resolve, 750))");
       assert.equal(await evaluate("window.loadingSample.revealShaders"), revealShaders, "Entering the room reuses the prepared bio shader");
