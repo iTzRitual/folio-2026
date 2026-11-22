@@ -38,7 +38,7 @@ const W = CONFIG.workstation;
 const roomModels = [
   W.KEYBOARD_MODEL_URL, W.DESK_MODEL_URL, W.TURNTABLE_MODEL_URL, W.SPEAKER_MODEL_URL,
   W.CABINET_MODEL_URL, W.ENERGY_CAN_MODEL_URL, W.CONTROLLER_MODEL_URL, W.SKATEBOARD_MODEL_URL,
-  W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL, W.HEADPHONES_MODEL_URL,
+  W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL, W.HEADPHONES_MODEL_URL, W.WINDOW_MODEL_URL,
 ];
 
 if (typeof window !== "undefined") {
@@ -47,6 +47,7 @@ if (typeof window !== "undefined") {
   useEnvironment.preload({ files: CONFIG.workstation.ENVIRONMENT_URL });
   for (const url of roomModels) useGLTF.preload(url);
   useLoader.preload(WorkstationTextureLoader, [W.ARTWORK_PORTRAIT_URL, W.ARTWORK_RONALDO_URL]);
+  useLoader.preload(WorkstationTextureLoader, W.WINDOW_VIEW.url);
   useLoader.preload(WorkstationTextureLoader, W.RECORD_COVER_URL);
   useLoader.preload(WorkstationTextureLoader, W.LEVITATING_LAMP.WOOD_URL);
 }

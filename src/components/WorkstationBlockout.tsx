@@ -91,6 +91,8 @@ export function WallProxies({ supportY }: { supportY: number }) {
     CONFIG.workstation.ARTWORK_PORTRAIT_URL,
     CONFIG.workstation.ARTWORK_RONALDO_URL,
   ]);
+  const view = CONFIG.workstation.WINDOW_VIEW;
+  const city = useLoader(WorkstationTextureLoader, view.url);
   const win = w.windowPosition;
   const s = CONFIG.workstation.WINDOW_SIZE;
   const wallZ = win.z - 0.07;
@@ -110,18 +112,11 @@ export function WallProxies({ supportY }: { supportY: number }) {
       <Block size={[s.x, 2.5 - win.y - s.y / 2, 0.12]} position={[win.x, (2.5 + win.y + s.y / 2) / 2, wallZ]} color={wall} />
     </group>
     <group name="Window" position={xyz(win, supportY)}>
-      <mesh position={[0, 0, -0.13]} raycast={noRaycast}>
-        <planeGeometry args={[s.x + 0.05, s.y + 0.05]} />
-        <meshBasicMaterial color={lighting.mode === "day" ? "#93b7bc" : "#3b526e"} />
+      <WorkstationAsset url={CONFIG.workstation.WINDOW_MODEL_URL} intensity={CONFIG.workstation.WINDOW_ENV_INTENSITY} />
+      <mesh name="ShinjukuSkyline" position={[view.offset.x, view.offset.y, view.offset.z]} raycast={noRaycast}>
+        <planeGeometry args={[view.width, view.height]} />
+        <meshBasicMaterial map={city} color={view.tint[lighting.mode]} toneMapped={false} fog={false} />
       </mesh>
-      {[-1, 1].map(side => <group key={side}>
-        <Block size={[0.032, s.y + 0.06, 0.1]} position={[side * s.x / 2, 0, 0]} color={bone} />
-        <Block size={[s.x, 0.032, 0.1]} position={[0, side * s.y / 2, 0]} color={bone} />
-      </group>)}
-      <Block size={[0.023, s.y, 0.065]} color={bone} />
-      <Block size={[s.x, 0.018, 0.065]} position={[0, 0.03, 0]} color={bone} />
-      <Block size={[s.x + 0.1, 0.028, 0.19]} position={[0, -s.y / 2, 0.035]} color={bone} />
-      <Block size={[s.x, 0.13, 0.02]} position={[0, -0.3, -0.1]} color={lighting.mode === "day" ? "#758d83" : "#273d46"} />
     </group>
     <PersonalProps supportY={supportY} />
     <FramedArtwork
