@@ -1,5 +1,5 @@
 import { EffectComposer, EffectPass, RenderPass, SMAAEffect, SMAAPreset } from "postprocessing";
-import { HalfFloatType, type Camera, type Scene, type WebGLRenderer } from "three";
+import { HalfFloatType, type Camera, type Scene, type WebGLRenderer, type WebGLRenderTarget } from "three";
 import { CONFIG } from "@/config/constants";
 import { CustomAberrationEffect } from "./CustomAberrationEffect";
 import { HeaderExclusionEffect } from "./HeaderExclusionEffect";
@@ -21,6 +21,7 @@ export class PortfolioEffectPipeline {
   private readonly antialiasingPass: EffectPass;
   private readonly multisampling: number;
   private readonly workstationMultisampling: number;
+  private readonly inputBuffers = new Map<number, WebGLRenderTarget>();
   private readonly renderer: WebGLRenderer;
   private readonly autoClear: boolean;
   private disposed = false;
@@ -38,7 +39,9 @@ export class PortfolioEffectPipeline {
     this.antialiasing = new SMAAEffect({ preset: SMAAPreset[CONFIG.antialiasing.SMAA_PRESET] });
     this.headerPass = new EffectPass(camera, this.header);
     this.aberrationPass = new EffectPass(camera, this.aberration);
-    this.composer = new EffectComposer(renderer, { multisampling: 0, frameBufferType: HalfFloatType });
+    this.composer = new EffectComposer(renderer, { multisampling: this.multisampling, frameBufferType: HalfFloatType });
+    this.composer.outputBuffer.samples = 0;
+    this.inputBuffers.set(this.multisampling, this.composer.inputBuffer);
     this.composer.autoRenderToScreen = false;
     this.composer.addPass(new RenderPass(scene, camera));
     this.composer.addPass(this.headerPass);
@@ -49,6 +52,17 @@ export class PortfolioEffectPipeline {
     this.setAberrationEnabled(true);
   }
 
+  resize(width: number, height: number) {
+    this.composer.setSize(width, height);
+    const active = this.composer.inputBuffer;
+    for (const target of this.inputBuffers.values()) {
+      if (target !== active && (target.width !== active.width || target.height !== active.height)) {
+        target.setSize(active.width, active.height);
+        this.renderer.initRenderTarget(target);
+      }
+    }
+  }
+
   setAberrationEnabled(enabled: boolean) {
     this.aberrationPass.enabled = enabled;
     this.updateOutput();
@@ -57,9 +71,15 @@ export class PortfolioEffectPipeline {
   setAntialiasingMode(mode: "msaa" | "smaa" | "workstation") {
     const samples = mode === "workstation" ? this.workstationMultisampling : mode === "msaa" ? this.multisampling : 0;
     if (this.composer.multisampling !== samples) {
-      this.composer.multisampling = samples;
-      this.composer.outputBuffer.samples = 0;
-      this.composer.outputBuffer.dispose();
+      const current = this.composer.inputBuffer;
+      let target = this.inputBuffers.get(samples);
+      if (!target) {
+        target = current.clone();
+        target.samples = samples;
+        this.inputBuffers.set(samples, target);
+      }
+      target.setSize(current.width, current.height);
+      this.composer.inputBuffer = target;
     }
     this.antialiasingPass.enabled = samples === 0;
     this.updateOutput();
@@ -76,6 +96,10 @@ export class PortfolioEffectPipeline {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    for (const target of this.inputBuffers.values()) {
+      if (target !== this.composer.inputBuffer) target.dispose();
+    }
+    this.inputBuffers.clear();
     this.composer.dispose();
     this.renderer.autoClear = this.autoClear;
   }

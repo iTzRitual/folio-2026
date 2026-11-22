@@ -56,5 +56,14 @@ def optimize(path, limits):
 
 
 if __name__ == "__main__":
+    covers = MODELS.parent / "textures" / "music-cabinet"
+    for source, output, limit in [
+        ("walnut.jpg", "lamp-walnut.webp", 256),
+        ("the-prodigy-one-love.webp", "one-love-sleeve.webp", 512),
+    ]:
+        with Image.open(covers / source) as image:
+            image.thumbnail((limit, limit), Image.Resampling.LANCZOS)
+            image.save(covers / output, quality=90, method=6)
+
     for model, limits in COLOR_MAPS.items():
         optimize(MODELS / (model + ".glb"), limits)

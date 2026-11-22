@@ -10,7 +10,11 @@ export function scheduleWork(callback: () => void) {
   return () => cancelAnimationFrame(id);
 }
 
+export type WorkstationPreview = (draw: () => void) => void;
+
 interface WarmupOptions {
+  page: Group;
+  portrait: Object3D;
   gl: WebGLRenderer;
   camera: Camera;
   world: Scene;
@@ -21,7 +25,7 @@ interface WarmupOptions {
   fail: (error: unknown) => void;
 }
 
-export function warmWorkstation({ gl, camera, world, surface, desktop, progress, complete, fail }: WarmupOptions) {
+export function warmWorkstation({ gl, camera, world, surface, desktop, page, portrait, progress, complete, fail }: WarmupOptions) {
   const target = new WebGLRenderTarget(4, 4);
   const batches: Scene[] = [];
   const collect = (roots: readonly Object3D[], environment: Scene) => {
@@ -44,6 +48,9 @@ export function warmWorkstation({ gl, camera, world, surface, desktop, progress,
       batches.push(batch);
     }
   };
+  const pageLights: Light[] = [];
+  page.traverseVisible(object => { if (object instanceof Light) pageLights.push(object); });
+  collect([portrait, ...pageLights], world);
   if (surface) collect(surface.children, world);
   collect(desktop.children, desktop);
   let index = 0;

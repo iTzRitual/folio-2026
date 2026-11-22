@@ -1,8 +1,10 @@
 "use client";
 
+import { useLoader } from "@react-three/fiber";
 import { useMemo } from "react";
-import { MathUtils, Mesh, SRGBColorSpace } from "three";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { MathUtils, Mesh } from "three";
+import { useGLTF } from "@react-three/drei";
+import { WorkstationTextureLoader } from "./Workstation/WorkstationTextureLoader";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { Block } from "./WorkstationPrimitives";
@@ -20,7 +22,7 @@ export function DeskCollectionProps({ supportY }: { supportY: number }) {
     });
     return model;
   }, [can]);
-  const artwork = useTexture(CONFIG.workstation.RECORD_COVER_URL, texture => { texture.colorSpace = SRGBColorSpace; });
+  const artwork = useLoader(WorkstationTextureLoader, CONFIG.workstation.RECORD_COVER_URL);
   const position = (p: { x: number; y: number; z: number }): [number, number, number] => [p.x, supportY + p.y, p.z];
   const recordSize = CONFIG.workstation.RECORD_SIZE;
   const thickness = CONFIG.workstation.RECORD_THICKNESS;

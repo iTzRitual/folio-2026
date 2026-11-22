@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { MathUtils, Mesh, MeshStandardMaterial, SRGBColorSpace, type Texture } from "three";
-import { useThree } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { MathUtils, Mesh, MeshStandardMaterial, type Texture } from "three";
+import { useLoader, useThree } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { WorkstationTextureLoader } from "./Workstation/WorkstationTextureLoader";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { PersonalProps } from "./WorkstationPersonalProps";
@@ -17,9 +18,6 @@ export { Block } from "./WorkstationPrimitives";
 type Point = { x: number; y: number; z: number };
 const bone = "#b9b4a7";
 const noRaycast = () => null;
-const configureArtworkTextures = (textures: Texture[]) => {
-  for (const texture of textures) texture.colorSpace = SRGBColorSpace;
-};
 
 const xyz = (p: Point, y: number): [number, number, number] => [p.x, p.y + y, p.z];
 
@@ -85,10 +83,10 @@ export function MusicCabinet({ supportY, children }: { supportY: number; childre
 
 export function WallProxies({ supportY }: { supportY: number }) {
   const { workstation: w, lighting } = useDebugSettings();
-  const [portraitArtwork, ronaldoArtwork] = useTexture([
+  const [portraitArtwork, ronaldoArtwork] = useLoader(WorkstationTextureLoader, [
     CONFIG.workstation.ARTWORK_PORTRAIT_URL,
     CONFIG.workstation.ARTWORK_RONALDO_URL,
-  ], configureArtworkTextures);
+  ]);
   const win = w.windowPosition;
   const s = CONFIG.workstation.WINDOW_SIZE;
   const wallZ = win.z - 0.07;

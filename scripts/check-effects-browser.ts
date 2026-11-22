@@ -70,10 +70,15 @@ export async function checkEffects(renderer: WebGLRenderer) {
         pipeline.composer.render(1 / 60);
         const reference = capture();
         assert(reference.slice(0, 3).some(value => value > 0), "Pipeline output must not be blank");
+        const targets = new Map<number, WebGLRenderTarget>();
         for (let change = 0; change < 16; change++) {
           const mode = (["msaa", "smaa", "workstation"] as const)[change % 3];
           pipeline.setAntialiasingMode(mode);
-          const buffers = [pipeline.composer.inputBuffer, pipeline.composer.outputBuffer];
+          const samples = pipeline.composer.multisampling;
+          const input = pipeline.composer.inputBuffer;
+          assert(!targets.has(samples) || targets.get(samples) === input, "Returning to a prepared sample count must reuse its geometry buffer");
+          targets.set(samples, input);
+          const buffers = [input, pipeline.composer.outputBuffer];
           let disposals = 0;
           const disposed = () => { disposals++; };
           buffers.forEach(buffer => buffer.addEventListener("dispose", disposed));
@@ -82,7 +87,7 @@ export async function checkEffects(renderer: WebGLRenderer) {
           assert(disposals === 0, "An unchanged antialiasing mode must not reallocate GPU buffers");
           pipeline.setAberrationEnabled(change % 2 === 0);
           pipeline.aberration.setTaps(change % 3 === 0 ? 3 : 8);
-          pipeline.composer.setSize(change % 2 === 0 ? 48 : 32, 32);
+          pipeline.resize(change % 2 === 0 ? 48 : 32, 32);
           pipeline.composer.render(1 / 60);
           assert(pipeline.composer.outputBuffer.samples === 0, "Fullscreen effects must not allocate a second multisampled buffer");
           const activePasses = pipeline.composer.passes.filter(pass => pass.enabled);
@@ -118,7 +123,7 @@ export async function checkEffects(renderer: WebGLRenderer) {
       pipeline.header.setActive(false);
       for (const dpr of [0.75, 1, 1.5]) {
         renderer.setPixelRatio(dpr);
-        pipeline.composer.setSize(64, 64);
+        pipeline.resize(64, 64);
         const dimensions = renderer.getDrawingBufferSize(new Vector2());
         const pixels = new Uint8Array(dimensions.x * dimensions.y * 4);
         const readEdges = () => {
@@ -150,7 +155,7 @@ export async function checkEffects(renderer: WebGLRenderer) {
         pipeline.setAntialiasingMode("workstation");
         pipeline.setAberrationEnabled(false);
         renderer.setPixelRatio(1);
-        pipeline.composer.setSize(64, 64);
+        pipeline.resize(64, 64);
         scene.background = new Color("#45484d");
         material.color.set("#55585d");
         const pixels = new Uint8Array(64 * 64 * 4);

@@ -26,6 +26,7 @@ import type {
   SceneInputMode,
   SceneQualityTier,
 } from "@/lib/responsiveScene";
+import type { WorkstationPreview } from "./Workstation/prepareWorkstation";
 import { WorkstationScene } from "./WorkstationScene";
 import { CONFIG } from "@/config/constants";
 import { useStableSceneViewport } from "@/hooks/useStableSceneViewport";
@@ -70,6 +71,7 @@ function SceneContent({
 }) {
   useStableSceneViewport();
   const workstationReady = useRef(false);
+  const workstationPreview = useRef<WorkstationPreview | null>(null);
 
   return (
     <HeroLayoutProvider startAnimation={startAnimation}>
@@ -84,7 +86,7 @@ function SceneContent({
               <Environment files={CONFIG.workstation.ENVIRONMENT_URL} />
 
               <Suspense fallback={null}>
-                <WorkstationScene prepare={prepareWorkstation} readyRef={workstationReady} onProgress={onWorkstationProgress} onFailure={onFailure}>
+                <WorkstationScene prepare={prepareWorkstation} readyRef={workstationReady} previewRef={workstationPreview} onProgress={onWorkstationProgress} onFailure={onFailure}>
                   <directionalLight intensity={3} position={[0, 3, 2]} />
                   <Model isDebug={isDebug} />
 
@@ -97,7 +99,7 @@ function SceneContent({
                   <SceneReady onReady={onReady} />
                 </WorkstationScene>
               </Suspense>
-              <PortfolioEffects />
+              <PortfolioEffects previewRef={workstationPreview} />
             </CaseStudyProvider>
           </ProjectHoverProvider>
         </SceneMotionProvider>

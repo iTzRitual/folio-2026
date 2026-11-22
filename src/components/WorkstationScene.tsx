@@ -44,7 +44,8 @@ import {
   workstationCameraProgress,
 } from "@/lib/workstationFrame";
 import { applyPointerCamera, bindPointerCameraInput, createPointerCameraRuntime } from "@/lib/pointerCamera";
-import { scheduleWork, warmWorkstation } from "./Workstation/prepareWorkstation";
+import { scheduleWork, warmWorkstation, type WorkstationPreview } from "./Workstation/prepareWorkstation";
+import { WorkstationTextureLoader } from "./Workstation/WorkstationTextureLoader";
 import { PortfolioCapture } from "./Workstation/PortfolioCapture";
 import { WorkstationEnvironment } from "./WorkstationEnvironment";
 import {
@@ -103,10 +104,11 @@ const roomModels = [
   W.MOUSE_MODEL_URL, W.MOUSE_PAD_MODEL_URL,
 ];
 
-export function WorkstationScene({ children, prepare, readyRef, onProgress, onFailure }: {
+export function WorkstationScene({ children, prepare, readyRef, previewRef, onProgress, onFailure }: {
   children: ReactNode;
   prepare: boolean;
   readyRef: RefObject<boolean>;
+  previewRef: RefObject<WorkstationPreview | null>;
   onProgress?: (progress: number) => void;
   onFailure: (error: unknown) => void;
 }) {
@@ -289,7 +291,7 @@ export function WorkstationScene({ children, prepare, readyRef, onProgress, onFa
     let cancelled = false;
 
     wallpaperSettled.current = false;
-    new THREE.TextureLoader().load(WORKSTATION_WALLPAPER_SRC, (texture) => {
+    new WorkstationTextureLoader().load(WORKSTATION_WALLPAPER_SRC, (texture) => {
       if (cancelled) {
         texture.dispose();
         return;
@@ -300,7 +302,6 @@ export function WorkstationScene({ children, prepare, readyRef, onProgress, onFa
       const repeatX = Math.min(1, planeAspect / imageAspect);
       const repeatY = Math.min(1, imageAspect / planeAspect);
 
-      texture.colorSpace = THREE.SRGBColorSpace;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.repeat.set(repeatX, repeatY);
@@ -410,34 +411,70 @@ export function WorkstationScene({ children, prepare, readyRef, onProgress, onFa
   useEffect(() => {
     if (!prepare) return;
     let cancel: () => void;
+    let cancelled = false;
     const begin = () => {
       const surface = surfaceGroupRef.current;
       const crt = crtScreenRef.current;
+      const page = pageGroupRef.current;
+      const portrait = page?.getObjectByName("BioPortrait");
       if (!capture.ready) {
         capturePendingRef.current = true;
         invalidate();
       }
-      if (!roomRef.current || !capture.ready || !wallpaperSettled.current || !surface || !crt) {
+      if (!roomRef.current || !capture.ready || !wallpaperSettled.current || !surface || !crt || !page || !portrait) {
         cancel = scheduleWork(begin);
         return;
       }
       const finish = () => {
         crt.prepareFrame(() => {
-          readyRef.current = true;
-          onProgress?.(1);
+          if (cancelled) return;
+          previewRef.current = draw => {
+            const position = camera.position.clone();
+            const rotation = camera.quaternion.clone();
+            const scale = surface.scale.clone();
+            const y = surface.position.y;
+            const pageVisible = page.visible;
+            const roomVisible = surface.visible;
+            try {
+              page.visible = false;
+              surface.visible = true;
+              surface.scale.setScalar(1);
+              surface.position.y = 0;
+              cameraPath.sample(settings.sceneFraming.maxZoomOut, camera.position, cameraTarget);
+              camera.lookAt(cameraTarget);
+              draw();
+              readyRef.current = true;
+              onProgress?.(1);
+            } catch (error) {
+              onFailure(error);
+            } finally {
+              camera.position.copy(position);
+              camera.quaternion.copy(rotation);
+              camera.updateMatrixWorld();
+              surface.scale.copy(scale);
+              surface.position.y = y;
+              page.visible = pageVisible;
+              surface.visible = roomVisible;
+            }
+          };
+          invalidate();
         });
         invalidate();
       };
       onProgress?.(0.3);
       cancel = warmWorkstation({
-        gl, camera, world: scene, surface: readyRef.current ? null : surface, desktop: crt.desktopScene,
+        gl, camera, world: scene, surface: readyRef.current ? null : surface, desktop: crt.desktopScene, page, portrait,
         progress: fraction => onProgress?.(0.3 + fraction * 0.65),
         complete: finish, fail: onFailure,
       });
     };
     cancel = scheduleWork(begin);
-    return () => { cancel(); };
-  }, [prepare, capture, gl, camera, scene, readyRef, size.height, size.width, desktop, onProgress, onFailure, invalidate]);
+    return () => {
+      cancelled = true;
+      cancel();
+      previewRef.current = null;
+    };
+  }, [prepare, capture, gl, camera, scene, readyRef, previewRef, cameraPath, cameraTarget, settings.sceneFraming.maxZoomOut, size.height, size.width, desktop, onProgress, onFailure, invalidate]);
 
   useEffect(() => {
     return () => {

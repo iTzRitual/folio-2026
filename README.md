@@ -112,10 +112,10 @@ npm run dev
 ### Resource loading
 
 1. The first screen starts the skull, CRT geometry and environment map together. While the loader is visible, the canvas renders on demand. The counter advances as the renderer, fonts and scenes become ready.
-2. Once the portfolio has drawn its first frame, the workstation queues the remaining models during idle time. It compiles materials and draws small batches offscreen, then renders the virtual desktop into the CRT buffer before the counter reaches 100.
-3. The reveal reuses those GPU resources. The CRT adjusts its drawing area inside the allocated buffer as the camera moves. Project video starts when its orbit becomes active. PlayStation clips and editor source files load when their respective inputs or apps are selected.
+2. Once the portfolio has drawn its first frame, the workstation queues the remaining models during idle time. On the first visit it prepares the workstation before the loader exits. On repeat visits the loader releases the hero as soon as its frame and fonts are ready. Room preparation continues while the hero is interactive.
+3. The warmup draws the bio portrait with the portfolio lighting, fills the CRT buffer and renders a workstation frame with the final camera and antialiasing settings. Each sample count keeps its own geometry buffer. An early scroll waits at the end of the portfolio until the workstation is ready, then catches up to the scroll position. The CRT adjusts its drawing area inside the allocated buffer as the camera moves. Project video starts when its orbit becomes active. PlayStation clips and editor source files load when their respective inputs or apps are selected.
 
-Run `npm run test:loading` to check the counter and immediate workstation entry on fresh and repeat visits. After re-exporting the speakers, cabinet or energy can, run `python3 assets/optimize_workstation_textures.py` with Pillow installed to prepare their runtime color maps.
+Run `npm run test:loading` to check the counter and immediate workstation entry on fresh and repeat visits. Run `python3 assets/optimize_workstation_textures.py` with Pillow installed to rebuild the lamp and record sleeve textures and optimize the color maps in the speaker, cabinet and energy can models.
 
 ### 🛠️ Developer Tools
 

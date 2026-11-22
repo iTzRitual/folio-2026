@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactLenis } from "lenis/react";
+import { IS_REPEAT_VISIT } from "@/lib/visitSession";
 import { Loader } from "@/components/Loader";
 import { useInputMode } from "@/hooks/useInputMode";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -94,7 +95,7 @@ export default function Home() {
                                         <DynamicScene
                                             startAnimation={startScene}
                                             prepareWorkstation={status === "ready"}
-                                            onWorkstationProgress={advanceWorkstation}
+                                            onWorkstationProgress={IS_REPEAT_VISIT ? undefined : advanceWorkstation}
                                             onCanvasReady={canvasCreated}
                                             inputMode={inputMode}
                                             detailsOverflowViewports={overflowViewports}

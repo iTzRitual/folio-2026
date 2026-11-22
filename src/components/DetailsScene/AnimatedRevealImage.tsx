@@ -146,7 +146,7 @@ export function AnimatedRevealImage({
     );
 
     return (
-        <group ref={groupRef} position={position}>
+        <group name="BioPortrait" ref={groupRef} position={position}>
             <mesh position={[width / 2, -height / 2, 0]}>
                 <planeGeometry
                     args={[

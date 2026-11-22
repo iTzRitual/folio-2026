@@ -19,7 +19,10 @@ export function Loader({ canvasReady, ready, workstationProgress, onExitStart, o
   const blockRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const wake = useRef<(() => void) | null>(null);
-  const target = useEffectEvent(() => ready ? 60 + Math.floor(40 * workstationProgress) : canvasReady ? 45 : 20);
+  const target = useEffectEvent(() => {
+    if (!ready) return canvasReady ? 45 : 20;
+    return IS_REPEAT_VISIT ? 100 : 60 + Math.floor(40 * workstationProgress);
+  });
   const startHero = useEffectEvent(onExitStart);
   const finish = useEffectEvent(onComplete);
 
@@ -40,7 +43,7 @@ export function Loader({ canvasReady, ready, workstationProgress, onExitStart, o
     };
     const wipe = (origin: string, from: number, to: number) => {
       block.style.transformOrigin = origin;
-      return move(block, `scaleX(${from})`, `scaleX(${to})`, CONFIG.loader.REVEAL_DURATION * 1000, "cubic-bezier(.76,0,.24,1)");
+      return move(block, `scaleX(${from})`, `scaleX(${to})`, (IS_REPEAT_VISIT ? CONFIG.loader.REVEAL_DURATION_REPEAT : CONFIG.loader.REVEAL_DURATION) * 1000, "cubic-bezier(.76,0,.24,1)");
     };
     const count = (from: number, to: number) =>
       move(counter, `translateY(-${from}em)`, `translateY(-${to}em)`, countTime * (to - from) / 100, `steps(${to - from}, end)`);

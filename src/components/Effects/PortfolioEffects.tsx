@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { MathUtils, NoToneMapping } from "three";
 import { CONFIG } from "@/config/constants";
@@ -8,6 +8,7 @@ import { useSceneCapabilities } from "@/context/SceneCapabilitiesContext";
 import { useSceneMotion } from "@/context/SceneMotionContext";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { HEADER_LAYER } from "./HeaderExclusionEffect";
+import type { WorkstationPreview } from "../Workstation/prepareWorkstation";
 import { PortfolioEffectPipeline } from "./PortfolioEffectPipeline";
 
 function affordableTaps(width: number, height: number) {
@@ -20,7 +21,7 @@ function affordableTaps(width: number, height: number) {
   );
 }
 
-export function PortfolioEffects() {
+export function PortfolioEffects({ previewRef }: { previewRef: RefObject<WorkstationPreview | null> }) {
   const pipelineRef = useRef<PortfolioEffectPipeline | null>(null);
   const { gl, scene, camera, size, viewport } = useThree();
   const { headerExclusion, scrollBlur } = useDebugSettings();
@@ -45,7 +46,7 @@ export function PortfolioEffects() {
   }, [gl, scene, camera]);
 
   useLayoutEffect(() => {
-    pipelineRef.current?.composer.setSize(size.width, size.height);
+    pipelineRef.current?.resize(size.width, size.height);
   }, [gl, scene, camera, size.width, size.height, viewport.dpr]);
 
   useFrame((_, delta) => {
@@ -53,10 +54,7 @@ export function PortfolioEffects() {
     if (!pipeline) return;
     const workstationSurfaceActive = revealProgressRef.current >= CONFIG.workstation.BROWSER_REVEAL_START;
     const enabled = !workstationSurfaceActive && qualityTier !== "low" && !reducedMotion;
-    pipeline.setAberrationEnabled(enabled);
     pipeline.header.configure(headerExclusion.strength, headerExclusion.threshold, headerExclusion.softness);
-    pipeline.setAntialiasingMode(workstationSurfaceActive ? "workstation" : "msaa");
-    pipeline.header.setActive(!workstationSurfaceActive);
     const effect = pipeline.aberration;
     effect.setTaps(Math.min(scrollBlur.taps, affordableTaps(size.width, size.height), inputMode === "coarse" ? CONFIG.customAberration.SCROLL_TAPS_COARSE : CONFIG.customAberration.SCROLL_TAPS));
     const aspect = size.width / size.height;
@@ -80,6 +78,17 @@ export function PortfolioEffects() {
     const autoClear = gl.autoClear;
     gl.autoClear = true;
     try {
+      const preview = previewRef.current;
+      if (preview) {
+        previewRef.current = null;
+        pipeline.setAntialiasingMode("workstation");
+        pipeline.setAberrationEnabled(false);
+        pipeline.header.setActive(false);
+        preview(() => pipeline.composer.render(0));
+      }
+      pipeline.setAntialiasingMode(workstationSurfaceActive ? "workstation" : "msaa");
+      pipeline.setAberrationEnabled(enabled);
+      pipeline.header.setActive(!workstationSurfaceActive);
       pipeline.composer.render(delta);
     } finally {
       gl.autoClear = autoClear;

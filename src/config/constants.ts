@@ -252,7 +252,7 @@ export const CONFIG = {
     CABINET_POSITION: { x: -1.101, y: 0.225, z: -0.35 },
     CABINET_SIZE: { x: 0.882, y: 0.945, z: 0.53 },
     CABINET_MODEL_URL: "/glbs/music-cabinet.glb",
-    RECORD_COVER_URL: "/textures/music-cabinet/the-prodigy-one-love.webp",
+    RECORD_COVER_URL: "/textures/music-cabinet/one-love-sleeve.webp",
     CABINET_PANEL: 0.024,
     CABINET_PLINTH: 0.063,
     MOUSE_ENV_INTENSITY: { day: 0.82, night: 0.65 },
@@ -269,7 +269,7 @@ export const CONFIG = {
     LAMP_SCALE: 0.78,
     LAMP_POSITION: { x: -0.34, y: 0, z: -0.23 },
     LEVITATING_LAMP: {
-      WOOD_URL: "/textures/music-cabinet/walnut.jpg",
+      WOOD_URL: "/textures/music-cabinet/lamp-walnut.webp",
       BASE_RADIUS: 0.105,
       BASE_HEIGHT: 0.03,
       BASE_BEVEL: 0.008,
@@ -435,6 +435,7 @@ export const CONFIG = {
   },
   loader: {
     REVEAL_DURATION: 0.5,
+    REVEAL_DURATION_REPEAT: 0.18,
     ODOMETER_DURATION: 2,
     ODOMETER_DURATION_REPEAT: 0.5,
   },

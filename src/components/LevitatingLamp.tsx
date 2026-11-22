@@ -1,9 +1,10 @@
 "use client";
 
-import { Html, useCursor, useTexture } from "@react-three/drei";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Html, useCursor } from "@react-three/drei";
+import { useFrame, useLoader, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CatmullRomCurve3, Color, Group, LatheGeometry, MathUtils, MeshStandardMaterial, PointLight, SRGBColorSpace, Vector2, Vector3 } from "three";
+import { CatmullRomCurve3, Color, Group, LatheGeometry, MathUtils, MeshStandardMaterial, PointLight, Vector2, Vector3 } from "three";
+import { WorkstationTextureLoader } from "./Workstation/WorkstationTextureLoader";
 import { CONFIG } from "@/config/constants";
 import { useDebugSettings } from "@/context/DebugSettingsContext";
 import { useHeroTransition } from "@/context/HeroTransitionContext";
@@ -40,7 +41,7 @@ const filamentCurve = new CatmullRomCurve3(Array.from({ length: lamp.FILAMENT_TU
 }));
 
 export function LevitatingLamp({ supportY, worldScale }: { supportY: number; worldScale: number }) {
-  const wood = useTexture(lamp.WOOD_URL, texture => { texture.colorSpace = SRGBColorSpace; });
+  const wood = useLoader(WorkstationTextureLoader, lamp.WOOD_URL);
   const { workstation: w, lighting } = useDebugSettings();
   const { revealProgressRef } = useHeroTransition();
   const reducedMotion = usePrefersReducedMotion();
